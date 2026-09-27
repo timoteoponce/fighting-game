@@ -17,7 +17,10 @@ const NECK := 4.0
 const UPPER := 15.0
 const FORE := 14.0
 const HEAD := 11.0
-const HEAD_SCALE := 1.18  # head-space drawings are authored for HEAD = 11
+const HEAD_SCALE := 1.45  # default head size; each character sets its own in `CharacterDef.head_scale`
+## Ink line weight around every limb and shape. Thick lines are what make it
+## read as a cartoon rather than a painted figure at 320x180.
+const INK := 2.4
 
 const POSES := {
 	"idle": {"lean": 6, "head": 0, "arm_f": 30, "elb_f": 80, "arm_b": 45, "elb_b": 95,
@@ -72,6 +75,7 @@ const SMEAR_MIN := 7.0
 ## lunging). Volume is roughly conserved: what we lose in height we gain in
 ## width, so the character never looks like it simply changed size.
 var squash := 0.0
+var hs := HEAD_SCALE  # this fighter's head scale, from its CharacterDef
 var squash_vel := 0.0
 ## How hard the effect hits. 0 would be the old rigid look.
 const SQUASH_MAX := 0.42
@@ -105,6 +109,7 @@ const JOINT_RESPONSE := {
 
 func setup(d: CharacterDef, alt := false) -> void:
 	def = d
+	hs = d.head_scale
 	colors = d.alt_colors if alt else d.colors
 	pose = d.pose("idle")
 	chains.clear()
@@ -160,6 +165,7 @@ func copy_from(src: FighterRenderer) -> void:
 	prop_t = src.prop_t
 	t = src.t
 	squash = src.squash
+	hs = src.hs
 	eye_pop = src.eye_pop
 	chains = src.chains.duplicate(true)
 	scale = src.scale
@@ -171,7 +177,7 @@ func copy_from(src: FighterRenderer) -> void:
 
 ## A point given in head space (as the hair is drawn), in local space.
 static func head_point(s: Dictionary, p: Vector2) -> Vector2:
-	return s["head"] + (p * HEAD_SCALE).rotated(s["head_ang"])
+	return s["head"] + (p * float(s.get("hs", HEAD_SCALE))).rotated(s["head_ang"])
 
 
 static func dir(a: float) -> Vector2:
@@ -202,7 +208,7 @@ func skeleton() -> Dictionary:
 	s["elb_b"] = s["sh_b"] + dir(p["arm_b"]) * UPPER
 	s["hand_b"] = s["elb_b"] + dir(p["arm_b"] + p["elb_b"]) * FORE
 	var head_ang := lean * 0.5 + deg_to_rad(float(p["head"]))
-	s["head"] = s["neck"] + up.rotated(head_ang - lean) * (NECK + HEAD * 0.8 * HEAD_SCALE)
+	s["head"] = s["neck"] + up.rotated(head_ang - lean) * (NECK + HEAD * 0.8 * hs)
 	var rot := deg_to_rad(float(p["rot"]))
 	var pts := ["hip", "hip_f", "hip_b", "knee_f", "foot_f", "knee_b", "foot_b", "neck", "sh_f", "sh_b",
 		"elb_f", "hand_f", "elb_b", "hand_b", "head"]
@@ -220,6 +226,7 @@ func skeleton() -> Dictionary:
 	s["perp"] = perp.rotated(rot)
 	s["head_ang"] = head_ang + rot
 	s["rot"] = rot
+	s["hs"] = hs
 	s["foot_dir_f"] = dir(p["leg_f"] - p["knee_f"] + 90.0).rotated(rot)
 	s["foot_dir_b"] = dir(p["leg_b"] - p["knee_b"] + 90.0).rotated(rot)
 	return s
@@ -377,7 +384,7 @@ func _draw_head(s: Dictionary) -> void:
 	var c := colors
 	var up: Vector2 = s["up"]
 	part(s["neck"] - up * 2.0, s["neck"] + up * NECK, 6.0, 5.5, c["skin"])
-	draw_set_transform(s["head"], s["head_ang"], Vector2.ONE * HEAD_SCALE)
+	draw_set_transform(s["head"], s["head_ang"], Vector2.ONE * hs)
 	def.draw_hair_back(self)
 	poly(head_shape(), c["skin"], 2.0)
 	# Shadow under the jaw and at the back of the face.
@@ -430,26 +437,35 @@ static func capsule_pts(a: Vector2, b: Vector2, r1: float, r2: float) -> PackedV
 func part(a: Vector2, b: Vector2, w1: float, w2: float, col: Color) -> void:
 	var r1 := w1 * 0.5
 	var r2 := w2 * 0.5
-	draw_colored_polygon(capsule_pts(a, b, r1 + 1.6, r2 + 1.6), OUT)
+	draw_colored_polygon(capsule_pts(a, b, r1 + INK, r2 + INK), OUT)
 	draw_colored_polygon(capsule_pts(a, b, r1, r2), shade(col))
 	var d := (b - a).normalized()
 	var n := Vector2(-d.y, d.x)
 	if n.dot(LIGHT) < 0.0:
 		n = -n
-	draw_colored_polygon(capsule_pts(a + n * r1 * 0.3, b + n * r2 * 0.3, r1 * 0.7, r2 * 0.7), col)
-	draw_line(a + n * r1 * 0.55, b + n * r2 * 0.55, hl(col), maxf(1.0, r2 * 0.28), true)
-	# Cool rim light on the shadow side, like arcade sprite shading.
-	draw_line(a - n * r1 * 0.78, b - n * r2 * 0.78, Color(0.7, 0.8, 1.0, 0.35), maxf(0.8, r2 * 0.16), true)
+	# Flat two-tone cel shading: a big lit area and a thin shadow edge. No rim
+	# light or gloss — that was the anime-painting look; cartoons keep it flat.
+	draw_colored_polygon(capsule_pts(a + n * r1 * 0.22, b + n * r2 * 0.22, r1 * 0.8, r2 * 0.8), col)
 
 
 func ball(p: Vector2, r: float, col: Color) -> void:
-	draw_circle(p, r + 1.5, OUT, true, -1.0, true)
+	draw_circle(p, r + INK, OUT, true, -1.0, true)
 	draw_circle(p, r, shade(col), true, -1.0, true)
 	draw_circle(p + LIGHT * r * 0.25, r * 0.75, col, true, -1.0, true)
 
 
+## Cartoon hands and feet are oversized: it reads at a glance and it's funny.
+const EXTREMITY := 1.3
+
+
 ## A clenched fist pointing along `d` (the forearm direction).
 func fist(p: Vector2, col: Color, d := Vector2.DOWN) -> void:
+	draw_set_transform(p, 0.0, Vector2.ONE * EXTREMITY)
+	_fist(Vector2.ZERO, col, d)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _fist(p: Vector2, col: Color, d: Vector2) -> void:
 	d = d.normalized()
 	var n := Vector2(-d.y, d.x)
 	var box := PackedVector2Array([p - n * 3.6 - d * 1.5, p + n * 3.6 - d * 1.5, p + n * 4.0 + d * 3.2,
@@ -468,7 +484,7 @@ func poly(pts: PackedVector2Array, col: Color, outline := 1.8) -> void:
 	if outline > 0.0:
 		var closed := pts.duplicate()
 		closed.append(pts[0])
-		draw_polyline(closed, OUT, outline, true)
+		draw_polyline(closed, OUT, outline * 1.35, true)
 
 
 ## Cel-shaded polygon: shadow color base, lit copy shrunk toward the light.
@@ -533,6 +549,12 @@ func ribbon(pts: PackedVector2Array, w0: float, w1: float, col: Color) -> void:
 
 
 func shoe(foot: Vector2, fwd: Vector2, col: Color) -> void:
+	draw_set_transform(foot, 0.0, Vector2.ONE * EXTREMITY)
+	_shoe(Vector2.ZERO, fwd, col)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _shoe(foot: Vector2, fwd: Vector2, col: Color) -> void:
 	var up := Vector2(fwd.y, -fwd.x)
 	var pts := PackedVector2Array([foot - fwd * 3.0 + up * 3.0, foot + fwd * 5.0 + up * 3.0, foot + fwd * 10.0 - up * 0.5,
 		foot + fwd * 9.0 - up * 3.0, foot - fwd * 4.0 - up * 3.0])
@@ -599,8 +621,8 @@ func face(iris: Color, girl := false) -> void:
 	var pop := 1.0 + 1.15 * (float(eye_pop) / 9.0)
 	for i in 2:
 		var e: Vector2 = eyes[i]
-		var rx := (3.2 if girl else 2.8) * (0.62 if i == 1 else 1.0) * pop
-		var ry := (4.6 if girl else 3.7) * pop
+		var rx := (3.5 if girl else 3.2) * (0.66 if i == 1 else 1.0) * pop
+		var ry := (4.9 if girl else 4.3) * pop
 		if expr == "attack":
 			ry *= 0.78
 		match expr:

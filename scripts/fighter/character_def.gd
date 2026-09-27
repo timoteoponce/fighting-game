@@ -16,6 +16,9 @@ const REQUIRED_COLORS := ["skin", "hair", "shirt", "sleeve", "forearm", "hands",
 
 var id := ""
 var size := 1.0  # body scale; hitboxes are scaled to match by scale_moves()
+## Head size relative to the body. Purely visual (hitboxes ignore it), and the
+## cheapest way to give a fighter a silhouette: big head = chibi cartoon.
+var head_scale := 1.45
 var display := ""
 var likes := ""
 var colors := {}
