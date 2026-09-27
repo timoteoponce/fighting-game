@@ -3,9 +3,9 @@ extends Node2D
 ## Short-lived visual effects. Sparks draw on an additive "glow" layer so
 ## overlapping light adds up to white-hot, MvC style. Comic words go on top.
 
-const LIFE := {"hit": 12, "heavy": 18, "super": 22, "block": 12, "dust": 20, "text": 36, "sparkle": 24}
+const LIFE := {"hit": 12, "heavy": 18, "super": 22, "block": 12, "dust": 20, "text": 36, "sparkle": 24, "slash": 9, "ring": 18}
 const WORDS := ["POW!", "WHAM!", "BAM!", "BOOM!", "ZAP!", "KAPOW!"]
-const GLOW_KINDS := ["hit", "heavy", "super", "block", "sparkle"]
+const GLOW_KINDS := ["hit", "heavy", "super", "block", "sparkle", "slash", "ring"]
 
 var parts: Array = []
 var glow: Node2D
@@ -96,6 +96,22 @@ func _draw_glow() -> void:
 				for i in 6:
 					var a := PI * (0.0 if dir < 0 else 1.0) + rng.randf_range(-1.2, 1.2)
 					glow.draw_line(p, p + Vector2.from_angle(a) * (10.0 + 26.0 * k), Color(0.7, 0.9, 1.0, fade), 2.0, true)
+			"slash":
+				# Crescent swoosh along the attack, opening in the facing direction.
+				var dir := float(e["d"].get("dir", 1))
+				var r := float(e["d"].get("r", 30.0)) * (0.8 + 0.4 * k)
+				var a0 := -1.3 if dir > 0 else PI - 1.3
+				var outer := PackedVector2Array()
+				var inner := PackedVector2Array()
+				for i in 13:
+					var a := a0 + 2.6 * i / 12.0
+					outer.append(p + Vector2.from_angle(a) * Vector2(r, r * 0.8))
+					inner.append(p + Vector2.from_angle(a) * Vector2(r * 0.72, r * 0.5) + Vector2(-dir * 4.0, 0))
+				inner.reverse()
+				outer.append_array(inner)
+				glow.draw_colored_polygon(FighterRenderer.safe(outer), Color(0.75, 0.9, 1.0, 0.55 * fade))
+			"ring":
+				glow.draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(p, 20.0 + 70.0 * k, 5.0 + 12.0 * k, 0.0, 32)), Color(1, 0.9, 0.7, 0.7 * fade), 3.0 * fade + 0.5, true)
 			"sparkle":
 				for i in 6:
 					var a := TAU * i / 6.0 + float(e["t"]) * 0.1

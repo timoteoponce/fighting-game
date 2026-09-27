@@ -290,6 +290,7 @@ func _launched_step() -> void:
 		set_state(S.KNOCKDOWN, true)
 		Sfx.play("land", 0.7)
 		fight.effects.spawn("dust", position)
+		fight.effects.spawn("ring", position)
 		fight.shake = maxf(fight.shake, 3.0)
 
 
@@ -419,6 +420,10 @@ func _attack_step() -> void:
 	var dashing := m.dash_speed != 0.0 and sf >= m.dash_from and sf <= m.dash_to
 	if dashing:
 		vel.x = m.dash_speed * facing
+	if sf == m.startup + 1 and m.hitbox.size != Vector2.ZERO:
+		var hb := hitbox_world()
+		if hb.has_area():
+			fight.effects.spawn("slash", hb.get_center(), {"dir": facing, "r": maxf(hb.size.x, hb.size.y) * 0.6})
 	if not m.projectile.is_empty() and sf == m.startup:
 		fight.spawn_projectile(self, m.projectile)
 	var airborne := position.y < GROUND_Y - 0.01 or vel.y < 0.0

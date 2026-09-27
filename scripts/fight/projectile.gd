@@ -44,6 +44,13 @@ func setup(owner: Fighter, spec: Dictionary) -> void:
 		m_final = MoveData.make(hit)
 	scale.x = dir
 	_follow()
+	var halo := Node2D.new()
+	var mat := CanvasItemMaterial.new()
+	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
+	halo.material = mat
+	halo.show_behind_parent = true
+	halo.draw.connect(_draw_halo.bind(halo))
+	add_child(halo)
 
 
 func _follow() -> void:
@@ -89,7 +96,22 @@ func register_hit() -> void:
 
 # --- Drawing (local space faces right; node scale mirrors it) -----------------
 
+## Additive glow behind the projectile.
+func _draw_halo(h: Node2D) -> void:
+	var col: Color = {"ball": Color(1, 0.8, 0.4), "spark": Color(1, 0.4, 0.85), "beam": Color(0.5, 0.8, 1.0), "dragon": Color(1, 0.5, 0.9)}.get(kind, Color.WHITE)
+	var pulse := 1.0 + 0.15 * sin(t * 0.5)
+	if kind == "beam":
+		var w := size.x * minf(1.0, t / 6.0)
+		for i in 3:
+			h.draw_rect(Rect2(0, -size.y * (0.6 + i * 0.2), w, size.y * (1.2 + i * 0.4)), Color(col, 0.12))
+		return
+	var r := maxf(size.x, size.y) * 0.9 * pulse
+	for i in 4:
+		h.draw_circle(Vector2.ZERO, r * (1.0 + i * 0.45), Color(col, 0.22 - i * 0.045), true, -1.0, true)
+
+
 func _draw() -> void:
+	get_child(0).queue_redraw()
 	match kind:
 		"ball":
 			for i in 4:

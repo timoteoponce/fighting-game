@@ -225,10 +225,12 @@ func _combo(o: Node2D, i: int) -> void:
 	var x := lerpf(-80.0, 40.0, slide) if i == 0 else lerpf(720.0, 600.0, slide)
 	var align := HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT
 	var n := str(combo_show[i])
-	UI.text(o, Vector2(x, 122), n, 40, Color(1, 0.92, 0.3, fade), align, 7, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
 	var nw := UI.arcade_font().get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
-	var hx := x + nw + 6 if i == 0 else x - nw - 6
-	UI.text(o, Vector2(hx, 122), "HITS", 18, Color(1, 1, 1, fade), align, 5, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
+	var hw := UI.arcade_font().get_string_size("HITS", HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	# Always reads "12 HITS": number first, whichever side it sits on.
+	var nx := x if i == 0 else x - hw - 6 - nw
+	UI.text(o, Vector2(nx, 122), n, 40, Color(1, 0.92, 0.3, fade), HORIZONTAL_ALIGNMENT_LEFT, 7, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
+	UI.text(o, Vector2(nx + nw + 6, 122), "HITS", 18, Color(1, 1, 1, fade), HORIZONTAL_ALIGNMENT_LEFT, 5, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
 	if combo_show[i] >= 5:
 		var word := "AWESOME!" if combo_show[i] < 10 else "INCREDIBLE!"
 		UI.text(o, Vector2(x, 144), word, 14, Color(0.6, 0.95, 1, fade), align, 4, Color(0.1, 0.1, 0.4, fade), UI.arcade_font())
