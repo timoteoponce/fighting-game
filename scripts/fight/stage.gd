@@ -28,14 +28,15 @@ func _draw() -> void:
 	else:
 		_draw_field()
 	if dim > 0.0:
-		draw_rect(Rect2(cam_x - 400, -50, 800, 460), Color(0.02, 0.0, 0.08, dim * 0.7))
+		draw_rect(Rect2(cam_x - 450, -250, 900, 700), Color(0.02, 0.0, 0.08, dim * 0.7))
 
 
 func _draw_field() -> void:
-	var left := cam_x - 360.0
-	UI.gradient_rect(self, Rect2(left, -40, 720, 280), Color("1d1640"), Color("ff8a5c"))
+	var left := cam_x - 420.0
+	UI.gradient_rect(self, Rect2(left, -200, 840, 80), Color("120c2c"), Color("1d1640"))
+	UI.gradient_rect(self, Rect2(left, -120, 840, 360), Color("1d1640"), Color("ff8a5c"))
 	for i in 25:
-		var sx := left + fmod(i * 97.3, 720.0)
+		var sx := left + fmod(i * 97.3, 840.0)
 		draw_circle(Vector2(sx, 10.0 + fmod(i * 23.7, 60.0)), 1.0, Color(1, 1, 1, 0.5 + 0.5 * sin(t * 2.0 + i)))
 	var sun := Vector2(px(720, 0.15), 200)
 	for i in 4:
@@ -63,7 +64,7 @@ func _draw_field() -> void:
 			draw_rect(Rect2(-200 + i * 70, 236, 70, 200), Color("378a33"))
 	draw_line(Vector2(-200, 246), Vector2(1200, 246), Color(1, 1, 1, 0.7), 3.0)
 	draw_line(Vector2(500, 246), Vector2(500, 360), Color(1, 1, 1, 0.35), 3.0)
-	draw_polyline(ChibiRenderer.ellipse_pts(Vector2(500, 300), 90, 24, 0.0, 40) + PackedVector2Array([Vector2(590, 300)]), Color(1, 1, 1, 0.35), 3.0, true)
+	draw_polyline(FighterRenderer.ellipse_pts(Vector2(500, 300), 90, 24, 0.0, 40) + PackedVector2Array([Vector2(590, 300)]), Color(1, 1, 1, 0.35), 3.0, true)
 	for gx in [30.0, 970.0]:
 		var x := px(gx, 0.85)
 		var w := 60.0
@@ -76,8 +77,8 @@ func _draw_field() -> void:
 
 
 func _draw_library() -> void:
-	var left := cam_x - 360.0
-	UI.gradient_rect(self, Rect2(left, -40, 720, 340), Color("1e1238"), Color("47307a"))
+	var left := cam_x - 420.0
+	UI.gradient_rect(self, Rect2(left, -200, 840, 500), Color("120a24"), Color("47307a"))
 	# Big arched window with the moon.
 	var wx := px(500, 0.3)
 	var win := PackedVector2Array()
@@ -126,7 +127,7 @@ func _draw_library() -> void:
 		draw_rect(Rect2(x - 32, 196, 64, 50), Color("fffaf0"))
 		draw_rect(Rect2(x - 32, 196, 64, 50), Color("8b5a2b"), false, 2.0)
 		if ex < 500.0:
-			draw_colored_polygon(ChibiRenderer.star_pts(Vector2(x - 10, 216), 12, 5), Color("ffd24a"))
+			draw_colored_polygon(FighterRenderer.star_pts(Vector2(x - 10, 216), 12, 5), Color("ffd24a"))
 			draw_circle(Vector2(x + 14, 230), 7.0, Color("ff7eb6"), true, -1.0, true)
 		else:
 			for k in 4:
@@ -139,9 +140,9 @@ func _draw_library() -> void:
 	for i in 30:
 		var row := i % 4
 		draw_line(Vector2(-200 + i * 53 + row * 20, 296 + row * 18), Vector2(-200 + i * 53 + row * 20, 314 + row * 18), Color("5a3620"), 2.0)
-	draw_colored_polygon(ChibiRenderer.ellipse_pts(Vector2(500, 318), 270, 26, 0.0, 40), Color("8e3f8f"))
-	draw_polyline(ChibiRenderer.ellipse_pts(Vector2(500, 318), 256, 21, 0.0, 40) + PackedVector2Array([Vector2(756, 318)]), Color("ff9ed6"), 2.0, true)
+	draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(500, 318), 270, 26, 0.0, 40), Color("8e3f8f"))
+	draw_polyline(FighterRenderer.ellipse_pts(Vector2(500, 318), 256, 21, 0.0, 40) + PackedVector2Array([Vector2(756, 318)]), Color("ff9ed6"), 2.0, true)
 	for i in 14:
 		var sx := px(fmod(i * 83.0 + t * 12.0, 1100.0) - 50.0, 0.9)
 		var sy := 60.0 + fmod(i * 47.0, 200.0) + sin(t + i) * 8.0
-		draw_colored_polygon(ChibiRenderer.star_pts(Vector2(sx, sy), 3.0, 1.2, 4, t), Color(1, 0.85, 1, 0.4 + 0.3 * sin(t * 3.0 + i)))
+		draw_colored_polygon(FighterRenderer.star_pts(Vector2(sx, sy), 3.0, 1.2, 4, t), Color(1, 0.85, 1, 0.4 + 0.3 * sin(t * 3.0 + i)))

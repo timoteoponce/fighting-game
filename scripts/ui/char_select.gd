@@ -10,13 +10,13 @@ var slots := [
 var cpu_step := 0  # 0 = P1 picks, 1 = picks CPU fighter, 2 = difficulty
 var start_timer := -1.0
 var t := 0.0
-var chibis: Array[ChibiRenderer] = []
+var chibis: Array[FighterRenderer] = []
 
 
 func _ready() -> void:
 	for i in 2:
-		var r := ChibiRenderer.new()
-		r.base_scale = 1.8
+		var r := FighterRenderer.new()
+		r.base_scale = 1.35
 		r.facing = 1 if i == 0 else -1
 		r.position = Vector2(245 if i == 0 else 395, 305)
 		add_child(r)

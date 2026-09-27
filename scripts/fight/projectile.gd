@@ -104,7 +104,7 @@ func _draw() -> void:
 
 
 static func draw_soccer_ball(ci: CanvasItem, c: Vector2, r: float, rot: float) -> void:
-	var out := ChibiRenderer.OUT
+	var out := FighterRenderer.OUT
 	ci.draw_circle(c, r + 1.5, out, true, -1.0, true)
 	ci.draw_circle(c, r, Color.WHITE, true, -1.0, true)
 	var pent := PackedVector2Array()
@@ -122,10 +122,10 @@ static func draw_soccer_ball(ci: CanvasItem, c: Vector2, r: float, rot: float) -
 func _draw_spark() -> void:
 	for i in 5:
 		var p := Vector2(-12.0 - i * 9.0, sin(t * 0.5 + i) * 4.0)
-		draw_colored_polygon(ChibiRenderer.star_pts(p, 5.0 - i * 0.8, 2.0 - i * 0.3, 4, t * 0.2), Color(1, 0.6, 0.9, 0.7 - i * 0.12))
+		draw_colored_polygon(FighterRenderer.star_pts(p, 5.0 - i * 0.8, 2.0 - i * 0.3, 4, t * 0.2), Color(1, 0.6, 0.9, 0.7 - i * 0.12))
 	draw_circle(Vector2.ZERO, 14.0, Color(1, 0.5, 0.9, 0.3), true, -1.0, true)
-	draw_colored_polygon(ChibiRenderer.star_pts(Vector2.ZERO, 11.0, 4.5, 5, t * 0.3), Color(1, 0.55, 0.85))
-	draw_colored_polygon(ChibiRenderer.star_pts(Vector2.ZERO, 6.0, 2.5, 5, t * 0.3), Color.WHITE)
+	draw_colored_polygon(FighterRenderer.star_pts(Vector2.ZERO, 11.0, 4.5, 5, t * 0.3), Color(1, 0.55, 0.85))
+	draw_colored_polygon(FighterRenderer.star_pts(Vector2.ZERO, 6.0, 2.5, 5, t * 0.3), Color.WHITE)
 
 
 func _draw_beam() -> void:
@@ -151,7 +151,7 @@ func _draw_beam() -> void:
 
 
 func _draw_dragon() -> void:
-	var out := ChibiRenderer.OUT
+	var out := FighterRenderer.OUT
 	var paper := Color(1, 0.98, 0.93)
 	# Wavy body trailing behind the head.
 	for i in range(9, 0, -1):

@@ -71,7 +71,7 @@ func _player_bars(i: int) -> void:
 	for k in Fight.ROUNDS_TO_WIN:
 		var sx := x0 + 12.0 + k * 18.0 if right else x0 + w - 12.0 - k * 18.0
 		var won: bool = fight.wins[i] > k
-		var star := ChibiRenderer.star_pts(Vector2(sx, y + 28), 7, 3)
+		var star := FighterRenderer.star_pts(Vector2(sx, y + 28), 7, 3)
 		draw_colored_polygon(star, Color(1, 0.85, 0.2) if won else Color(0.2, 0.15, 0.3))
 		draw_polyline(star + PackedVector2Array([star[0]]), Color(0.05, 0.03, 0.1), 1.5, true)
 	# Hyper meter.

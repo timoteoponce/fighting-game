@@ -5,8 +5,9 @@ extends Node2D
 const STAGE_W := 1000.0
 const ZOOM := 1.2
 const HALF_VIEW := 320.0 / ZOOM
+const BASE_CAM_Y := 342.0 - 180.0 / ZOOM  # ground sits near the bottom of the screen
 const WALL := 24.0
-const PUSH_W := 34.0
+const PUSH_W := 42.0
 const ROUNDS_TO_WIN := 2
 const ROUND_FRAMES := 99 * 60
 
@@ -69,7 +70,7 @@ func _ready() -> void:
 	debug_draw.draw.connect(_draw_debug)
 	add_child(debug_draw)
 	camera = Camera2D.new()
-	camera.position = Vector2(STAGE_W * 0.5, 342.0 - 180.0 / ZOOM)
+	camera.position = Vector2(STAGE_W * 0.5, BASE_CAM_Y)
 	camera.zoom = Vector2(ZOOM, ZOOM)
 	add_child(camera)
 	camera.make_current()
@@ -215,7 +216,7 @@ func on_hyper(f: Fighter, m: MoveData) -> void:
 	cutin_text = m.display
 	cutin_color = f.renderer.colors["shirt"]
 	Sfx.play("hyper")
-	effects.spawn("sparkle", f.position + Vector2(0, -60))
+	effects.spawn("sparkle", f.position + Vector2(0, -80))
 
 
 func spawn_projectile(f: Fighter, spec: Dictionary) -> void:
@@ -325,6 +326,15 @@ func _cleanup_projectiles() -> void:
 func _update_camera() -> void:
 	var mid := (fighters[0].position.x + fighters[1].position.x) * 0.5
 	camera.position.x = clampf(mid, HALF_VIEW, STAGE_W - HALF_VIEW)
+	# MvC-style: zoom out and rise to keep both fighters on screen during super jumps.
+	var top := minf(fighters[0].position.y, fighters[1].position.y) - 175.0
+	var bottom := maxf(fighters[0].position.y, fighters[1].position.y) + 30.0
+	var z := clampf(360.0 / (bottom - top), 0.85, ZOOM)
+	var cam_z := lerpf(camera.zoom.x, z, 0.12)
+	camera.zoom = Vector2(cam_z, cam_z)
+	var base_y := 342.0 - 180.0 / cam_z
+	camera.position.y = minf(base_y, (top + bottom) * 0.5)
+	camera.position.x = clampf(mid, 320.0 / cam_z, STAGE_W - 320.0 / cam_z)
 	stage.cam_x = camera.position.x
 
 
@@ -391,6 +401,6 @@ func _draw_debug() -> void:
 		var label := "%s f%d" % [Fighter.S.keys()[f.state], f.sf]
 		if f.move:
 			label += " " + f.move.id
-		UI.text(debug_draw, f.position + Vector2(0, -118), label, 10)
+		UI.text(debug_draw, f.position + Vector2(0, -150), label, 10)
 	for p in projectiles:
 		debug_draw.draw_rect(p.rect(), Color(1, 0.5, 0.1, 0.4))

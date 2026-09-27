@@ -5,14 +5,14 @@ const ITEMS := ["VS PLAYER", "VS CPU", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"
 
 var idx := 0
 var t := 0.0
-var chibis: Array[ChibiRenderer] = []
+var chibis: Array[FighterRenderer] = []
 
 
 func _ready() -> void:
 	for i in 2:
-		var r := ChibiRenderer.new()
+		var r := FighterRenderer.new()
 		r.setup(GameState.make_character(GameState.CHARACTERS[i]))
-		r.base_scale = 2.3
+		r.base_scale = 1.75
 		r.facing = 1 if i == 0 else -1
 		r.position = Vector2(105 if i == 0 else 535, 318)
 		add_child(r)

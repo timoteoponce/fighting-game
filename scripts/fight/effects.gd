@@ -55,4 +55,4 @@ func _draw() -> void:
 				for i in 5:
 					var a := TAU * i / 5.0 + float(e["t"]) * 0.1
 					var q := p + Vector2(cos(a), sin(a)) * (6.0 + 20.0 * k)
-					draw_colored_polygon(ChibiRenderer.star_pts(q, 4.0 * (1.0 - k) + 1.0, 1.5, 4, a), Color(1, 0.7, 0.95, 1.0 - k))
+					draw_colored_polygon(FighterRenderer.star_pts(q, 4.0 * (1.0 - k) + 1.0, 1.5, 4, a), Color(1, 0.7, 0.95, 1.0 - k))

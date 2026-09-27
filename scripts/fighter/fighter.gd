@@ -12,7 +12,7 @@ const MAX_HEALTH := 1000
 const MAX_METER := 100.0
 const JUGGLE_LIMIT := 7
 const BUFFER := 6
-const SCALE := 1.15
+const SCALE := 1.25
 
 var def: CharacterDef
 var index := 0
@@ -20,7 +20,7 @@ var input_source
 var buf := InputBuffer.new()
 var fight: Fight
 var opponent: Fighter
-var renderer: ChibiRenderer
+var renderer: FighterRenderer
 var input_enabled := false
 
 var vel := Vector2.ZERO
@@ -42,13 +42,16 @@ var invuln := 0
 var launch_window := 0
 var flash := 0
 var projectile: Projectile
+var super_jumping := false
+var ghosts: Array[FighterRenderer] = []  # MvC-style afterimages
+var _ghost_next := 0
 
 
 func setup(d: CharacterDef, idx: int, src, alt: bool) -> void:
 	def = d
 	index = idx
 	input_source = src
-	renderer = ChibiRenderer.new()
+	renderer = FighterRenderer.new()
 	renderer.setup(def, alt)
 	renderer.base_scale = SCALE
 	add_child(renderer)
@@ -69,6 +72,9 @@ func reset_for_round(x: float, face: int) -> void:
 	launch_window = 0
 	flash = 0
 	projectile = null
+	super_jumping = false
+	for g in ghosts:
+		g.visible = false
 	buf.clear()
 	_update_visual()
 
@@ -172,6 +178,7 @@ func _threatened() -> bool:
 
 func _to_neutral() -> void:
 	set_state(S.IDLE)
+	super_jumping = false
 	combo = 0
 	juggle = 0
 	chain = 0
@@ -233,6 +240,7 @@ func _super_jump() -> void:
 	chain = 0
 	crouching = false
 	vel = Vector2(clampf((opponent.position.x - position.x) * 0.08, -4.0, 4.0), -13.5)
+	super_jumping = true
 	position.y -= 1.0
 	set_state(S.JUMP, true)
 	Sfx.play("whoosh", 0.8)
@@ -442,20 +450,20 @@ func hitbox_world() -> Rect2:
 func hurtbox_world() -> Rect2:
 	if invuln > 0:
 		return Rect2()
-	var r := Rect2(-20, -96, 40, 96)
+	var r := Rect2(-24, -125, 48, 125)
 	match state:
 		S.KNOCKDOWN, S.GETUP, S.KO, S.INTRO, S.WIN:
 			return Rect2()
 		S.LAUNCHED:
 			if juggle > JUGGLE_LIMIT:
 				return Rect2()
-			r = Rect2(-26, -84, 52, 74)
+			r = Rect2(-32, -108, 64, 94)
 		S.ATTACK:
 			if move.crouch:
-				r = Rect2(-20, -64, 40, 64)
+				r = Rect2(-26, -88, 52, 88)
 		_:
 			if crouching and on_ground():
-				r = Rect2(-20, -64, 40, 64)
+				r = Rect2(-26, -88, 52, 88)
 	return to_world(r)
 
 
@@ -561,7 +569,32 @@ func _update_visual() -> void:
 			renderer.prop = def.intro_prop
 		_:
 			renderer.prop = ""
+	_update_ghosts()
 	queue_redraw()
+
+
+func _update_ghosts() -> void:
+	if fight == null:
+		return
+	if ghosts.is_empty():
+		for i in 4:
+			var g := FighterRenderer.new()
+			g.visible = false
+			g.z_index = -1
+			fight.add_child(g)
+			ghosts.append(g)
+	var active := (state == S.ATTACK and move != null and move.level >= 2) or (state == S.JUMP and super_jumping)
+	for g in ghosts:
+		if g.visible:
+			g.modulate.a -= 0.06
+			g.visible = g.modulate.a > 0.0
+	if active and buf.frame % 3 == 0:
+		var g := ghosts[_ghost_next]
+		_ghost_next = (_ghost_next + 1) % ghosts.size()
+		g.copy_from(renderer)
+		var c: Color = renderer.colors.get("accent", Color.WHITE)
+		g.modulate = Color(c.r * 0.8 + 0.3, c.g * 0.8 + 0.3, c.b * 0.8 + 0.5, 0.5)
+		g.visible = true
 
 
 func _pose_target() -> Array:
