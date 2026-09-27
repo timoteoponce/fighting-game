@@ -15,6 +15,12 @@ var walk_speed := 3.0
 var back_speed := 2.4
 var jump_vel := -10.5
 var jump_x := 3.6
+## Base pitch (Hz) of this character's synthesized shouts. Lower = older or
+## bigger. Set it and the voice works; there is no table to register in.
+var voice_pitch := 280.0
+## Where this fighter sits on the select screen. Lower comes first; ties break
+## alphabetically by id.
+var roster_order := 100
 var moves := {}
 var poses := {}
 var win_prop := ""

@@ -113,10 +113,10 @@ func _handle_cpu_mode() -> void:
 				cpu_step = 0
 		2:
 			if Controls.just_pressed(dev, Controls.LEFT):
-				GameState.cpu_level = posmod(GameState.cpu_level - 1, 3)
+				GameState.cpu_level = posmod(GameState.cpu_level - 1, GameState.CPU_LEVELS.size())
 				Sfx.play("select")
 			if Controls.just_pressed(dev, Controls.RIGHT):
-				GameState.cpu_level = posmod(GameState.cpu_level + 1, 3)
+				GameState.cpu_level = posmod(GameState.cpu_level + 1, GameState.CPU_LEVELS.size())
 				Sfx.play("select")
 			if ok:
 				start_timer = 0.8

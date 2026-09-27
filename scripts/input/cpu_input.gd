@@ -19,15 +19,18 @@ var rng := RandomNumberGenerator.new()
 var _seen_attack := false
 var _seen_projectile := false
 
-# Per level: EASY, NORMAL, HARD
-const THINK := [26, 15, 8]
-const BLOCK_P := [0.15, 0.45, 0.8]
-const ANTI_AIR_P := [0.15, 0.45, 0.8]
-const COMBO_DROP_P := [0.5, 0.2, 0.0]
+# Per level: VERY EASY, EASY, NORMAL, HARD
+const THINK := [40, 26, 15, 8]
+const BLOCK_P := [0.05, 0.15, 0.45, 0.8]
+const ANTI_AIR_P := [0.0, 0.15, 0.45, 0.8]
+const COMBO_DROP_P := [0.8, 0.5, 0.2, 0.0]
+## How often the CPU reaches for dashes, throws and air dashes. A Very Easy
+## opponent basically never does, so a beginner isn't run over by movement.
+const MOBILITY_P: Array[float] = [0.0, 0.15, 0.4, 0.7]
 
 
 func _init(lvl: int) -> void:
-	level = clampi(lvl, 0, 2)
+	level = clampi(lvl, 0, THINK.size() - 1)
 	rng.randomize()
 
 
@@ -78,14 +81,21 @@ func _react(f: Fighter, o: Fighter) -> void:
 func _decide(f: Fighter, o: Fighter) -> void:
 	var dx := absf(o.position.x - f.position.x)
 	var r := rng.randf()
+	var mobile := rng.randf() < MOBILITY_P[level]
 	if f.launch_window > 0:
 		_q([[U, 3], [0, 8], [L, 2], [0, 6], [L, 2], [0, 7], [H, 2], [0, 10]])
 	elif f.meter >= Fighter.HYPER_COST and dx < 320 and r < 0.35:
 		_q([[BACK, 3], [BACK | L | H, 3], [0, 20]])
 	elif o.state == Fighter.S.JUMP and dx < 130 and r < ANTI_AIR_P[level]:
 		_q([[D | L | H, 3], [0, 10]])
+	elif dx < Fighter.THROW_RANGE * 0.8 and o.on_ground() and mobile and r < 0.25:
+		# Close enough to grab: L+H point blank is a throw.
+		_q([[L | H, 3], [0, 30]])
 	elif dx > 260:
-		if r < 0.35:
+		if mobile and r < 0.3:
+			# Dash in, then attack out of it.
+			_q([[FWD, 2], [0, 2], [FWD, 4], [0, 10], [L, 2], [0, 16]])
+		elif r < 0.35:
 			_q([[L | H, 3], [0, 25]])
 		elif r < 0.75:
 			_q([[FWD, rng.randi_range(20, 45)]])
@@ -94,7 +104,10 @@ func _decide(f: Fighter, o: Fighter) -> void:
 		else:
 			_q([[0, 20]])
 	elif dx > 100:
-		if r < 0.2:
+		if mobile and r < 0.15:
+			# Jump in with an air dash, then attack.
+			_q([[U | FWD, 3], [0, 6], [FWD, 2], [0, 2], [FWD, 3], [0, 6], [L, 2], [0, 20]])
+		elif r < 0.2:
 			_q([[FWD | L | H, 3], [0, 25]])
 		elif r < 0.6:
 			_q([[FWD, rng.randi_range(12, 30)]])
@@ -114,7 +127,10 @@ func _decide(f: Fighter, o: Fighter) -> void:
 			_q([[D | L, 2], [0, 6], [D | H, 2], [0, 20]])
 		elif r < 0.72:
 			_q([[D | L | H, 3], [0, 25]])
-		elif r < 0.85:
+		elif mobile and r < 0.8:
+			# Backdash out of pressure.
+			_q([[BACK, 2], [0, 2], [BACK, 4], [0, 18]])
+		elif r < 0.88:
 			_q([[BACK, 20]])
 		else:
 			_q([[U | BACK, 4], [0, 30]])

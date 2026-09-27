@@ -10,6 +10,8 @@ const STEP_NAMES := {
 }
 const MAX_BUTTONS := 32
 const MAX_AXES := 8
+## How many buttons may share one action, so Square *and* Cross can both be LIGHT.
+const MAX_PER_ACTION := 3
 
 var mode := "list"  # list, map, test
 var dev := -1
@@ -88,19 +90,49 @@ func _map_input() -> void:
 		return
 	if waiting_release:
 		if _all_released():
+			# Nothing is being touched: this is the honest resting position.
+			baseline = {}
+			for a in MAX_AXES:
+				var v := Input.get_joy_axis(dev, a)
+				if absf(v) > 0.15:
+					baseline[a] = v
 			waiting_release = false
 		return
-	var b := _detect()
-	if b.is_empty():
+	var bound: Array = mapping.get(STEPS[step], [])
+	# START moves on, so a player can bind two buttons to one attack.
+	if not bound.is_empty() and Controls.just_pressed(dev, Controls.START) and STEPS[step] != "start":
+		_next_step()
 		return
-	mapping[STEPS[step]] = [b]
+	var b := _detect()
+	if b.is_empty() or _already_bound(b):
+		return
+	bound = bound.duplicate()
+	bound.append(b)
+	mapping[STEPS[step]] = bound
 	Sfx.play("select")
+	waiting_release = true
+	if bound.size() >= MAX_PER_ACTION or STEPS[step] in ["up", "down", "left", "right", "start"]:
+		_next_step()
+
+
+func _next_step() -> void:
 	step += 1
 	waiting_release = true
 	if step >= STEPS.size():
+		Controls.set_rest(dev, baseline)
 		Controls.set_custom(dev, mapping)
 		Sfx.play("confirm")
 		mode = "test"
+
+
+## Prevents binding the same button to two actions, which silently breaks a pad.
+func _already_bound(b: Dictionary) -> bool:
+	for action in mapping:
+		for other in mapping[action]:
+			if other.get("t") == b.get("t") and int(other["i"]) == int(b["i"]) \
+				and int(other.get("s", 0)) == int(b.get("s", 0)):
+				return true
+	return false
 
 
 func _raw_buttons(pad: int) -> Array:
@@ -169,9 +201,13 @@ func _draw_list() -> void:
 		var status := "recognized" if Input.is_joy_known(pad) else "unknown - please set it up"
 		if Controls.has_custom(pad):
 			status = "custom mapping saved"
+		var rest: Dictionary = Controls.rest_of(pad)
+		if not rest.is_empty():
+			status += ", %d axis(es) calibrated" % rest.size()
 		UI.text(self, Vector2(30, y), "%s   (%s)" % [Controls.device_name(pad), status], 12, Color(1, 0.95, 0.6), HORIZONTAL_ALIGNMENT_LEFT, 3)
 		UI.text(self, Vector2(46, y + 15), _raw_text(pad), 10, Color(0.8, 0.95, 1), HORIZONTAL_ALIGNMENT_LEFT, 3)
 		y += 38.0
+	UI.text(self, Vector2(320, 282), "If a direction seems stuck, set the pad up again without touching the sticks.", 11, Color(1, 0.9, 0.6))
 	UI.text(self, Vector2(320, 296), "Keyboards always work:  P1 = W A S D + F / G (Esc = start)", 11, Color(1, 1, 1, 0.75))
 	UI.text(self, Vector2(320, 311), "P2 = Arrows + K / L (Enter = start)", 11, Color(1, 1, 1, 0.75))
 
@@ -181,11 +217,18 @@ func _draw_map() -> void:
 	if step < STEPS.size():
 		var prompt := "Let go of everything..." if waiting_release else "Press  %s" % STEP_NAMES[STEPS[step]]
 		UI.text(self, Vector2(320, 110), prompt, 24, Color(1, 0.9, 0.3) if int(t * 3.0) % 2 == 0 or waiting_release else Color.WHITE)
+		var bound: Array = mapping.get(STEPS[step], [])
+		if not bound.is_empty() and STEPS[step] in ["light", "heavy"]:
+			UI.text(self, Vector2(320, 132), "Add another button for the same attack, or press START to continue.",
+				11, Color(0.8, 1, 0.8))
 	for i in STEPS.size():
 		var action: String = STEPS[i]
-		var done := mapping.has(action)
-		var txt := "%s:  %s" % [action.to_upper(), Controls.binding_text(mapping[action][0]) if done else ("..." if i == step else "")]
-		UI.text(self, Vector2(250, 150 + i * 18), txt, 12, Color(0.6, 1, 0.6) if done else Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, 3)
+		var bound: Array = mapping.get(action, [])
+		var names := []
+		for b in bound:
+			names.append(Controls.binding_text(b))
+		var txt := "%s:  %s" % [action.to_upper(), ", ".join(names) if not names.is_empty() else ("..." if i == step else "")]
+		UI.text(self, Vector2(230, 152 + i * 18), txt, 12, Color(0.6, 1, 0.6) if not names.is_empty() else Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, 3)
 	UI.text(self, Vector2(320, 300), _raw_text(dev), 10, Color(0.8, 0.95, 1))
 	UI.text(self, Vector2(320, 316), "ESC = cancel", 10, Color(1, 1, 1, 0.7))
 

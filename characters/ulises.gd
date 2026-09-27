@@ -21,6 +21,8 @@ func _init() -> void:
 	back_speed = 2.8
 	jump_vel = -10.5
 	jump_x = 4.0
+	voice_pitch = 250.0
+	roster_order = 0
 	win_prop = "book"
 	intro_prop = "ball_intro"
 	specials_text = [

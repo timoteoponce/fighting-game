@@ -97,7 +97,19 @@ func _ready() -> void:
 	hud = Hud.new()
 	hud.fight = self
 	layer.add_child(hud)
+	Controls.device_changed.connect(_on_device_changed)
 	start_round()
+
+
+## A controller pulled out mid-round should never cost someone the match.
+func _on_device_changed(dev: int, connected: bool) -> void:
+	if connected or paused or phase == "over" or menu_items.size() > 0:
+		return
+	for f in fighters:
+		if f.input_source is PlayerInput and (f.input_source as PlayerInput).device == dev:
+			_open_menu("CONTROLLER UNPLUGGED", ["RESUME", "CHARACTER SELECT", "TITLE SCREEN"])
+			paused = true
+			return
 
 
 func start_round() -> void:
@@ -211,7 +223,7 @@ func _update_phase() -> void:
 					w.move = null
 					w.vel = Vector2.ZERO
 					w.set_state(Fighter.S.WIN, true)
-					Sfx.voice(w.def.id, "win", w.index)
+					Sfx.voice(w.def.id, "win", w.index, w.def.voice_pitch)
 			if phase_t == 100:
 				_banner("DRAW!" if winner < 0 else "%s!" % fighters[winner].def.display)
 			if phase_t >= 210:

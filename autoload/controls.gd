@@ -35,15 +35,62 @@ const KEYS := {
 }
 
 const SAVE_PATH := "user://controls.cfg"
+## Extra SDL mappings, if the player drops the community controller database
+## next to the game. Lines are standard `gamecontrollerdb.txt` entries.
+const SDL_DB_PATHS := ["user://gamecontrollerdb.txt", "res://gamecontrollerdb.txt"]
 const AXIS_THRESHOLD := 0.5
+const MAX_AXES := 10
+
+## Emitted when a gamepad is plugged in or pulled out mid-game.
+signal device_changed(dev: int, connected: bool)
 
 var _custom := {}  # guid -> mapping
+var _rest := {}  # guid -> {axis index: resting value}
 var _prev := {}  # device -> mask (for menu edge detection)
 var _just := {}  # device -> mask pressed this frame
 
 
 func _ready() -> void:
+	_load_sdl_db()
 	_load()
+	Input.joy_connection_changed.connect(_on_joy_changed)
+	for dev in Input.get_connected_joypads():
+		_ensure_rest(dev)
+
+
+## Cheap adapters often rest with a stick or an unused axis off centre, which
+## without this reads as a direction held down forever. Sample each new pad
+## once and treat that reading as its zero.
+func _on_joy_changed(dev: int, connected: bool) -> void:
+	if connected:
+		_ensure_rest(dev)
+	else:
+		_prev.erase(dev)
+		_just.erase(dev)
+	device_changed.emit(dev, connected)
+
+
+func _ensure_rest(dev: int) -> void:
+	var guid := Input.get_joy_guid(dev)
+	if _rest.has(guid):
+		return
+	var rest := {}
+	for a in MAX_AXES:
+		var v := Input.get_joy_axis(dev, a)
+		if absf(v) > 0.15:
+			rest[a] = v
+	_rest[guid] = rest
+
+
+## Replaces a pad's resting values, e.g. after Controller Setup measured them
+## while the player was told to let go of everything.
+func set_rest(dev: int, rest: Dictionary) -> void:
+	_rest[Input.get_joy_guid(dev)] = rest.duplicate()
+	_save()
+
+
+func rest_of(dev: int) -> Dictionary:
+	return _rest.get(Input.get_joy_guid(dev), {})
 
 
 func _process(_delta: float) -> void:
@@ -118,10 +165,12 @@ static func axis(i: int, s: int) -> Dictionary:
 	return {"t": "a", "i": i, "s": s}
 
 
-func default_mapping() -> Dictionary:
-	# SDL "standard" layout. On a PlayStation pad: Square/Cross = LIGHT,
-	# Triangle/Circle = HEAVY. Unknown adapters get fixed in Controller Setup.
-	return {
+## SDL "standard" layout. On a PlayStation pad: Square/Cross = LIGHT,
+## Triangle/Circle = HEAVY. Unrecognized adapters also get the axis 6/7
+## fallback, which is where most of them report their D-pad — but only those,
+## because on a recognized pad those axis numbers can mean something else.
+func default_mapping(dev := -1) -> Dictionary:
+	var m := {
 		"up": [btn(JOY_BUTTON_DPAD_UP), axis(JOY_AXIS_LEFT_Y, -1)],
 		"down": [btn(JOY_BUTTON_DPAD_DOWN), axis(JOY_AXIS_LEFT_Y, 1)],
 		"left": [btn(JOY_BUTTON_DPAD_LEFT), axis(JOY_AXIS_LEFT_X, -1)],
@@ -130,13 +179,19 @@ func default_mapping() -> Dictionary:
 		"heavy": [btn(JOY_BUTTON_Y), btn(JOY_BUTTON_B)],
 		"start": [btn(JOY_BUTTON_START)],
 	}
+	if dev >= 0 and not Input.is_joy_known(dev):
+		m["up"].append(axis(7, -1))
+		m["down"].append(axis(7, 1))
+		m["left"].append(axis(6, -1))
+		m["right"].append(axis(6, 1))
+	return m
 
 
 func get_mapping(dev: int) -> Dictionary:
 	var guid := Input.get_joy_guid(dev)
 	if _custom.has(guid):
 		return _custom[guid]
-	return default_mapping()
+	return default_mapping(dev)
 
 
 func has_custom(dev: int) -> bool:
@@ -156,7 +211,9 @@ func clear_custom(dev: int) -> void:
 func binding_active(dev: int, b: Dictionary) -> bool:
 	if b.get("t") == "b":
 		return Input.is_joy_button_pressed(dev, int(b["i"]))
-	var v := Input.get_joy_axis(dev, int(b["i"]))
+	var i := int(b["i"])
+	# Measure against this pad's resting value, not against zero.
+	var v := Input.get_joy_axis(dev, i) - float(rest_of(dev).get(i, 0.0))
 	return v * float(b["s"]) > AXIS_THRESHOLD
 
 
@@ -170,14 +227,45 @@ func _save() -> void:
 	var cfg := ConfigFile.new()
 	for guid in _custom:
 		cfg.set_value("pads", guid, _custom[guid])
+	for guid in _rest:
+		if not (_rest[guid] as Dictionary).is_empty():
+			cfg.set_value("rest", guid, _rest[guid])
 	cfg.save(SAVE_PATH)
 
 
 func _load() -> void:
 	var cfg := ConfigFile.new()
-	if cfg.load(SAVE_PATH) != OK or not cfg.has_section("pads"):
+	if cfg.load(SAVE_PATH) != OK:
 		return
-	for guid in cfg.get_section_keys("pads"):
-		var mapping = cfg.get_value("pads", guid)
-		if mapping is Dictionary:
-			_custom[guid] = mapping
+	if cfg.has_section("pads"):
+		for guid in cfg.get_section_keys("pads"):
+			var mapping = cfg.get_value("pads", guid)
+			if mapping is Dictionary:
+				_custom[guid] = mapping
+	if cfg.has_section("rest"):
+		for guid in cfg.get_section_keys("rest"):
+			var rest = cfg.get_value("rest", guid)
+			if rest is Dictionary:
+				_rest[guid] = rest
+
+
+## Lets players fix an unrecognized adapter without touching the game, by
+## dropping the community `gamecontrollerdb.txt` next to the executable.
+func _load_sdl_db() -> void:
+	var paths := SDL_DB_PATHS.duplicate()
+	paths.append(OS.get_executable_path().get_base_dir().path_join("gamecontrollerdb.txt"))
+	for path in paths:
+		if not FileAccess.file_exists(path):
+			continue
+		var f := FileAccess.open(path, FileAccess.READ)
+		if f == null:
+			continue
+		var added := 0
+		while not f.eof_reached():
+			var line := f.get_line().strip_edges()
+			if line.is_empty() or line.begins_with("#"):
+				continue
+			Input.add_joy_mapping(line, true)
+			added += 1
+		print("Controls: loaded %d controller mappings from %s" % [added, path])
+		return

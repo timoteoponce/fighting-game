@@ -13,8 +13,8 @@ var _voices := {}  # "character/line" -> stream
 var _voice_player: Array[AudioStreamPlayer] = []
 
 const VOICE_LINES := ["light", "heavy", "special", "hyper", "hurt", "ko", "win"]
-## Base voice pitch (Hz) per character: Emilia's is higher.
-const VOICE_PITCH := {"ulises": 250.0, "emilia": 330.0}
+## Fallback voice pitch (Hz) when a character doesn't state one.
+const DEFAULT_VOICE_PITCH := 280.0
 ## Vowel formants [F1, F2, F3] in Hz.
 const VOWELS := {
 	"a": [800.0, 1250.0, 2600.0], "e": [500.0, 1800.0, 2600.0], "i": [320.0, 2300.0, 3000.0],
@@ -45,14 +45,15 @@ func _ready() -> void:
 		vp.volume_db = -3.0
 		add_child(vp)
 		_voice_player.append(vp)
-	for id in VOICE_PITCH:
-		for line in VOICE_LINES:
-			var custom := _load_recording(id, line)
-			_voices[id + "/" + line] = custom if custom else _voice(VOICE_PITCH[id], line)
 
 
-## Plays a fighter shout. Each fighter uses its own channel so shouts cut each other off like in the arcade.
-func voice(id: String, line: String, channel := 0) -> void:
+## Plays a fighter shout. Each fighter uses its own channel so shouts cut each
+## other off like in the arcade. Voices are built the first time a character
+## speaks, from the pitch the character itself declares — so a new fighter never
+## needs registering in a table here.
+func voice(id: String, line: String, channel := 0, pitch := 0.0) -> void:
+	if not _voices.has(id + "/" + line):
+		_build_voices(id, pitch if pitch > 0.0 else DEFAULT_VOICE_PITCH)
 	var s = _voices.get(id + "/" + line)
 	if s == null:
 		return
@@ -60,6 +61,12 @@ func voice(id: String, line: String, channel := 0) -> void:
 	p.stream = s
 	p.pitch_scale = randf_range(0.95, 1.06)
 	p.play()
+
+
+func _build_voices(id: String, pitch: float) -> void:
+	for line in VOICE_LINES:
+		var custom := _load_recording(id, line)
+		_voices[id + "/" + line] = custom if custom else _voice(pitch, line)
 
 
 func _load_recording(id: String, line: String) -> AudioStream:

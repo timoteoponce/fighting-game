@@ -572,7 +572,7 @@ func _start_move(m: MoveData) -> void:
 	Sfx.play(m.sfx)
 	var line: String = ["light", "heavy", "special", "hyper"][m.level]
 	if m.level > 0 or randf() < 0.5:
-		Sfx.voice(def.id, line, index)
+		Sfx.voice(def.id, line, index, def.voice_pitch)
 	if m.level == 3:
 		meter -= HYPER_COST
 		fight.on_hyper(self, m)
@@ -643,7 +643,7 @@ func _fire_event(kind: String, data: Dictionary) -> void:
 		"sfx":
 			Sfx.play(String(data.get("name", "whoosh")), float(data.get("pitch", 1.0)))
 		"voice":
-			Sfx.voice(def.id, String(data.get("line", "light")), index)
+			Sfx.voice(def.id, String(data.get("line", "light")), index, def.voice_pitch)
 		"shake":
 			fight.shake = maxf(fight.shake, float(data.get("amount", 2.0)))
 
@@ -668,7 +668,7 @@ func _try_throw() -> bool:
 	o.move = null
 	o.vel = Vector2.ZERO
 	Sfx.play("whoosh", 0.7)
-	Sfx.voice(def.id, "heavy", index)
+	Sfx.voice(def.id, "heavy", index, def.voice_pitch)
 	return true
 
 
@@ -794,12 +794,12 @@ func take_hit(m: MoveData, from_x: float) -> String:
 	launch_window = 0
 	if health == 0:
 		set_state(S.KO, true)
-		Sfx.voice(def.id, "ko", index)
+		Sfx.voice(def.id, "ko", index, def.voice_pitch)
 		vel = Vector2(dir * 4.0, -9.0)
 		position.y -= 1.0
 		return "ko"
 	if combo <= 1 or m.level >= 1 and randf() < 0.5:
-		Sfx.voice(def.id, "hurt", index)
+		Sfx.voice(def.id, "hurt", index, def.voice_pitch)
 	var airborne := not on_ground() or state == S.LAUNCHED
 	if airborne:
 		juggle += 1
