@@ -244,24 +244,25 @@ func _draw() -> void:
 		def.draw_torso(self, s)
 		_draw_head(s)
 		return
+	var b := def.build  # limb thickness: skinny < 1 < chunky
 	def.draw_behind(self, s)
 	_smears(s)
 	# Back arm and leg: darker, they're further away.
-	part(s["sh_b"], s["elb_b"], 8.0, 7.0, dk(c["sleeve"]))
-	part(s["elb_b"], s["hand_b"], 6.5, 5.5, dk(c["forearm"]))
+	part(s["sh_b"], s["elb_b"], 8.0 * b, 7.0 * b, dk(c["sleeve"]))
+	part(s["elb_b"], s["hand_b"], 6.5 * b, 5.5 * b, dk(c["forearm"]))
 	fist(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["elb_b"])
-	part(s["hip_b"], s["knee_b"], 11.0, 8.5, dk(c["pants"]))
-	part(s["knee_b"], s["foot_b"], 8.5, 6.5, dk(c["legs"]))
+	part(s["hip_b"], s["knee_b"], 11.0 * b, 8.5 * b, dk(c["pants"]))
+	part(s["knee_b"], s["foot_b"], 8.5 * b, 6.5 * b, dk(c["legs"]))
 	shoe(s["foot_b"], s["foot_dir_b"], dk(c["shoes"]))
 	torso(s)
 	def.draw_torso(self, s)
-	part(s["hip_f"], s["knee_f"], 11.0, 8.5, c["pants"])
-	part(s["knee_f"], s["foot_f"], 8.5, 6.5, c["legs"])
+	part(s["hip_f"], s["knee_f"], 11.0 * b, 8.5 * b, c["pants"])
+	part(s["knee_f"], s["foot_f"], 8.5 * b, 6.5 * b, c["legs"])
 	shoe(s["foot_f"], s["foot_dir_f"], c["shoes"])
 	def.draw_over_legs(self, s)
 	_draw_head(s)
-	part(s["sh_f"], s["elb_f"], 8.0, 7.0, c["sleeve"])
-	part(s["elb_f"], s["hand_f"], 6.5, 5.5, c["forearm"])
+	part(s["sh_f"], s["elb_f"], 8.0 * b, 7.0 * b, c["sleeve"])
+	part(s["elb_f"], s["hand_f"], 6.5 * b, 5.5 * b, c["forearm"])
 	fist(s["hand_f"], c["hands"], s["hand_f"] - s["elb_f"])
 	def.draw_props(self, s)
 	_draw_emotes(s)
@@ -383,7 +384,7 @@ func _smears(s: Dictionary) -> void:
 func _draw_head(s: Dictionary) -> void:
 	var c := colors
 	var up: Vector2 = s["up"]
-	part(s["neck"] - up * 2.0, s["neck"] + up * NECK, 6.0, 5.5, c["skin"])
+	part(s["neck"] - up * 2.0, s["neck"] + up * NECK, 6.0 * def.build, 5.5 * def.build, c["skin"])
 	draw_set_transform(s["head"], s["head_ang"], Vector2.ONE * hs)
 	def.draw_hair_back(self)
 	poly(head_shape(), c["skin"], 2.0)
@@ -568,7 +569,7 @@ func torso(s: Dictionary) -> void:
 	var hip: Vector2 = s["hip"]
 	var pts := PackedVector2Array()
 	for f in [[0.0, 8.0], [0.45, 6.5], [0.78, 9.5], [1.0, 7.0], [1.0, -9.0], [0.78, -8.5], [0.45, -6.5], [0.0, -8.0]]:
-		pts.append(hip + up * TORSO * f[0] + perp * f[1])
+		pts.append(hip + up * TORSO * f[0] + perp * f[1] * def.build)
 	shaded_poly(pts, colors["shirt"], 2.2, 0.8)
 
 

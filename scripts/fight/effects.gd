@@ -90,7 +90,7 @@ func say(pos: Vector2, text: String, dir := 1, who := -1) -> void:
 	spawn("bubble", at, {"text": text, "dir": dir, "who": who})
 
 
-## Knocks a character's belongings loose: Mateo drops a drumstick, Silvan loses
+## Knocks a character's belongings loose: Charlie drops a tissue, Silvan loses
 ## his pacifier. `item` names a shape from `_draw_gag`; anything unknown falls
 ## back to a spinning star, so a character can never crash the effect layer.
 func gag(pos: Vector2, item: String, dir := 1) -> void:
@@ -315,9 +315,13 @@ func _draw_gag(e: Dictionary) -> void:
 			for sx in [-6.0, 6.0]:
 				top.draw_circle(Vector2(sx, -2.5), 3.0, Color(1, 0.98, 0.9, a), true, -1.0, true)
 				top.draw_circle(Vector2(sx, 2.5), 3.0, Color(1, 0.98, 0.9, a), true, -1.0, true)
-		"drumstick":
-			top.draw_line(Vector2(-8, 3), Vector2(7, -3), Color(0.85, 0.66, 0.4, a), 3.0, true)
-			top.draw_circle(Vector2(8, -3.5), 3.0, Color(0.92, 0.76, 0.5, a), true, -1.0, true)
+		"tissue":
+			# A crumpled, used tissue. Gross, which is the point.
+			var tis := PackedVector2Array([Vector2(-6, -3), Vector2(-2, -7), Vector2(3, -5), Vector2(7, -1),
+				Vector2(4, 5), Vector2(-1, 6), Vector2(-6, 3)])
+			top.draw_colored_polygon(tis, Color(0.98, 0.98, 1.0, a))
+			top.draw_polyline(Stage._closed(tis), ink, 1.2, true)
+			top.draw_line(Vector2(-3, -2), Vector2(2, 1), Color(0.7, 0.75, 0.85, a), 1.0, true)
 		"ball":
 			top.draw_circle(Vector2.ZERO, 6.0, Color(0.95, 0.45, 0.15, a), true, -1.0, true)
 			top.draw_arc(Vector2.ZERO, 6.0, 0, TAU, 16, ink, 1.2, true)

@@ -5,7 +5,7 @@ fighters drawn entirely in code — there is not a single image file in the repo
 
 - **Ulises**: soccer, running, reading and video games. Fast, with a soccer-ball shot and a pixel-beam hyper.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
-- **Mateo**: drums, basketball and dinosaurs. The big one — slow, tough, and the hardest single hits on the roster.
+- **Charlie**: basketball and crying. A skinny kid with a huge bald head and a nasty grin — slow, long reach, and the hardest single hits on the roster.
 - **Silvan**: two years old, still in diapers, and somehow part puppy. Fastest walk and highest jump, weakest hits.
 
 Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Normal / Hard).
@@ -37,12 +37,12 @@ cd UlisesVsEmilia
 
 ### Special moves: press L and H together
 
-| Input | Ulises | Emilia | Mateo | Silvan |
+| Input | Ulises | Emilia | Charlie | Silvan |
 |---|---|---|---|---|
-| L + H | Power Shot (soccer ball) | Wand Spark | Bass Drop | Bark Blast |
-| Forward + L + H | Sprint Dash | Cartwheel Rush | Shoulder Charge | Puppy Dash |
+| L + H | Power Shot (soccer ball) | Wand Spark | Chest Pass | Bark Blast |
+| Forward + L + H | Sprint Dash | Cartwheel Rush | Fast Break | Puppy Dash |
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
-| Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | DRUM SOLO FINISH | MOON HOWL |
+| Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | CRYBABY FLOOD | MOON HOWL |
 
 **Throw:** L + H while *touching* a grounded opponent grabs them instead of
 firing the projectile. The victim can break it by pressing L + H back within

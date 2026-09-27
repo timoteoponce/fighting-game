@@ -1,7 +1,7 @@
 class_name Projectile
 extends Node2D
 ## Projectiles and hyper attacks: soccer ball, wand spark, and one hyper look per
-## character — pixel beam (Ulises), doodle dragon (Emilia), drum wave (Mateo),
+## character — pixel beam (Ulises), doodle dragon (Emilia), tear flood (Charlie),
 ## spirit wolf (Silvan). `kind` only changes the drawing; the hitbox is `size`.
 
 var owner_f: Fighter
@@ -101,12 +101,10 @@ func register_hit() -> void:
 ## Additive glow behind the projectile.
 func _draw_halo(h: Node2D) -> void:
 	var col: Color = {"ball": Color(1, 0.8, 0.4), "spark": Color(1, 0.4, 0.85), "beam": Color(0.5, 0.8, 1.0),
-		"dragon": Color(1, 0.5, 0.9), "drum": Color(1, 0.6, 0.2), "wolf": Color(0.55, 0.75, 1.0)}.get(kind, Color.WHITE)
+		"dragon": Color(1, 0.5, 0.9), "tears": Color(0.4, 0.7, 1.0), "bball": Color(1, 0.55, 0.2), "wolf": Color(0.55, 0.75, 1.0)}.get(kind, Color.WHITE)
 	var pulse := 1.0 + 0.15 * sin(t * 0.5)
-	if kind == "drum":
-		var beat := 1.0 - fmod(t, 8.0) / 8.0
-		h.draw_circle(Vector2.ZERO, 60.0 + 20.0 * beat, Color(col, 0.3), true, -1.0, true)
-		h.draw_rect(Rect2(0, -size.y * 0.5, size.x * minf(1.0, t / 6.0), size.y), Color(col, 0.1))
+	if kind == "tears":
+		h.draw_rect(Rect2(0, -size.y * 0.5, size.x * minf(1.0, t / 6.0), size.y), Color(col, 0.12))
 		return
 	if kind == "wolf":
 		h.draw_circle(Vector2(_wolf_x(), 0), 60.0 * pulse, Color(col, 0.28), true, -1.0, true)
@@ -135,8 +133,12 @@ func _draw() -> void:
 			_draw_beam()
 		"dragon":
 			_draw_dragon()
-		"drum":
-			_draw_drum()
+		"tears":
+			_draw_tears()
+		"bball":
+			for i in 4:
+				draw_circle(Vector2(-11.0 - i * 7.0, sin(t * 0.4 + i) * 2.0), 7.0 - i * 1.5, Color(1, 0.8, 0.6, 0.3 - i * 0.06))
+			CharlieDef._basketball(self, Vector2(0, absf(sin(t * 0.25)) * -6.0), 10.0, t * 0.3)
 		"wolf":
 			_draw_wolf()
 
@@ -243,43 +245,52 @@ func _draw_dragon() -> void:
 		draw_line(Vector2(-60.0 - i * 8.0, y + sin(t * 0.4 + i) * 3.0), Vector2(-90.0 - i * 8.0, y), Color(0.3, 0.3, 0.4, 0.5), 1.5, true)
 
 
-## Mateo: DRUM SOLO FINISH. A giant bass drum booms on every beat and throws
-## rings of sound down the hitbox, with music notes riding the waves.
-func _draw_drum() -> void:
+## Charlie: CRYBABY FLOOD. He bawls so hard the tears become a tidal wave that
+## rolls over the hitbox, basketballs bobbing in the surf.
+func _draw_tears() -> void:
 	var out := FighterRenderer.OUT
 	var w := size.x * minf(1.0, t / 6.0)
 	var h := size.y
 	var fade := 1.0 if life > 10 else life / 10.0
-	var beat := 1.0 - fmod(t, 8.0) / 8.0  # 1 on the beat, decaying to 0
-	# Sound rings, a new one launched each beat, thinning as they travel.
-	for i in 7:
-		var d := fmod(t * 7.0 + i * 46.0, maxf(w, 1.0))
-		if d < 30.0:
-			continue
-		var span := asin(minf(1.0, h * 0.5 / d))
-		var k := d / size.x
-		var col := Color(1.0, lerpf(0.55, 0.95, k), lerpf(0.15, 0.5, k), (1.0 - k) * fade)
-		draw_arc(Vector2.ZERO, d, -span, span, 20, out, 9.0 * (1.0 - k) + 4.0, true)
-		draw_arc(Vector2.ZERO, d, -span, span, 20, col, 7.0 * (1.0 - k) + 2.0, true)
-	# Notes bobbing along the waves.
-	for i in 6:
-		var nx := fmod(t * 5.0 + i * 52.0, maxf(w, 1.0))
-		var p := Vector2(nx, sin(t * 0.3 + i * 1.7) * h * 0.32)
-		var col := Color.from_hsv(fmod(i * 0.17 + t * 0.01, 1.0), 0.6, 1.0, fade)
-		draw_line(p + Vector2(3.5, 0), p + Vector2(3.5, -13), out, 3.5, true)
-		draw_circle(p, 5.0, out, true, -1.0, true)
-		draw_circle(p, 3.6, col, true, -1.0, true)
-		draw_line(p + Vector2(3.5, -13), p + Vector2(10, -9), out, 3.0, true)
-	# The drum itself, facing the opponent, swelling on the beat.
-	var r := 30.0 + 7.0 * beat
-	var shell := PackedVector2Array([Vector2(-18, -r), Vector2(0, -r), Vector2(0, r), Vector2(-18, r)])
-	draw_colored_polygon(shell, Color(0.85, 0.2, 0.15, fade))
-	draw_polyline(Stage._closed(shell), out, 2.5, true)
-	for zx in [-15.0, -9.0, -3.0]:
-		draw_line(Vector2(zx, -r + 4), Vector2(zx + 3, r - 4), Color(1, 0.85, 0.3, fade), 1.5, true)
-	draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2.ZERO, r * 0.32, r, 0.0, 20), Color(1, 0.97, 0.88, fade))
-	draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(Vector2.ZERO, r * 0.32, r, 0.0, 20)), out, 3.0, true)
-	draw_colored_polygon(FighterRenderer.star_pts(Vector2(0, 0), r * 0.25, r * 0.11, 5, -PI / 2), Color(1, 0.55, 0.1, fade))
+	var rise := minf(1.0, t / 10.0) * fade
+	var bottom := h * 0.5
+	var surface := bottom - h * 0.85 * rise
+	# Wave body: a wobbly surface curling higher at the leading edge.
+	var top := PackedVector2Array()
+	var steps := 24
+	for i in steps + 1:
+		var x := w * i / float(steps)
+		var curl := 18.0 * rise * smoothstep(0.6, 1.0, x / maxf(w, 1.0))
+		# Near Charlie the water gushes up from the floor rather than starting
+		# as a wall.
+		var ramp := smoothstep(0.0, 50.0, x)
+		top.append(Vector2(x, lerpf(bottom, surface - curl + sin(x * 0.06 - t * 0.4) * 5.0, ramp)))
+	var body := top.duplicate()
+	body.append(Vector2(w, bottom))
+	body.append(Vector2(0, bottom))
+	draw_colored_polygon(FighterRenderer.safe(body), Color(0.35, 0.62, 1.0, 0.85 * fade))
+	# Lighter band just under the surface, then the ink line and foam on top.
+	var band := PackedVector2Array()
+	for q in top:
+		band.append(q)
+	for i in range(top.size() - 1, -1, -1):
+		band.append(top[i] + Vector2(0, 10.0))
+	draw_colored_polygon(FighterRenderer.safe(band), Color(0.6, 0.85, 1.0, 0.9 * fade))
+	draw_polyline(top, out, 2.5, true)
+	for i in range(0, top.size(), 3):
+		draw_circle(top[i] + Vector2(0, -1.5), 3.0 + fmod(i * 1.7 + t * 0.3, 2.0), Color(1, 1, 1, 0.9 * fade), true, -1.0, true)
+	# Big cartoon teardrops splashing up off the crest.
+	for i in 5:
+		var k := fmod(t * 0.05 + i * 0.2, 1.0)
+		var x0 := w * (0.2 + i * 0.16)
+		var p := Vector2(x0 + k * 20.0, surface - 20.0 - sin(k * PI) * 34.0)
+		var drop := PackedVector2Array([p + Vector2(0, -7), p + Vector2(4.5, 1), p + Vector2(0, 5), p + Vector2(-4.5, 1)])
+		draw_colored_polygon(drop, Color(0.6, 0.85, 1.0, fade))
+		draw_polyline(Stage._closed(drop), out, 1.4, true)
+	# Basketballs bobbing in the surf.
+	for i in 2:
+		var bx := w * (0.35 + i * 0.35)
+		CharlieDef._basketball(self, Vector2(bx, surface + 6.0 + sin(t * 0.3 + i * 2.0) * 4.0), 9.0, t * 0.15 + i)
 
 
 ## Where Silvan's spirit wolf's head is: it races the length of the hitbox in

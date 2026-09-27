@@ -19,6 +19,8 @@ var size := 1.0  # body scale; hitboxes are scaled to match by scale_moves()
 ## Head size relative to the body. Purely visual (hitboxes ignore it), and the
 ## cheapest way to give a fighter a silhouette: big head = chibi cartoon.
 var head_scale := 1.45
+## Limb and torso thickness, also purely visual: 0.7 is a beanpole, 1.3 is stocky.
+var build := 1.0
 var display := ""
 var likes := ""
 var colors := {}
@@ -39,7 +41,7 @@ var win_prop := ""
 var intro_prop := ""
 var win_quote := ""
 ## Things that get knocked loose when this fighter eats a big hit. Names come
-## from `Effects._draw_gag` ("pacifier", "bone", "drumstick", "ball", "pencil",
+## from `Effects._draw_gag` ("pacifier", "bone", "tissue", "ball", "pencil",
 ## "tooth", "note"); anything else becomes a spinning star.
 var gag_items: Array = ["star"]
 ## Short shouty lines that appear in a speech bubble. Keep them under ~14
