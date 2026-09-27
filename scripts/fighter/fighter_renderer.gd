@@ -66,6 +66,35 @@ var pose_vel := {}  # joint spring velocities
 ## Limbs moving faster than this (pixels per frame) leave a smear behind them.
 const SMEAR_MIN := 7.0
 
+## Squash and stretch — the oldest trick in animation and the single biggest
+## thing separating a cartoon from a puppet. Positive `squash` flattens the
+## fighter wide (landing, taking a hit), negative stretches them tall (jumping,
+## lunging). Volume is roughly conserved: what we lose in height we gain in
+## width, so the character never looks like it simply changed size.
+var squash := 0.0
+var squash_vel := 0.0
+## How hard the effect hits. 0 would be the old rigid look.
+const SQUASH_MAX := 0.42
+## Emotes floating over the head: "sweat", "vein", "shock", "hearts", "note",
+## "stars" (dizzy), "zzz". Each is [kind, frames left, total frames].
+var emotes: Array = []
+## Frames left of a bugged-out eye-pop, set on big hits.
+var eye_pop := 0
+
+
+## Kicks the squash spring. `amount` is positive to flatten, negative to stretch.
+func squish(amount: float) -> void:
+	squash_vel += amount
+
+
+## Floats a little cartoon symbol over the head for `frames`.
+func emote(kind: String, frames := 40) -> void:
+	for e in emotes:
+		if e[0] == kind:
+			e[1] = maxi(e[1], frames)
+			return
+	emotes.append([kind, frames, frames])
+
 ## Per-joint spring response: legs snap, torso follows, arms and head trail
 ## behind with a little overshoot. That lag is what stops the puppet look.
 const JOINT_RESPONSE := {
@@ -92,13 +121,31 @@ func update_pose(target: Dictionary, speed: float) -> void:
 		var v := float(pose_vel.get(k, 0.0)) * 0.62 + (float(target[k]) - float(pose[k])) * stiff
 		pose_vel[k] = v
 		pose[k] = float(pose[k]) + v
-	scale = Vector2(base_scale * facing, base_scale)
+	_step_squash()
+	# Volume-conserving scale: squash wide and short, stretch tall and thin.
+	var sq := clampf(squash, -SQUASH_MAX, SQUASH_MAX)
+	scale = Vector2(base_scale * facing * (1.0 + sq), base_scale * (1.0 - sq))
 	modulate = Color(2.2, 2.2, 2.2) if flash > 0 else Color.WHITE
+	if eye_pop > 0:
+		eye_pop -= 1
+	for e in emotes:
+		e[1] -= 1
+	emotes = emotes.filter(func(e: Array) -> bool: return e[1] > 0)
 	prev_sk = sk
 	sk = skeleton()
 	if is_inside_tree() and def != null:
 		def.update_chains(self, sk)
 	queue_redraw()
+
+
+## A springy return to neutral, so a squash always bounces back through a small
+## stretch instead of snapping. That overshoot is what reads as "rubbery".
+func _step_squash() -> void:
+	squash_vel = squash_vel * 0.72 - squash * 0.28
+	squash = clampf(squash + squash_vel, -SQUASH_MAX, SQUASH_MAX)
+	if absf(squash) < 0.002 and absf(squash_vel) < 0.002:
+		squash = 0.0
+		squash_vel = 0.0
 
 
 ## Copies another renderer's current look (used for afterimages).
@@ -112,6 +159,8 @@ func copy_from(src: FighterRenderer) -> void:
 	prop = src.prop
 	prop_t = src.prop_t
 	t = src.t
+	squash = src.squash
+	eye_pop = src.eye_pop
 	chains = src.chains.duplicate(true)
 	scale = src.scale
 	global_position = src.global_position
@@ -208,6 +257,101 @@ func _draw() -> void:
 	part(s["elb_f"], s["hand_f"], 6.5, 5.5, c["forearm"])
 	fist(s["hand_f"], c["hands"], s["hand_f"] - s["elb_f"])
 	def.draw_props(self, s)
+	_draw_emotes(s)
+
+
+## Cartoon symbols floating over the head. This is the vocabulary every kid
+## already reads without being taught: a sweat drop means "uh oh", a vein means
+## "furious", stars mean "seeing stars". They do more characterisation per pixel
+## than anything else we can draw at this size.
+func _draw_emotes(s: Dictionary) -> void:
+	if emotes.is_empty():
+		return
+	var head: Vector2 = s["head"]
+	for i in emotes.size():
+		var e: Array = emotes[i]
+		var kind: String = e[0]
+		var left := float(e[1])
+		var total := float(e[2])
+		var k := 1.0 - left / total
+		# Pop in fast, fade out over the last third.
+		var a := minf(1.0, left / (total * 0.34))
+		var grow := minf(1.0, (total - left) / 4.0)
+		# Stack multiple emotes so they never sit on top of each other.
+		var anchor := head + Vector2(6.0 + i * 13.0, -22.0)
+		match kind:
+			"sweat":
+				# A big bead of sweat sliding down beside the temple.
+				var p := anchor + Vector2(-16.0, -2.0 + 9.0 * k)
+				var drop := PackedVector2Array([
+					p + Vector2(0, -6.5), p + Vector2(3.4, 1.0), p + Vector2(2.4, 4.4),
+					p + Vector2(0, 5.2), p + Vector2(-2.4, 4.4), p + Vector2(-3.4, 1.0),
+				])
+				draw_colored_polygon(drop, Color(0.55, 0.85, 1.0, 0.92 * a))
+				draw_polyline(Stage._closed(drop), Color(0.15, 0.45, 0.75, a), 1.1, true)
+				draw_circle(p + Vector2(-1.0, 0.6), 1.0, Color(1, 1, 1, 0.85 * a), true, -1.0, true)
+			"vein":
+				# The four-lobed anger cross. Throbs on a fast pulse.
+				var p := anchor + Vector2(0, -2.0)
+				var pulse := 1.0 + 0.22 * sin(left * 0.55)
+				var col := Color(0.95, 0.2, 0.25, a)
+				for arm in 4:
+					var ang := TAU * arm / 4.0 + 0.78
+					var d := Vector2.from_angle(ang)
+					var n := Vector2(-d.y, d.x)
+					var r := 6.4 * grow * pulse
+					draw_colored_polygon(PackedVector2Array([
+						p + n * 1.9 * grow, p + d * r, p - n * 1.9 * grow,
+					]), col)
+				draw_circle(p, 2.1 * grow * pulse, col, true, -1.0, true)
+			"shock":
+				# Exclamation burst: something just went very wrong.
+				var p := anchor + Vector2(0, -4.0 - 3.0 * grow)
+				draw_colored_polygon(star_pts(p, 11.0 * grow, 5.0 * grow, 9, left * 0.05), Color(1, 0.92, 0.3, 0.85 * a))
+				draw_colored_polygon(PackedVector2Array([
+					p + Vector2(-1.7, -6.0), p + Vector2(1.7, -6.0), p + Vector2(1.1, 1.4), p + Vector2(-1.1, 1.4),
+				]), Color(0.15, 0.08, 0.12, a))
+				draw_circle(p + Vector2(0, 3.8), 1.5, Color(0.15, 0.08, 0.12, a), true, -1.0, true)
+			"hearts":
+				for h in 3:
+					var ph := left * 0.09 + h * 2.1
+					var p := anchor + Vector2(-8.0 + h * 7.0 + sin(ph) * 3.0, -2.0 - fposmod(ph * 2.4, 16.0))
+					var r := (3.4 - h * 0.5) * grow
+					var col := Color(1.0, 0.35, 0.55, a * 0.9)
+					draw_circle(p + Vector2(-r * 0.5, -r * 0.35), r * 0.62, col, true, -1.0, true)
+					draw_circle(p + Vector2(r * 0.5, -r * 0.35), r * 0.62, col, true, -1.0, true)
+					draw_colored_polygon(PackedVector2Array([
+						p + Vector2(-r, -r * 0.2), p + Vector2(r, -r * 0.2), p + Vector2(0, r * 1.25),
+					]), col)
+			"note":
+				for n in 2:
+					var ph := left * 0.07 + n * 2.6
+					var p := anchor + Vector2(-6.0 + n * 9.0 + sin(ph) * 4.0, -fposmod(ph * 2.2, 18.0))
+					var col := Color(0.15, 0.08, 0.12, a)
+					draw_line(p + Vector2(3.0, -7.0), p + Vector2(3.0, 1.0), col, 1.4, true)
+					draw_colored_polygon(ellipse_pts(p, 3.0, 2.2, -0.4), col)
+					draw_colored_polygon(PackedVector2Array([
+						p + Vector2(3.0, -7.0), p + Vector2(7.0, -5.6), p + Vector2(7.0, -3.4), p + Vector2(3.0, -5.0),
+					]), col)
+			"stars":
+				# Seeing stars: the dizzy halo. Drawn in the head's own space so
+				# it orbits the skull rather than the world.
+				for si in 5:
+					var ang := left * 0.14 + TAU * si / 5.0
+					var p := head + Vector2(cos(ang) * 17.0, -20.0 + sin(ang) * 5.0)
+					var r := 4.6 + 1.6 * sin(ang)
+					var col := Color(1.0, 0.88, 0.3, a * (0.55 + 0.45 * (sin(ang) * 0.5 + 0.5)))
+					draw_colored_polygon(star_pts(p, r, r * 0.42, 5, ang), col)
+					draw_polyline(Stage._closed(star_pts(p, r, r * 0.42, 5, ang)), Color(0.5, 0.3, 0.05, a * 0.7), 0.9, true)
+			"zzz":
+				for z in 3:
+					var ph := left * 0.05 + z * 1.4
+					var p := anchor + Vector2(z * 6.0, -fposmod(ph * 3.0, 20.0))
+					var r := (5.0 - z) * grow
+					var col := Color(0.8, 0.9, 1.0, a * 0.9)
+					draw_polyline(PackedVector2Array([
+						p + Vector2(-r, -r), p + Vector2(r, -r), p + Vector2(-r, r), p + Vector2(r, r),
+					]), col, 1.3, true)
 
 
 ## Motion smear: a translucent streak from where a fast limb was last frame to
@@ -450,10 +594,13 @@ func chain_local(name: String) -> PackedVector2Array:
 func face(iris: Color, girl := false) -> void:
 	var eyes := [Vector2(4.8, 0.9), Vector2(10.7, 0.6)]
 	var blink := int(t) % 190 < 6 and expr == "normal"
+	# A big hit bugs the eyes right out of the skull for a few frames. Nothing
+	# says "cartoon" faster, and it costs one multiplier.
+	var pop := 1.0 + 1.15 * (float(eye_pop) / 9.0)
 	for i in 2:
 		var e: Vector2 = eyes[i]
-		var rx := (3.2 if girl else 2.8) * (0.62 if i == 1 else 1.0)
-		var ry := 4.6 if girl else 3.7
+		var rx := (3.2 if girl else 2.8) * (0.62 if i == 1 else 1.0) * pop
+		var ry := (4.6 if girl else 3.7) * pop
 		if expr == "attack":
 			ry *= 0.78
 		match expr:
@@ -462,6 +609,27 @@ func face(iris: Color, girl := false) -> void:
 				draw_polyline(PackedVector2Array([e + Vector2(-2.0 * sgn, -2.0), e + Vector2(1.5 * sgn, 0), e + Vector2(-2.0 * sgn, 2.0)]), OUT, 1.4, true)
 			"happy":
 				draw_arc(e + Vector2(0, 1.2), 2.2, PI, TAU, 8, OUT, 1.5, true)
+			"ko":
+				# Classic knocked-out X eyes.
+				var r := 3.0
+				draw_line(e + Vector2(-r, -r), e + Vector2(r, r), OUT, 1.7, true)
+				draw_line(e + Vector2(r, -r), e + Vector2(-r, r), OUT, 1.7, true)
+			"dizzy":
+				# Spiral eyes, drawn as a tightening arc.
+				var pts := PackedVector2Array()
+				for st in 17:
+					var a := t * 0.12 + st * 0.62
+					pts.append(e + Vector2.from_angle(a) * (0.4 + st * 0.22))
+				draw_polyline(pts, OUT, 1.2, true)
+			"shock":
+				# Tiny pinprick pupils in a huge white eye: pure panic.
+				draw_colored_polygon(ellipse_pts(e, rx * 1.25, ry * 1.25), Color(1, 0.99, 0.97))
+				draw_polyline(Stage._closed(ellipse_pts(e, rx * 1.25, ry * 1.25)), OUT, 1.2, true)
+				draw_circle(e + Vector2(0.4, 0.3), maxf(0.9, rx * 0.26), OUT, true, -1.0, true)
+			"smug":
+				# One raised lid, a flat confident line.
+				draw_line(e + Vector2(-rx, 0.4), e + Vector2(rx, -0.9), OUT, 1.6, true)
+				draw_circle(e + Vector2(0.3, 1.5), rx * 0.42, OUT, true, -1.0, true)
 			_:
 				if blink:
 					draw_line(e + Vector2(-rx, 0.5), e + Vector2(rx, 0.5), OUT, 1.3, true)
@@ -480,12 +648,20 @@ func face(iris: Color, girl := false) -> void:
 		# Eyebrows.
 		var b0 := e + Vector2(-2.4, -ry - 2.2)
 		var b1 := e + Vector2(2.4, -ry - 2.0)
-		if expr == "attack":
-			b0.y -= 1.0
-			b1.y += 1.0
-		elif expr == "hurt":
-			b0.y += 1.0
-			b1.y -= 1.0
+		match expr:
+			"attack":
+				b0.y -= 1.0
+				b1.y += 1.0
+			"hurt", "shock":
+				b0.y += 1.0
+				b1.y -= 1.0
+			"smug":
+				# One brow way up, one flat: the "oh really?" face.
+				b0.y -= 2.2 if i == 0 else 0.0
+				b1.y -= 3.0 if i == 0 else 0.0
+			"ko", "dizzy":
+				b0.y -= 1.4
+				b1.y -= 1.4
 		draw_line(b0, b1, OUT, 1.0 if girl else 1.6, true)
 	draw_line(Vector2(12.2, 2.8), Vector2(11.4, 4.3), shade(colors["skin"]), 1.0, true)
 	if girl:
@@ -498,5 +674,17 @@ func face(iris: Color, girl := false) -> void:
 			poly(ellipse_pts(m + Vector2(0, 0.3), 1.3, 1.7, 0.0, 10), Color(0.45, 0.1, 0.15), 1.0)
 		"happy":
 			draw_colored_polygon(PackedVector2Array([m + Vector2(-2.2, -0.8), m + Vector2(2.2, -1.0), m + Vector2(0.8, 1.6), m + Vector2(-1.0, 1.4)]), Color(0.55, 0.12, 0.18))
+		"ko", "shock":
+			# Jaw on the floor: a big round wail of a mouth.
+			poly(ellipse_pts(m + Vector2(0, 1.2), 2.6, 3.4, 0.0, 12), Color(0.45, 0.1, 0.15), 1.2)
+			draw_colored_polygon(ellipse_pts(m + Vector2(0.2, 3.0), 1.7, 1.2, 0.0, 10), Color(1.0, 0.45, 0.55))
+		"dizzy":
+			# Wobbly line: not quite conscious.
+			var w := PackedVector2Array()
+			for wi in 5:
+				w.append(m + Vector2(-2.4 + wi * 1.2, 0.6 + (1.0 if wi % 2 == 0 else -1.0) * 0.8))
+			draw_polyline(w, Color(0.5, 0.12, 0.18), 1.3, true)
+		"smug":
+			draw_arc(m + Vector2(0.4, -1.0), 2.6, 0.25, 1.5, 8, Color(0.5, 0.12, 0.18), 1.4, true)
 		_:
 			draw_line(m + Vector2(-1.5, 0), m + Vector2(1.5, -0.2), OUT, 1.0, true)

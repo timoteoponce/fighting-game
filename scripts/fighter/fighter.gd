@@ -303,6 +303,9 @@ func _jump(h: int) -> void:
 	air_jumps = 1
 	air_dashes = 1
 	air_dash_timer = 0
+	# Crouch-then-spring: a hard stretch on the way up is half of what sells a
+	# cartoon jump. The other half is the squash on landing.
+	renderer.squish(-0.30)
 	# Spend the press, or holding Up would immediately burn the double jump.
 	buf.consume(Controls.UP)
 	set_state(S.JUMP, true)
@@ -425,12 +428,16 @@ func _air_physics() -> bool:
 
 
 func _land() -> void:
+	# The faster you were falling, the harder you splat. Capped so a light hop
+	# stays subtle and a super-jump landing really thumps.
+	var impact := clampf(vel.y / 14.0, 0.12, 1.0)
 	vel = Vector2.ZERO
 	land_timer = 6
 	air_jumps = 0
 	air_dashes = 0
 	Sfx.play("land")
 	fight.effects.spawn("dust", position)
+	renderer.squish(0.34 * impact)
 	_to_neutral()
 
 
@@ -454,6 +461,9 @@ func _launched_step() -> void:
 		fight.effects.spawn("dust", position)
 		fight.effects.spawn("ring", position)
 		fight.shake = maxf(fight.shake, 3.0)
+		# Full pancake, then see stars. This is the pratfall.
+		renderer.squish(0.40)
+		renderer.emote("stars", 46)
 
 
 func _knockdown_step() -> void:
@@ -781,6 +791,10 @@ func take_hit(m: MoveData, from_x: float) -> String:
 		var chip := int(m.damage * m.chip)
 		health = maxi(1, health - chip)  # chip damage never KOs
 		meter = minf(MAX_METER, meter + 2.0)
+		renderer.squish(0.07 + 0.03 * m.level)
+		# Blocking a special is a close shave, and the fighter knows it.
+		if m.level >= 2:
+			renderer.emote("sweat", 34)
 		return "block"
 	combo = combo + 1 if state in [S.HITSTUN, S.LAUNCHED] else 1
 	var scale := maxf(0.5 if m.level == 3 else 0.3, 1.0 - 0.1 * (combo - 1))
@@ -792,6 +806,13 @@ func take_hit(m: MoveData, from_x: float) -> String:
 	crouching = false
 	move = null
 	launch_window = 0
+	# Cartoon impact: the body concertinas and the eyes bug out, scaled to how
+	# hard the hit was. A jab barely ripples; a hyper nearly folds you in half.
+	renderer.squish(0.13 + 0.10 * m.level)
+	if m.level >= 1:
+		renderer.eye_pop = 6 + m.level * 2
+	if m.level >= 2:
+		renderer.emote("shock", 26)
 	if health == 0:
 		set_state(S.KO, true)
 		Sfx.voice(def.id, "ko", index, def.voice_pitch)
@@ -833,15 +854,7 @@ func _update_visual() -> void:
 	renderer.position = Vector2(randf_range(-1.6, 1.6), randf_range(-1.2, 1.2)) if shook > 0 else Vector2.ZERO
 	var tgt := _pose_target()
 	renderer.update_pose(tgt[0], tgt[1])
-	match state:
-		S.HITSTUN, S.LAUNCHED, S.KNOCKDOWN, S.KO:
-			renderer.expr = "hurt"
-		S.ATTACK, S.BLOCK:
-			renderer.expr = "attack"
-		S.WIN:
-			renderer.expr = "happy"
-		_:
-			renderer.expr = "normal"
+	renderer.expr = _expression()
 	match state:
 		S.ATTACK:
 			renderer.prop = move.prop
@@ -854,6 +867,33 @@ func _update_visual() -> void:
 			renderer.prop = ""
 	_update_ghosts()
 	queue_redraw()
+
+
+## Which cartoon face to wear. Ordered most-specific first: being knocked out
+## beats being dizzy, which beats simply being hit.
+func _expression() -> String:
+	match state:
+		S.KO:
+			return "ko"
+		S.KNOCKDOWN, S.GETUP:
+			return "dizzy"
+		S.HITSTUN, S.LAUNCHED, S.THROWN:
+			return "hurt"
+		S.WIN:
+			return "happy"
+		S.BLOCK:
+			return "shock" if stun > 0 and opponent != null and opponent.combo >= 2 else "attack"
+		S.ATTACK:
+			# Landing a big combo earns the smug face. Kids love the smug face.
+			if opponent != null and opponent.combo >= 4:
+				return "smug"
+			return "attack"
+		S.DASH, S.BACKDASH, S.THROW:
+			return "attack"
+	# On the ropes: below a quarter health you sweat it out.
+	if health <= MAX_HEALTH / 4:
+		return "shock" if int(buf.frame / 22) % 4 == 0 else "normal"
+	return "normal"
 
 
 func _update_ghosts() -> void:

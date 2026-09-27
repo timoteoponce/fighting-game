@@ -35,6 +35,14 @@ var poses := {}
 var win_prop := ""
 var intro_prop := ""
 var win_quote := ""
+## Things that get knocked loose when this fighter eats a big hit. Names come
+## from `Effects._draw_gag` ("pacifier", "bone", "drumstick", "ball", "pencil",
+## "tooth", "note"); anything else becomes a spinning star.
+var gag_items: Array = ["star"]
+## Short shouty lines that appear in a speech bubble. Keep them under ~14
+## characters or the bubble grows wider than the fighter.
+var taunt_lines: Array = ["HA!"]
+var hurt_lines: Array = ["OW!"]
 var specials_text := []  # [[input, name], ...] for menus
 var _throw: MoveData
 

@@ -8,6 +8,9 @@ func _init() -> void:
 	display = "ULISES"
 	likes = "Soccer, running, reading, video games"
 	win_quote = "Game over! Now, where was I in my book?"
+	gag_items = ["ball", "tooth", "star"]
+	taunt_lines = ["TOO SLOW!", "GOOOAL!", "NICE TRY!"]
+	hurt_lines = ["OOF!", "MY BALL!", "HEY!"]
 	colors = {
 		"skin": Color("f2c29b"), "hair": Color("2b1a12"), "shirt": Color("2f6fe0"), "sleeve": Color("2f6fe0"),
 		"forearm": Color("f2c29b"), "hands": Color("f2c29b"), "pants": Color("f2c29b"), "shorts": Color("f4f4f4"),

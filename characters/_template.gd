@@ -27,6 +27,10 @@ func _init() -> void:
 	display = "TEMPLATE"  # shown on the select screen and the HUD
 	likes = "Being copied into a real character"  # a line of flavour, kid-facing
 	win_quote = "Now go make me into someone!"  # shown on the victory screen
+	# Stuff that flies off when you get clobbered, and lines for speech bubbles.
+	gag_items = ["star", "tooth"]
+	taunt_lines = ["HA HA!"]
+	hurt_lines = ["OUCH!"]
 	roster_order = 999  # lower numbers come first on the select screen
 
 	# --- Colours ----------------------------------------------------------

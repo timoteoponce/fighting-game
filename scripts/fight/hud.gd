@@ -82,7 +82,7 @@ func _process(_delta: float) -> void:
 			cutin_portrait.setup(owner.def, owner.index == 1 and fight.fighters[0].def.id == fight.fighters[1].def.id)
 		var left := owner.index == 0
 		cutin_portrait.facing = 1 if left else -1
-		var k := minf(1.0, (45 - fight.freeze) / 8.0)
+		var k := minf(1.0, (Fight.HYPER_FREEZE - fight.freeze) / 8.0)
 		cutin_portrait.position = Vector2(lerpf(-120.0, 150.0, k) if left else lerpf(760.0, 490.0, k), 330)
 		cutin_portrait.expr = "attack"
 		cutin_portrait.t = frame
@@ -252,7 +252,7 @@ func _banner(o: Node2D) -> void:
 func _draw_cutin_bg() -> void:
 	if fight.freeze <= 0 or fight.freeze_owner == null:
 		return
-	var k := minf(1.0, (45 - fight.freeze) / 6.0)
+	var k := minf(1.0, (Fight.HYPER_FREEZE - fight.freeze) / 6.0)
 	var left := fight.freeze_owner.index == 0
 	var col := fight.cutin_color
 	var x_end := 640.0 * k
@@ -265,7 +265,7 @@ func _draw_cutin_bg() -> void:
 
 
 func _cutin_text(o: Node2D) -> void:
-	var k := minf(1.0, (45 - fight.freeze) / 8.0)
+	var k := minf(1.0, (Fight.HYPER_FREEZE - fight.freeze) / 8.0)
 	var left := fight.freeze_owner.index == 0
 	var band_top := [Vector2(0, 150), Vector2(640 * minf(1.0, k * 1.3), 120)]
 	o.draw_line(band_top[0] if left else Vector2(640, 150), Vector2(640, 120) if left else Vector2(0, 120), Color(1, 1, 1, 0.9), 3.0)

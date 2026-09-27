@@ -8,6 +8,9 @@ func _init() -> void:
 	display = "EMILIA"
 	likes = "Wizard stories, anime, drawing, aerobics"
 	win_quote = "That's going in my sketchbook!"
+	gag_items = ["pencil", "star", "note"]
+	taunt_lines = ["ABRACADABRA!", "SPARKLE!", "DRAW THIS!"]
+	hurt_lines = ["EEK!", "MY PENCIL!", "RUDE!"]
 	colors = {
 		"skin": Color("f5cfb0"), "hair": Color("2e1a2a"), "shirt": Color("7b3fd1"), "sleeve": Color("7b3fd1"),
 		"forearm": Color("7b3fd1"), "hands": Color("f5cfb0"), "pants": Color("2d2340"), "legs": Color("2d2340"),

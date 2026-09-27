@@ -10,6 +10,9 @@ func _init() -> void:
 	display = "MATEO"
 	likes = "Drums, basketball, dinosaurs, pancakes"
 	win_quote = "Big drum, bigger finish!"
+	gag_items = ["drumstick", "note", "tooth"]
+	taunt_lines = ["BOOM BOOM!", "RAWR!", "DRUM SOLO!"]
+	hurt_lines = ["OW!", "NOT THE DRUM!", "WAAH!"]
 	roster_order = 2
 	colors = {
 		"skin": Color("c98a5e"), "hair": Color("1c1410"), "shirt": Color("ff8a2b"),

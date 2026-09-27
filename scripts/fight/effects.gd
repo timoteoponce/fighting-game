@@ -3,8 +3,14 @@ extends Node2D
 ## Short-lived visual effects. Sparks draw on an additive "glow" layer so
 ## overlapping light adds up to white-hot, MvC style. Comic words go on top.
 
-const LIFE := {"hit": 12, "heavy": 18, "super": 22, "block": 12, "dust": 20, "text": 36, "sparkle": 24, "slash": 9, "ring": 18}
-const WORDS := ["POW!", "WHAM!", "BAM!", "BOOM!", "ZAP!", "KAPOW!"]
+const LIFE := {"hit": 12, "heavy": 18, "super": 22, "block": 12, "dust": 20, "text": 36, "sparkle": 24, "slash": 9, "ring": 18, "gag": 70, "bubble": 54}
+## Impact words, graded by how hard the hit was. Keeping the silly ones on the
+## small hits and the loud ones on the big hits means the screen still tells you
+## something even while it is being daft.
+const WORDS_LIGHT := ["POK!", "BONK!", "BIFF!", "OOF!", "BOP!", "THWIP!", "PLONK!"]
+const WORDS_HEAVY := ["POW!", "WHAM!", "BAM!", "KAPOW!", "SMACK!", "CLONK!", "DOINK!"]
+const WORDS_SUPER := ["KABOOM!", "MEGA POW!", "YOWZA!", "SPLAT!", "KERBLAM!", "BOOOM!"]
+const WORDS := WORDS_HEAVY  # kept for older call sites
 const GLOW_KINDS := ["hit", "heavy", "super", "block", "sparkle", "slash", "ring"]
 
 var parts: Array = []
@@ -29,13 +35,50 @@ func spawn(kind: String, pos: Vector2, data := {}) -> void:
 	parts.append({"k": kind, "p": pos, "t": 0, "life": LIFE.get(kind, 12), "d": data})
 
 
-func word(pos: Vector2) -> void:
-	spawn("text", pos + Vector2(randf_range(-10, 10), -24), {"text": WORDS.pick_random()})
+## A comic impact word, picked to match how hard the hit was.
+func word(pos: Vector2, level := 1) -> void:
+	var pool: Array = WORDS_LIGHT
+	if level >= 3:
+		pool = WORDS_SUPER
+	elif level >= 1:
+		pool = WORDS_HEAVY
+	spawn("text", pos + Vector2(randf_range(-10, 10), -24), {"text": pool.pick_random(), "level": level})
+
+
+## A speech bubble with a fighter's own line in it.
+func say(pos: Vector2, text: String, dir := 1) -> void:
+	spawn("bubble", pos + Vector2(0, -34), {"text": text, "dir": dir})
+
+
+## Knocks a character's belongings loose: Mateo drops a drumstick, Silvan loses
+## his pacifier. `item` names a shape from `_draw_gag`; anything unknown falls
+## back to a spinning star, so a character can never crash the effect layer.
+func gag(pos: Vector2, item: String, dir := 1) -> void:
+	spawn("gag", pos, {
+		"item": item, "dir": dir,
+		"v": Vector2(randf_range(1.6, 4.0) * dir, randf_range(-7.5, -4.5)),
+		"spin": randf_range(-0.34, 0.34),
+	})
 
 
 func step() -> void:
 	for p in parts:
 		p["t"] += 1
+		# Gag items are the only effect with physics: they arc away, bounce once
+		# off the floor and roll to a stop, like a hat knocked off in a cartoon.
+		if p["k"] == "gag":
+			var d: Dictionary = p["d"]
+			var v: Vector2 = d["v"]
+			v.y += 0.42
+			var np: Vector2 = p["p"] + v
+			if np.y >= Fighter.GROUND_Y and v.y > 0.0:
+				np.y = Fighter.GROUND_Y
+				v = Vector2(v.x * 0.55, -v.y * 0.42)
+				if absf(v.y) < 1.2:
+					v = Vector2(v.x * 0.6, 0.0)
+			d["v"] = v
+			d["spin"] = float(d["spin"]) * 0.985
+			p["p"] = np
 	parts = parts.filter(func(p: Dictionary) -> bool: return p["t"] < p["life"])
 	queue_redraw()
 	glow.queue_redraw()
@@ -71,8 +114,13 @@ func _draw_glow() -> void:
 				glow.draw_circle(p, 16.0 * big * (1.0 - k * 0.7), Color(col, 0.35 * fade), true, -1.0, true)
 				glow.draw_circle(p, 9.0 * big * fade, Color(1, 1, 1, 0.9 * fade), true, -1.0, true)
 				# Tapered rays.
+				# Most rays spray along the knockback angle when the hit supplies
+				# one; a few stay random so it still reads as a burst.
+				var kb = e["d"].get("kb")
 				for i in 12:
 					var a := rng.randf() * TAU
+					if kb != null and i < 8:
+						a = float(kb) + rng.randf_range(-0.8, 0.8)
 					var len := (14.0 + rng.randf() * 34.0) * big * (0.4 + k)
 					var w := (2.0 + rng.randf() * 3.0) * big * fade
 					var d := Vector2.from_angle(a)
@@ -121,11 +169,108 @@ func _draw_glow() -> void:
 
 func _draw_top() -> void:
 	for e in parts:
-		if e["k"] != "text":
-			continue
-		var k := float(e["t"]) / float(e["life"])
-		var p: Vector2 = e["p"]
-		var pop := 1.0 + 0.7 * maxf(0.0, 1.0 - k * 5.0)
-		var a := minf(1.0, (1.0 - k) * 3.0)
-		UI.text(top, p + Vector2(0, -14.0 * k), e["d"]["text"], int(20 * pop), Color(1, 0.92, 0.25, a),
-			HORIZONTAL_ALIGNMENT_CENTER, 7, Color(0.75, 0.08, 0.2, a), UI.arcade_font())
+		match e["k"]:
+			"text": _draw_word(e)
+			"bubble": _draw_bubble(e)
+			"gag": _draw_gag(e)
+
+
+## A comic impact word sitting on a jagged starburst, like a 60s TV punch card.
+func _draw_word(e: Dictionary) -> void:
+	var k := float(e["t"]) / float(e["life"])
+	var level := int(e["d"].get("level", 1))
+	var p: Vector2 = e["p"]
+	# Overshoot then settle: the word snaps out too big and springs back.
+	var pop := 1.0 + 0.7 * maxf(0.0, 1.0 - k * 5.0)
+	var a := minf(1.0, (1.0 - k) * 3.0)
+	var txt: String = e["d"]["text"]
+	var size := int((20 + level * 3) * pop)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = e["d"]["seed"]
+	var tilt := rng.randf_range(-0.18, 0.18)
+	var at := p + Vector2(0, -14.0 * k)
+	# Burst: a ragged star that pulses out from behind the letters.
+	var burst_r := (18.0 + level * 8.0) * (0.7 + 1.1 * k) * pop
+	var pts := PackedVector2Array()
+	var spikes := 11
+	for i in spikes * 2:
+		var ang := TAU * i / float(spikes * 2) + tilt
+		var r := burst_r * (1.0 if i % 2 == 0 else 0.56) * (0.85 + rng.randf() * 0.3)
+		pts.append(at + Vector2(cos(ang) * (0.35 * txt.length() + 1.1), sin(ang)) * r * 0.55)
+	var burst: Color = [Color(1, 0.95, 0.5), Color(1, 0.7, 0.25), Color(1, 0.45, 0.6), Color(0.6, 0.85, 1)][mini(level, 3)]
+	top.draw_colored_polygon(FighterRenderer.safe(pts), Color(burst, 0.85 * a))
+	top.draw_polyline(Stage._closed(pts), Color(0.12, 0.08, 0.16, a), 2.0, true)
+	UI.text(top, at, txt, size, Color(1, 0.98, 0.9, a),
+		HORIZONTAL_ALIGNMENT_CENTER, 7, Color(0.75, 0.08, 0.2, a), UI.arcade_font())
+
+
+## Speech bubble with a tail pointing back at whoever said it.
+func _draw_bubble(e: Dictionary) -> void:
+	var k := float(e["t"]) / float(e["life"])
+	var a := minf(1.0, (1.0 - k) * 4.0) * minf(1.0, e["t"] / 3.0)
+	var grow := minf(1.0, e["t"] / 4.0)
+	var p: Vector2 = e["p"] + Vector2(0, -10.0 * k)
+	var dir := float(e["d"].get("dir", 1))
+	var txt: String = e["d"]["text"]
+	var w := (14.0 + txt.length() * 5.0) * grow
+	var h := 15.0 * grow
+	var body := PackedVector2Array()
+	# Wobbly outline: sampling the ellipse with a little per-point noise reads
+	# as hand-drawn rather than as a computer-perfect oval.
+	var rng := RandomNumberGenerator.new()
+	rng.seed = e["d"]["seed"]
+	for i in 20:
+		var ang := TAU * i / 20.0
+		body.append(p + Vector2(cos(ang) * w, sin(ang) * h) * (0.94 + rng.randf() * 0.12))
+	# Tail.
+	body.append(p + Vector2(dir * w * 0.1, h * 0.8))
+	body.append(p + Vector2(dir * w * 0.22, h * 2.0))
+	body.append(p + Vector2(dir * w * 0.42, h * 0.75))
+	top.draw_colored_polygon(FighterRenderer.safe(body), Color(1, 1, 0.97, 0.95 * a))
+	top.draw_polyline(Stage._closed(body), Color(0.12, 0.08, 0.16, a), 2.0, true)
+	UI.text(top, p + Vector2(0, 6), txt, 11, Color(0.12, 0.08, 0.16, a), HORIZONTAL_ALIGNMENT_CENTER, 0, Color.TRANSPARENT, UI.arcade_font())
+
+
+## Belongings knocked loose. Each item is a few primitives — the point is that
+## you recognise *whose* it is in the half second it is on screen.
+func _draw_gag(e: Dictionary) -> void:
+	var k := float(e["t"]) / float(e["life"])
+	var a := minf(1.0, (1.0 - k) * 4.0)
+	var p: Vector2 = e["p"]
+	var ang := float(e["t"]) * float(e["d"].get("spin", 0.2))
+	var item: String = e["d"].get("item", "star")
+	top.draw_set_transform(p, ang, Vector2.ONE)
+	var ink := Color(0.12, 0.08, 0.16, a)
+	match item:
+		"pacifier":
+			top.draw_circle(Vector2(0, 2), 6.0, Color(1, 0.75, 0.85, a), true, -1.0, true)
+			top.draw_arc(Vector2(0, 2), 6.0, 0, TAU, 16, ink, 1.5, true)
+			top.draw_circle(Vector2(0, -4), 3.0, Color(1, 0.95, 0.85, a), true, -1.0, true)
+			top.draw_arc(Vector2(0, 8), 4.0, PI, TAU, 10, ink, 1.5, true)
+		"bone":
+			top.draw_line(Vector2(-6, 0), Vector2(6, 0), Color(1, 0.98, 0.9, a), 4.0, true)
+			for sx in [-6.0, 6.0]:
+				top.draw_circle(Vector2(sx, -2.5), 3.0, Color(1, 0.98, 0.9, a), true, -1.0, true)
+				top.draw_circle(Vector2(sx, 2.5), 3.0, Color(1, 0.98, 0.9, a), true, -1.0, true)
+		"drumstick":
+			top.draw_line(Vector2(-8, 3), Vector2(7, -3), Color(0.85, 0.66, 0.4, a), 3.0, true)
+			top.draw_circle(Vector2(8, -3.5), 3.0, Color(0.92, 0.76, 0.5, a), true, -1.0, true)
+		"ball":
+			top.draw_circle(Vector2.ZERO, 6.0, Color(0.95, 0.45, 0.15, a), true, -1.0, true)
+			top.draw_arc(Vector2.ZERO, 6.0, 0, TAU, 16, ink, 1.2, true)
+			top.draw_line(Vector2(-6, 0), Vector2(6, 0), ink, 1.2, true)
+			top.draw_line(Vector2(0, -6), Vector2(0, 6), ink, 1.2, true)
+		"pencil":
+			top.draw_colored_polygon(PackedVector2Array([Vector2(-9, -2), Vector2(5, -2), Vector2(5, 2), Vector2(-9, 2)]), Color(1, 0.8, 0.2, a))
+			top.draw_colored_polygon(PackedVector2Array([Vector2(5, -2), Vector2(10, 0), Vector2(5, 2)]), Color(0.95, 0.85, 0.7, a))
+			top.draw_colored_polygon(PackedVector2Array([Vector2(-11, -2), Vector2(-9, -2), Vector2(-9, 2), Vector2(-11, 2)]), Color(1, 0.5, 0.6, a))
+		"tooth":
+			top.draw_colored_polygon(PackedVector2Array([Vector2(-4, -5), Vector2(4, -5), Vector2(3, 3), Vector2(0, 0), Vector2(-3, 3)]), Color(1, 1, 0.95, a))
+			top.draw_polyline(Stage._closed(PackedVector2Array([Vector2(-4, -5), Vector2(4, -5), Vector2(3, 3), Vector2(0, 0), Vector2(-3, 3)])), ink, 1.2, true)
+		"note":
+			top.draw_circle(Vector2(-3, 4), 3.5, Color(0.2, 0.15, 0.3, a), true, -1.0, true)
+			top.draw_line(Vector2(0, 4), Vector2(0, -7), Color(0.2, 0.15, 0.3, a), 1.8, true)
+			top.draw_line(Vector2(0, -7), Vector2(6, -9), Color(0.2, 0.15, 0.3, a), 1.8, true)
+		_:
+			top.draw_colored_polygon(FighterRenderer.star_pts(Vector2.ZERO, 7.0, 3.0, 5, 0.0), Color(1, 0.9, 0.3, a))
+	top.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

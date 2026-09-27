@@ -30,6 +30,12 @@ var freeze := 0
 var freeze_owner: Fighter
 var cutin_text := ""
 var cutin_color := Color.WHITE
+## How long the world stops for a hyper. The HUD reads this to work out how far
+## through the cut-in animation it is.
+const HYPER_FREEZE := 56
+## KO camera: how far it pushes in, and for how many (sim) frames of the KO phase.
+const KO_ZOOM := 1.75
+const KO_CAM_FRAMES := 80
 var slowmo := 0
 var shake := 0.0
 var flash := 0  # full-screen white flash frames
@@ -250,14 +256,26 @@ func _end_round(text: String) -> void:
 
 
 func on_hyper(f: Fighter, m: MoveData) -> void:
-	freeze = 45
+	freeze = HYPER_FREEZE
 	freeze_owner = f
 	cutin_text = m.display
 	cutin_color = f.renderer.colors["shirt"]
 	Sfx.play("hyper")
 	effects.spawn("sparkle", f.position + Vector2(0, -80))
-	flash = 5
+	effects.spawn("ring", f.position)
+	flash = 8
+	shake = maxf(shake, 4.0)
 	stage.hyper_color = f.renderer.colors["accent"]
+	# The user stretches up on the spot as the screen stops for them, and the
+	# poor soul on the other side gets to look worried about it.
+	f.renderer.squish(-0.26)
+	f.renderer.emote("vein", 40)
+	var o := f.opponent
+	if o != null and o.state != Fighter.S.KO:
+		o.renderer.emote("sweat", 50)
+		o.renderer.eye_pop = 9
+		if not o.def.hurt_lines.is_empty():
+			effects.say(o.position + Vector2(0, -74.0 * o.def.size), o.def.hurt_lines[0], -o.facing)
 
 
 ## A throw completed: same feedback a heavy hit gets, plus a stats entry.
@@ -339,18 +357,51 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		hitstop = maxi(hitstop, 4)
 		return
 	var heavy := m.level >= 1
-	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point)
+	# Sparks spray the way the victim is flying, so a launcher bursts upward
+	# and a sweep skids along the floor.
+	var away := signf(d.position.x - a.position.x)
+	var kb := Vector2(m.kb.x * (away if away != 0.0 else 1.0), m.kb.y)
+	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point, {"kb": kb.angle()})
 	Sfx.play(m.hit_sfx)
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
 		shake = maxf(shake, 3.0 + m.level)
+	# Big hits shake your belongings loose. One item per hit, so a long combo
+	# leaves a little trail of dropped junk rather than a single explosion.
+	if m.level >= 2 or (m.launch or m.knockdown) and randf() < 0.7:
+		var items: Array = d.def.gag_items
+		if not items.is_empty():
+			effects.gag(point, items.pick_random(), away)
 	if (m.launch or m.knockdown) and randf() < 0.6:
-		effects.word(point)
+		effects.word(point, m.level)
+	elif m.level >= 2:
+		effects.word(point, m.level)
+	elif randf() < 0.18:
+		effects.word(point, 0)
+	# The victim yelps. Rare enough that it stays funny instead of nagging.
+	if m.level >= 1 and randf() < 0.3 and not d.def.hurt_lines.is_empty():
+		effects.say(d.position + Vector2(0, -74.0 * d.def.size), d.def.hurt_lines.pick_random(), -d.facing)
+	# Characters react to each other: a long combo gets a gloat from whoever
+	# is dishing it out. Once per combo, on the 5th hit exactly.
+	elif d.combo == 5 and res != "ko":
+		_taunt(a)
 	if res == "ko":
 		hitstop = 24
 		shake = 9.0
 		flash = 8
-		effects.word(point)
+		effects.word(point, 3)
+		# The full yard sale: everything they own goes flying.
+		for item in d.def.gag_items:
+			effects.gag(point + Vector2(randf_range(-8, 8), randf_range(-14, 4)), item, away)
+		_taunt(a)
+
+
+## The fighter gloats in a speech bubble and puts on the smug face.
+func _taunt(f: Fighter) -> void:
+	if f.def.taunt_lines.is_empty():
+		return
+	effects.say(f.position + Vector2(0, -74.0 * f.def.size), f.def.taunt_lines.pick_random(), f.facing)
+	f.renderer.emote("note", 50)
 
 
 func _resolve_bounds() -> void:
@@ -392,12 +443,31 @@ func _update_camera() -> void:
 	var top := minf(fighters[0].position.y, fighters[1].position.y) - 175.0
 	var bottom := maxf(fighters[0].position.y, fighters[1].position.y) + 30.0
 	var z := clampf(360.0 / (bottom - top), 0.85, ZOOM)
+	var focus_y := (top + bottom) * 0.5
+	# KO punch-in: during the slow-motion the camera leans in on the loser, then
+	# eases back out in time for the winner's victory pose.
+	var loser := _ko_focus()
+	if loser != null:
+		mid = loser.position.x
+		z = KO_ZOOM
+		focus_y = loser.position.y - 60.0
 	cam_z = lerpf(cam_z, z, 0.12)
 	camera.zoom = Vector2(cam_z, cam_z) * PIXEL
 	var base_y := 342.0 - 180.0 / cam_z
-	camera.position.y = minf(base_y, (top + bottom) * 0.5)
-	camera.position.x = clampf(mid, 320.0 / cam_z, STAGE_W - 320.0 / cam_z)
+	camera.position.y = minf(base_y, focus_y)
+	var x := clampf(mid, 320.0 / cam_z, STAGE_W - 320.0 / cam_z)
+	# Pan rather than cut while the KO camera is doing its thing.
+	camera.position.x = lerpf(camera.position.x, x, 0.18) if phase == "ko" else x
 	stage.cam_x = camera.position.x
+
+
+## The fighter the KO camera should push in on, or null. Only a clean KO
+## counts: a double KO or a time-out has nobody to single out.
+func _ko_focus() -> Fighter:
+	if phase != "ko" or phase_t >= KO_CAM_FRAMES or winner < 0:
+		return null
+	var loser := fighters[1 - winner]
+	return loser if loser.health <= 0 else null
 
 
 # --- Menus -------------------------------------------------------------------

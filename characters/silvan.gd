@@ -10,6 +10,9 @@ func _init() -> void:
 	display = "SILVAN"
 	likes = "Jumping, running, puppies, snack time"
 	win_quote = "Woof! Again! Again!"
+	gag_items = ["pacifier", "bone", "star"]
+	taunt_lines = ["WOOF WOOF!", "BORK!", "CHASE ME!"]
+	hurt_lines = ["YIPE!", "AWOOO?", "WAAAH!"]
 	roster_order = 3
 	colors = {
 		"skin": Color("ffd9b8"), "hair": Color("8a5a32"), "shirt": Color("ffe27a"),
