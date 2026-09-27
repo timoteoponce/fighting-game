@@ -1,6 +1,8 @@
 class_name Projectile
 extends Node2D
-## Projectiles and hyper attacks: soccer ball, wand spark, pixel beam, doodle dragon.
+## Projectiles and hyper attacks: soccer ball, wand spark, and one hyper look per
+## character — pixel beam (Ulises), doodle dragon (Emilia), drum wave (Mateo),
+## spirit wolf (Silvan). `kind` only changes the drawing; the hitbox is `size`.
 
 var owner_f: Fighter
 var m: MoveData
@@ -98,8 +100,18 @@ func register_hit() -> void:
 
 ## Additive glow behind the projectile.
 func _draw_halo(h: Node2D) -> void:
-	var col: Color = {"ball": Color(1, 0.8, 0.4), "spark": Color(1, 0.4, 0.85), "beam": Color(0.5, 0.8, 1.0), "dragon": Color(1, 0.5, 0.9)}.get(kind, Color.WHITE)
+	var col: Color = {"ball": Color(1, 0.8, 0.4), "spark": Color(1, 0.4, 0.85), "beam": Color(0.5, 0.8, 1.0),
+		"dragon": Color(1, 0.5, 0.9), "drum": Color(1, 0.6, 0.2), "wolf": Color(0.55, 0.75, 1.0)}.get(kind, Color.WHITE)
 	var pulse := 1.0 + 0.15 * sin(t * 0.5)
+	if kind == "drum":
+		var beat := 1.0 - fmod(t, 8.0) / 8.0
+		h.draw_circle(Vector2.ZERO, 60.0 + 20.0 * beat, Color(col, 0.3), true, -1.0, true)
+		h.draw_rect(Rect2(0, -size.y * 0.5, size.x * minf(1.0, t / 6.0), size.y), Color(col, 0.1))
+		return
+	if kind == "wolf":
+		h.draw_circle(Vector2(_wolf_x(), 0), 60.0 * pulse, Color(col, 0.28), true, -1.0, true)
+		h.draw_circle(Vector2(_wolf_x(), 0), 100.0 * pulse, Color(col, 0.12), true, -1.0, true)
+		return
 	if kind == "beam":
 		var w := size.x * minf(1.0, t / 6.0)
 		for i in 3:
@@ -123,6 +135,10 @@ func _draw() -> void:
 			_draw_beam()
 		"dragon":
 			_draw_dragon()
+		"drum":
+			_draw_drum()
+		"wolf":
+			_draw_wolf()
 
 
 static func draw_soccer_ball(ci: CanvasItem, c: Vector2, r: float, rot: float) -> void:
@@ -165,11 +181,28 @@ func _draw_beam() -> void:
 				a *= 0.4
 			draw_rect(Rect2(cx * cell, -h * 0.5 + cy * cell, cell - 1.0, cell - 1.0), Color.from_hsv(hue, 0.7, 1.0, a))
 	draw_rect(Rect2(0, -h * 0.18, w, h * 0.36), Color(1, 1, 1, 0.85))
+	# Ulises' own touch: 8-bit soccer balls riding the beam like a retro
+	# sports game, bobbing on a sine as they go.
+	for i in 3:
+		var bx := fmod(t * 11.0 + i * size.x / 3.0, maxf(w, 1.0))
+		_pixel_ball(Vector2(bx, sin(t * 0.35 + i * 2.1) * h * 0.22), 5.0)
 	# Pixel text, un-mirrored.
 	if w > 200:
 		draw_set_transform(Vector2(w * 0.5, 7), 0.0, Vector2(dir, 1))
-		UI.text(self, Vector2.ZERO, "LEVEL UP!", 20, Color(0.2, 0.1, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 4, Color.WHITE)
+		UI.text(self, Vector2.ZERO, "GAME OVER", 20, Color(0.2, 0.1, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 4, Color.WHITE)
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## A soccer ball as chunky pixels: a 7x7 cell disc with a black pentagon patch.
+func _pixel_ball(c: Vector2, cell: float) -> void:
+	for gx in range(-3, 4):
+		for gy in range(-3, 4):
+			if gx * gx + gy * gy > 10:
+				continue
+			var edge := gx * gx + gy * gy > 6
+			var patch := absi(gx) + absi(gy) <= 1 or (absi(gx) == 2 and absi(gy) == 2)
+			var col := FighterRenderer.OUT if edge or patch else Color.WHITE
+			draw_rect(Rect2(c + Vector2(gx, gy) * cell - Vector2.ONE * cell * 0.5, Vector2.ONE * cell), col)
 
 
 func _draw_dragon() -> void:
@@ -208,3 +241,104 @@ func _draw_dragon() -> void:
 	for i in 4:
 		var y := -16.0 + i * 7.0
 		draw_line(Vector2(-60.0 - i * 8.0, y + sin(t * 0.4 + i) * 3.0), Vector2(-90.0 - i * 8.0, y), Color(0.3, 0.3, 0.4, 0.5), 1.5, true)
+
+
+## Mateo: DRUM SOLO FINISH. A giant bass drum booms on every beat and throws
+## rings of sound down the hitbox, with music notes riding the waves.
+func _draw_drum() -> void:
+	var out := FighterRenderer.OUT
+	var w := size.x * minf(1.0, t / 6.0)
+	var h := size.y
+	var fade := 1.0 if life > 10 else life / 10.0
+	var beat := 1.0 - fmod(t, 8.0) / 8.0  # 1 on the beat, decaying to 0
+	# Sound rings, a new one launched each beat, thinning as they travel.
+	for i in 7:
+		var d := fmod(t * 7.0 + i * 46.0, maxf(w, 1.0))
+		if d < 30.0:
+			continue
+		var span := asin(minf(1.0, h * 0.5 / d))
+		var k := d / size.x
+		var col := Color(1.0, lerpf(0.55, 0.95, k), lerpf(0.15, 0.5, k), (1.0 - k) * fade)
+		draw_arc(Vector2.ZERO, d, -span, span, 20, out, 9.0 * (1.0 - k) + 4.0, true)
+		draw_arc(Vector2.ZERO, d, -span, span, 20, col, 7.0 * (1.0 - k) + 2.0, true)
+	# Notes bobbing along the waves.
+	for i in 6:
+		var nx := fmod(t * 5.0 + i * 52.0, maxf(w, 1.0))
+		var p := Vector2(nx, sin(t * 0.3 + i * 1.7) * h * 0.32)
+		var col := Color.from_hsv(fmod(i * 0.17 + t * 0.01, 1.0), 0.6, 1.0, fade)
+		draw_line(p + Vector2(3.5, 0), p + Vector2(3.5, -13), out, 3.5, true)
+		draw_circle(p, 5.0, out, true, -1.0, true)
+		draw_circle(p, 3.6, col, true, -1.0, true)
+		draw_line(p + Vector2(3.5, -13), p + Vector2(10, -9), out, 3.0, true)
+	# The drum itself, facing the opponent, swelling on the beat.
+	var r := 30.0 + 7.0 * beat
+	var shell := PackedVector2Array([Vector2(-18, -r), Vector2(0, -r), Vector2(0, r), Vector2(-18, r)])
+	draw_colored_polygon(shell, Color(0.85, 0.2, 0.15, fade))
+	draw_polyline(Stage._closed(shell), out, 2.5, true)
+	for zx in [-15.0, -9.0, -3.0]:
+		draw_line(Vector2(zx, -r + 4), Vector2(zx + 3, r - 4), Color(1, 0.85, 0.3, fade), 1.5, true)
+	draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2.ZERO, r * 0.32, r, 0.0, 20), Color(1, 0.97, 0.88, fade))
+	draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(Vector2.ZERO, r * 0.32, r, 0.0, 20)), out, 3.0, true)
+	draw_colored_polygon(FighterRenderer.star_pts(Vector2(0, 0), r * 0.25, r * 0.11, 5, -PI / 2), Color(1, 0.55, 0.1, fade))
+
+
+## Where Silvan's spirit wolf's head is: it races the length of the hitbox in
+## 16 frames, then stays at the far end snapping.
+func _wolf_x() -> float:
+	return lerpf(20.0, size.x - 55.0, minf(1.0, t / 16.0))
+
+
+## Silvan: MOON HOWL. A ghostly giant wolf-dog charges out of him, leaving
+## afterimages and paw prints, howling as it goes.
+func _draw_wolf() -> void:
+	var fade := 1.0 if life > 10 else life / 10.0
+	var hx := _wolf_x()
+	var floor_y := size.y * 0.42
+	# Paw prints stamped along the floor behind the charge.
+	var px := 30.0
+	var n := 0
+	while px < hx - 30.0:
+		var pp := Vector2(px, floor_y + (5.0 if n % 2 == 0 else -5.0))
+		var col := Color(0.85, 0.92, 1.0, 0.55 * fade)
+		draw_circle(pp, 4.0, col, true, -1.0, true)
+		for tx in [-4.0, 0.0, 4.0]:
+			draw_circle(pp + Vector2(tx + 4.0, -5.0 + absf(tx) * 0.3), 1.8, col, true, -1.0, true)
+		px += 34.0
+		n += 1
+	# Afterimages, oldest first.
+	for i in range(4, 0, -1):
+		_wolf_head(Vector2(hx - i * 30.0, sin(t * 0.5 - i) * 3.0), 1.0 - i * 0.08, 0.14 * (5 - i) * fade)
+	_wolf_head(Vector2(hx, sin(t * 0.5) * 3.0), 1.0, 0.95 * fade)
+
+
+func _wolf_head(c: Vector2, sc: float, a: float) -> void:
+	var fur := Color(0.78, 0.88, 1.0, a)
+	var ink := Color(0.12, 0.16, 0.4, a)
+	var jaw := 0.2 + 0.22 * (0.5 + 0.5 * sin(t * 0.7))
+	var up := PackedVector2Array()
+	for q in [Vector2(-36, 8), Vector2(-40, -6), Vector2(-50, -12), Vector2(-38, -18), Vector2(-26, -26),
+			Vector2(-30, -52), Vector2(-12, -32), Vector2(-4, -50), Vector2(6, -28), Vector2(26, -20),
+			Vector2(46, -12), Vector2(52, -5), Vector2(46, 2), Vector2(8, 4)]:
+		up.append(c + q * sc)
+	var pivot := c + Vector2(8, 4) * sc
+	var low := PackedVector2Array()
+	for q in [Vector2(8, 4), Vector2(42, 6), Vector2(38, 12), Vector2(10, 16), Vector2(-22, 12)]:
+		low.append(pivot + (q - Vector2(8, 4)).rotated(jaw) * sc)
+	# Mouth: dark red wedge between the jaws, then the teeth.
+	draw_colored_polygon(PackedVector2Array([pivot, up[12], low[1]]), Color(0.5, 0.08, 0.15, a))
+	for i in 3:
+		var tp := c + Vector2(20 + i * 9, 2) * sc
+		draw_colored_polygon(PackedVector2Array([tp, tp + Vector2(4, 0) * sc, tp + Vector2(2, 5) * sc]), Color(1, 1, 1, a))
+	draw_colored_polygon(FighterRenderer.safe(low), fur)
+	draw_polyline(Stage._closed(low), ink, 2.0, true)
+	draw_colored_polygon(FighterRenderer.safe(up), fur)
+	draw_polyline(Stage._closed(up), ink, 2.2, true)
+	# Inner ears and a glowing eye.
+	draw_colored_polygon(PackedVector2Array([c + Vector2(-26, -30) * sc, c + Vector2(-28, -46) * sc, c + Vector2(-16, -32) * sc]), Color(1, 0.7, 0.8, a))
+	draw_circle(c + Vector2(16, -14) * sc, 4.2 * sc, Color(1, 0.9, 0.3, a), true, -1.0, true)
+	draw_line(c + Vector2(16, -17) * sc, c + Vector2(16, -11) * sc, ink, 1.6, true)
+	draw_circle(c + Vector2(51, -6) * sc, 2.6 * sc, ink, true, -1.0, true)
+	# Howl: sound arcs pouring out of the open mouth.
+	for i in 3:
+		var r := (10.0 + i * 9.0 + fmod(t * 2.0, 9.0)) * sc
+		draw_arc(c + Vector2(50, 4) * sc, r, -0.55, 0.55, 8, Color(1, 1, 1, a * (0.8 - i * 0.22)), 2.0, true)

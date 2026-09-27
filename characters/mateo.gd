@@ -133,7 +133,7 @@ func _init() -> void:
 			"id": "drum solo finish", "display": "DRUM SOLO FINISH!", "level": 3, "startup": 18,
 			"active": 1, "recovery": 48, "invuln": 44, "prop": "drum", "sfx": "hyper",
 			"projectile": {
-				"kind": "beam", "anchored": true, "size": Vector2(300, 150), "offset": Vector2(60, -80),
+				"kind": "drum", "anchored": true, "size": Vector2(300, 150), "offset": Vector2(60, -80),
 				"life": 60, "hits": 14, "interval": 4, "damage": 19, "hitstun": 16, "kb": Vector2(1.0, -1.0),
 				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
 				"strength": 99, "sfx": "hyper",

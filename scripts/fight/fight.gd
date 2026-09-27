@@ -378,7 +378,12 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		var items: Array = d.def.gag_items
 		if not items.is_empty():
 			effects.gag(point, items.pick_random(), away)
-	if (m.launch or m.knockdown) and randf() < 0.6:
+	# A multi-hit hyper is its own show: words only on the finishing hit, so
+	# they never paper over the character's hyper art.
+	var mid_hyper := p != null and m.level == 3 and p.hits_left > 0
+	if mid_hyper:
+		pass
+	elif (m.launch or m.knockdown) and randf() < 0.6:
 		effects.word(point, m.level)
 	elif m.level >= 2:
 		effects.word(point, m.level)

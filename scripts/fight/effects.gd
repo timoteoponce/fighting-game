@@ -70,7 +70,12 @@ func word(pos: Vector2, level := 1) -> void:
 		if e["k"] == "text" and e["t"] < WORD_GAP and int(e["d"]["level"]) >= level:
 			return
 	parts = parts.filter(func(e: Dictionary) -> bool: return e["k"] != "text")
-	spawn("text", pos + Vector2(randf_range(-10, 10), -24), {"text": pool.pick_random(), "level": level})
+	var at := pos + Vector2(randf_range(-10, 10), -24)
+	# Never on top of a speech bubble: drop below it instead.
+	for e in parts:
+		if e["k"] == "bubble" and absf(e["p"].x - at.x) < 70.0 and absf(e["p"].y - at.y) < 34.0:
+			at.y = e["p"].y + 36.0
+	spawn("text", at, {"text": pool.pick_random(), "level": level})
 
 
 ## A speech bubble with a fighter's own line in it. `who` is the speaker's

@@ -167,7 +167,7 @@ func _init() -> void:
 			"id": "moon howl", "display": "MOON HOWL!", "level": 3, "startup": 18, "active": 1,
 			"recovery": 46, "invuln": 44, "prop": "moon", "sfx": "hyper",
 			"projectile": {
-				"kind": "beam", "anchored": true, "size": Vector2(520, 96), "offset": Vector2(40, -66),
+				"kind": "wolf", "anchored": true, "size": Vector2(520, 96), "offset": Vector2(40, -66),
 				"life": 58, "hits": 13, "interval": 4, "damage": 18, "hitstun": 16, "kb": Vector2(1.1, -0.6),
 				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
 				"strength": 99, "sfx": "hyper",
