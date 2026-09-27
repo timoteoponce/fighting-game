@@ -80,7 +80,7 @@ func _decide(f: Fighter, o: Fighter) -> void:
 	var r := rng.randf()
 	if f.launch_window > 0:
 		_q([[U, 3], [0, 8], [L, 2], [0, 6], [L, 2], [0, 7], [H, 2], [0, 10]])
-	elif f.meter >= 100 and dx < 320 and r < 0.35:
+	elif f.meter >= Fighter.HYPER_COST and dx < 320 and r < 0.35:
 		_q([[BACK, 3], [BACK | L | H, 3], [0, 20]])
 	elif o.state == Fighter.S.JUMP and dx < 130 and r < ANTI_AIR_P[level]:
 		_q([[D | L | H, 3], [0, 10]])

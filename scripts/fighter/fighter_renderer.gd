@@ -132,7 +132,9 @@ func skeleton() -> Dictionary:
 	for k in pts:
 		s[k] = (s[k] as Vector2).rotated(rot)
 	var offset := Vector2(0, float(p["hip"]))
-	if int(p["ground"]) == 1:
+	if head_only:
+		offset = Vector2.ZERO
+	elif int(p["ground"]) == 1:
 		var low := maxf(maxf(s["foot_f"].y, s["foot_b"].y), maxf(s["knee_f"].y, s["knee_b"].y))
 		offset = Vector2(0, -low - 3.0)
 	for k in pts:
@@ -188,7 +190,6 @@ func _draw_head(s: Dictionary) -> void:
 	poly(head_shape(), c["skin"], 2.0)
 	# Shadow under the jaw and at the back of the face.
 	draw_colored_polygon(PackedVector2Array([Vector2(-8, 2), Vector2(-3, 7.5), Vector2(3, 10.2), Vector2(0, 5), Vector2(-5, 1)]), shade(c["skin"]))
-	ball(Vector2(-3.5, 1.5), 2.6, c["skin"])
 	def.draw_face(self)
 	def.draw_hair_front(self)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

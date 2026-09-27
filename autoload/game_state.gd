@@ -11,6 +11,7 @@ var devices := [-1, -2]  # input device per player
 var chars := ["ulises", "emilia"]
 var cpu_level := 1
 var stage := ""  # "" = random
+var debug_full_meter := false  # --full-meter: start rounds with 3 hyper levels
 
 
 func goto(screen: String) -> void:

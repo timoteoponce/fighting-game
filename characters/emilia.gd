@@ -145,8 +145,9 @@ func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
 		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.5)
 		var d: Vector2 = (s[leg[1]] - s[leg[0]]).normalized()
 		var boot: Color = r.colors["boots"].darkened(0.2 * (1.0 - leg[2]))
-		r.part(a + d * 1.5, s[leg[1]], 8.0, 7.0, boot)
-		r.part(a, a + d * 2.0, 10.0, 10.0, boot.lightened(0.15))
+		var n := Vector2(-d.y, d.x)
+		r.part(a, s[leg[1]], 8.8, 7.2, boot)
+		r.draw_line(a - n * 4.8, a + n * 4.8, boot.lightened(0.35), 2.2, true)
 
 
 func draw_face(r: FighterRenderer) -> void:

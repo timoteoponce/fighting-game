@@ -130,6 +130,7 @@ func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
 
 
 func draw_face(r: FighterRenderer) -> void:
+	draw_ear(r)
 	r.face(r.colors["eyes"])
 
 
@@ -157,8 +158,7 @@ func draw_hair_front(r: FighterRenderer) -> void:
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 	# Wristband.
-	var w: Vector2 = s["elb_f"].lerp(s["hand_f"], 0.8)
-	r.part(w, s["elb_f"].lerp(s["hand_f"], 0.68), 7.5, 7.5, r.colors["accent"])
+	r.part(s["elb_f"].lerp(s["hand_f"], 0.55), s["elb_f"].lerp(s["hand_f"], 0.7), 7.5, 7.0, r.colors["accent"])
 	match r.prop:
 		"ball":
 			if r.prop_t < 12:

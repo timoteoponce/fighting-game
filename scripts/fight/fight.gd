@@ -26,6 +26,7 @@ var cutin_text := ""
 var cutin_color := Color.WHITE
 var slowmo := 0
 var shake := 0.0
+var flash := 0  # full-screen white flash frames
 
 var round_num := 1
 var wins := [0, 0]
@@ -90,6 +91,8 @@ func start_round() -> void:
 	fighters[1].reset_for_round(STAGE_W * 0.5 + 110.0, -1)
 	for f in fighters:
 		f.input_enabled = false
+		if GameState.debug_full_meter:
+			f.meter = Fighter.MAX_METER
 	timer = ROUND_FRAMES
 	phase = "intro"
 	phase_t = 0
@@ -124,6 +127,8 @@ func _physics_process(_delta: float) -> void:
 	effects.step()
 	banner_t += 1
 	shake = maxf(0.0, shake - 0.5)
+	if flash > 0:
+		flash -= 1
 	camera.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake))
 	debug_draw.queue_redraw()
 	if freeze > 0:
@@ -149,6 +154,8 @@ func _physics_process(_delta: float) -> void:
 	var hyper_on := fighters.any(func(f: Fighter) -> bool: return f.is_hyper_active())
 	hyper_on = hyper_on or projectiles.any(func(p: Projectile) -> bool: return p.m.level == 3)
 	stage.dim = move_toward(stage.dim, 1.0 if hyper_on else 0.0, 0.05)
+	stage.cam_y = camera.position.y
+	stage.cam_zoom = camera.zoom.x
 	_update_phase()
 
 
@@ -217,6 +224,8 @@ func on_hyper(f: Fighter, m: MoveData) -> void:
 	cutin_color = f.renderer.colors["shirt"]
 	Sfx.play("hyper")
 	effects.spawn("sparkle", f.position + Vector2(0, -80))
+	flash = 5
+	stage.hyper_color = f.renderer.colors["accent"]
 
 
 func spawn_projectile(f: Fighter, spec: Dictionary) -> void:
@@ -282,7 +291,7 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		hitstop = maxi(hitstop, 4)
 		return
 	var heavy := m.level >= 1
-	effects.spawn("heavy" if heavy else "hit", point)
+	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point)
 	Sfx.play(m.hit_sfx)
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
@@ -292,6 +301,7 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 	if res == "ko":
 		hitstop = 24
 		shake = 9.0
+		flash = 8
 		effects.word(point)
 
 

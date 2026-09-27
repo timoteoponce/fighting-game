@@ -9,7 +9,8 @@ const GROUND_Y := 300.0
 const GRAVITY := 0.6
 const LAUNCH_GRAVITY := 0.45
 const MAX_HEALTH := 1000
-const MAX_METER := 100.0
+const MAX_METER := 300.0  # three hyper levels, like MvC
+const HYPER_COST := 100.0
 const JUGGLE_LIMIT := 7
 const BUFFER := 6
 const SCALE := 1.25
@@ -353,7 +354,7 @@ func _try_special() -> bool:
 		key = "anti"
 	elif h & _fwd():
 		key = "rush"
-	elif h & _back() and meter >= MAX_METER:
+	elif h & _back() and meter >= HYPER_COST:
 		key = "hyper"
 	if key == "proj" and is_instance_valid(projectile) and not projectile.dead:
 		return false
@@ -396,7 +397,7 @@ func _start_move(m: MoveData) -> void:
 	opponent.z_index = 0
 	Sfx.play(m.sfx)
 	if m.level == 3:
-		meter -= MAX_METER
+		meter -= HYPER_COST
 		fight.on_hyper(self, m)
 
 

@@ -18,6 +18,8 @@ func _ready() -> void:
 		elif arg == "--test":
 			add_child(load("res://tests/sim_test.gd").new())
 			return
+		elif arg == "--full-meter":
+			GameState.debug_full_meter = true
 		elif arg.begins_with("--chars="):
 			GameState.chars = Array(arg.trim_prefix("--chars=").split(","))
 		elif arg.begins_with("--stage="):

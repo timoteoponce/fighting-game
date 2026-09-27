@@ -56,6 +56,14 @@ func draw_hair_back(_r: FighterRenderer) -> void:
 	pass
 
 
+## Small ear, for characters whose hair doesn't cover it (head space).
+static func draw_ear(r: FighterRenderer) -> void:
+	var col: Color = r.colors["skin"]
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(-5.5, 2.0), 2.0, 2.8, 0.0, 12), FighterRenderer.OUT)
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(-5.5, 2.0), 1.3, 2.1, 0.0, 12), col)
+	r.draw_line(Vector2(-5.2, 1.0), Vector2(-5.0, 3.0), FighterRenderer.shade(col), 0.8, true)
+
+
 func draw_face(r: FighterRenderer) -> void:
 	r.face(colors.get("eyes", Color("3b2a20")))
 
