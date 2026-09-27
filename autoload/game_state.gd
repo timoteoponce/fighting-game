@@ -6,7 +6,7 @@ signal screen_requested(screen: String)
 const CHARACTERS := ["ulises", "emilia"]
 const CPU_LEVELS := ["EASY", "NORMAL", "HARD"]
 
-var mode := "vs"  # "vs" or "cpu"
+var mode := "vs"  # "vs", "cpu" or "demo" (CPU vs CPU)
 var devices := [-1, -2]  # input device per player
 var chars := ["ulises", "emilia"]
 var cpu_level := 1

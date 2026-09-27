@@ -6,7 +6,21 @@ var current: Node
 
 func _ready() -> void:
 	GameState.screen_requested.connect(func(s: String) -> void: call_deferred("_switch", s))
-	_switch("title")
+	# Command line (after "--"): --demo = CPU vs CPU fight, --screen=NAME opens a
+	# screen, --test runs the gameplay tests.
+	var start := "title"
+	for arg in OS.get_cmdline_user_args():
+		if arg == "--demo":
+			GameState.mode = "demo"
+			GameState.chars = [GameState.CHARACTERS.pick_random(), GameState.CHARACTERS.pick_random()]
+			GameState.cpu_level = 2
+			start = "fight"
+		elif arg == "--test":
+			add_child(load("res://tests/sim_test.gd").new())
+			return
+		elif arg.begins_with("--screen="):
+			start = arg.trim_prefix("--screen=")
+	_switch(start)
 
 
 func _switch(screen: String) -> void:
