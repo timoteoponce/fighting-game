@@ -113,6 +113,9 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	r.poly(PackedVector2Array([top + perp * 5.5 - up * 0.5, top - perp * 5.0 - up * 0.5, top + perp * 1.5 - up * 6.0]), acc, 1.2)
 	r.draw_colored_polygon(PackedVector2Array([top + perp * 3.5 - up * 1.0, top - perp * 2.5 - up * 1.0, top + perp * 1.2 - up * 4.0]), r.colors["skin"])
 	r.draw_line(hip + perp * 8.0 + up * 1.5, hip - perp * 8.0 + up * 1.5, acc, 2.0, true)
+	# A small belly pushing the jersey out in front. The shared torso is a straight wedge.
+	var belly := hip + up * 9.0 + perp * 5.5
+	r.poly(FighterRenderer.ellipse_pts(belly, 7.2, 5.0, atan2(perp.y, perp.x)), r.colors["shirt"], 1.6)
 	# Number 10, kept readable when facing left.
 	var num: Vector2 = hip + up * 17.0 + perp * 1.0
 	r.draw_set_transform(num, atan2(up.x, -up.y), Vector2(signf(r.scale.x) * 0.5, 0.5))
@@ -147,10 +150,11 @@ func draw_hair_back(r: FighterRenderer) -> void:
 
 func draw_hair_front(r: FighterRenderer) -> void:
 	var hc: Color = r.colors["hair"]
+	# Sharp spikes on top. The headband, drawn after this, covers the roots.
 	var hair := PackedVector2Array([
-		Vector2(-9, 5), Vector2(-15, 1), Vector2(-11, -3), Vector2(-19, -7), Vector2(-11, -10), Vector2(-17, -16),
-		Vector2(-8, -15), Vector2(-9, -23), Vector2(-2, -17), Vector2(2, -24), Vector2(5, -16), Vector2(11, -21),
-		Vector2(10, -13), Vector2(16, -12), Vector2(11.5, -8), Vector2(13, -4.5), Vector2(9, -6), Vector2(7.5, -2),
+		Vector2(-9, 5), Vector2(-15, 1), Vector2(-11, -3), Vector2(-20, -8), Vector2(-12, -11), Vector2(-18, -18),
+		Vector2(-8, -14), Vector2(-9, -28), Vector2(-3, -15), Vector2(1, -31), Vector2(6, -15), Vector2(12, -26),
+		Vector2(9, -13), Vector2(17, -14), Vector2(11.5, -8), Vector2(13, -4.5), Vector2(9, -6), Vector2(7.5, -2),
 		Vector2(5, -6), Vector2(2, -3.5), Vector2(-0.5, -6), Vector2(-3, -2), Vector2(-5.5, -4), Vector2(-6, 3),
 	])
 	r.shaded_poly(hair, hc, 2.0, 0.82)

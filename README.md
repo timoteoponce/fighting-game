@@ -1,12 +1,12 @@
 # Ulises vs Emilia: Ultimate Friends Showdown
 
-A 2D fighting game in the style of Marvel vs Capcom, with a roster of chibi
-fighters drawn entirely in code — there is not a single image file in the repo.
+A 2D fighting game in the style of Marvel vs Capcom. The fight itself is drawn
+in code. The title and the select screen use the painted portraits in `art/portraits/`.
 
 - **Ulises**: soccer, running, reading and video games. Fast, with a soccer-ball shot and a pixel-beam hyper.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
 - **Charlie**: basketball and crying. A skinny kid with a huge bald head and a nasty grin — slow, long reach, and the hardest single hits on the roster.
-- **Silvan**: two years old, still in diapers, and somehow part puppy. Fastest walk and highest jump, weakest hits.
+- **Silvan**: two years old, in pants and little boots, and somehow part puppy. Fastest walk and highest jump, weakest hits.
 
 Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Normal / Hard).
 

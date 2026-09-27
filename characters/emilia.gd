@@ -13,13 +13,14 @@ func _init() -> void:
 	hurt_lines = ["EEK!", "MY PENCIL!", "RUDE!"]
 	colors = {
 		"skin": Color("f5cfb0"), "hair": Color("2e1a2a"), "shirt": Color("7b3fd1"), "sleeve": Color("7b3fd1"),
-		"forearm": Color("7b3fd1"), "hands": Color("f5cfb0"), "pants": Color("2d2340"), "legs": Color("2d2340"),
+		"forearm": Color("7b3fd1"), "hands": Color("f5cfb0"), "pants": Color("4b2a8a"), "legs": Color("4b2a8a"),
 		"shoes": Color("5a2a6e"), "eyes": Color("8a4fff"), "accent": Color("ff7eb6"), "skirt": Color("4b2a8a"),
 		"trim": Color("ffd24a"), "cape": Color("3b1f6e"), "blouse": Color("fff4fa"), "boots": Color("5a2a6e"),
 	}
 	alt_colors = colors.duplicate()
 	alt_colors.merge({"shirt": Color("1fa3a3"), "sleeve": Color("1fa3a3"), "forearm": Color("1fa3a3"), "accent": Color("ffd24a"),
-		"skirt": Color("12706f"), "shoes": Color("3a2a10"), "boots": Color("3a2a10"), "eyes": Color("1f9e6a"), "cape": Color("0d4a4a")}, true)
+		"skirt": Color("12706f"), "pants": Color("12706f"), "legs": Color("12706f"),
+		"shoes": Color("3a2a10"), "boots": Color("3a2a10"), "eyes": Color("1f9e6a"), "cape": Color("0d4a4a")}, true)
 	walk_speed = 3.3
 	back_speed = 2.7
 	jump_vel = -11.6
@@ -90,8 +91,9 @@ func _init() -> void:
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:
-	r.chain("tail1", FighterRenderer.head_point(s, Vector2(-7, -12)), 8, 5.5, 0.32, 0.86, 0.14)
-	r.chain("tail2", FighterRenderer.head_point(s, Vector2(-11, -7)), 8, 5.5, 0.34, 0.86, 0.12)
+	# Shoulder-length locks. Short segments, so they stop around the collar instead of the waist.
+	r.chain("tail1", FighterRenderer.head_point(s, Vector2(-4, -6)), 4, 3.2, 0.28, 0.86, 0.12)
+	r.chain("tail2", FighterRenderer.head_point(s, Vector2(-8, -2)), 4, 3.2, 0.30, 0.86, 0.10)
 	var up: Vector2 = s["up"]
 	var perp: Vector2 = s["perp"]
 	r.chain("cape", s["sh_b"] + up * 1.0 - perp * 1.0, 6, 8.5, 0.55, 0.85, 0.08)
@@ -136,15 +138,23 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 
 
 func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
-	var up: Vector2 = s["up"]
-	var perp: Vector2 = s["perp"]
-	var hip: Vector2 = s["hip"] + up * 3.0
-	var hem := hip - up * 16.0
-	var sway := sin(r.t * 0.15) * 1.5
-	var skirt := PackedVector2Array([hip + perp * 9.0, hip - perp * 9.0, hem - perp * (15.0 + sway), hem - perp * 5.0 - up * 1.5,
-		hem + perp * 5.0, hem + perp * (15.0 - sway) - up * 1.0])
-	r.shaded_poly(skirt, r.colors["skirt"], 2.0, 0.8)
-	r.draw_line(hem - perp * 14.0 + up * 1.8, hem + perp * 14.0 + up * 1.5, r.colors["trim"], 1.6, true)
+	var trim: Color = r.colors["trim"]
+	var cloth: Color = r.colors["skirt"]
+	# Back leg first, so the front flare covers it. Wider at the hem than at the hip.
+	for leg in [["hip_b", "foot_b", 0.82], ["hip_f", "foot_f", 1.0]]:
+		var a: Vector2 = s[leg[0]]
+		var b: Vector2 = s[leg[1]]
+		var d: Vector2 = b - a
+		if d.length() < 1.0:
+			continue
+		var n := Vector2(-d.y, d.x).normalized()
+		var hem: Vector2 = a.lerp(b, 0.7)
+		var top_w: float = 5.2 * float(leg[2])
+		var bot_w: float = 11.5 * float(leg[2])
+		r.shaded_poly(PackedVector2Array([
+			a + n * top_w, a - n * top_w, hem - n * bot_w, hem + n * bot_w,
+		]), cloth.darkened(0.12 * (1.0 - leg[2])), 1.8, 0.82)
+		r.draw_line(hem - n * (bot_w - 0.4), hem + n * (bot_w - 0.4), trim, 1.7, true)
 	# Boot cuffs.
 	for leg in [["knee_f", "foot_f", 1.0], ["knee_b", "foot_b", 0.8]]:
 		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.5)
@@ -160,8 +170,8 @@ func draw_face(r: FighterRenderer) -> void:
 
 
 func draw_hair_back(r: FighterRenderer) -> void:
-	r.shaded_poly(PackedVector2Array([Vector2(-12, 10), Vector2(-15, 0), Vector2(-13, -10), Vector2(-5, -15.5),
-		Vector2(6, -14), Vector2(4, 4), Vector2(-4, 12)]), r.colors["hair"], 1.8, 0.75)
+	r.shaded_poly(PackedVector2Array([Vector2(-11, 2), Vector2(-14, -2), Vector2(-12, -10), Vector2(-4, -15.5),
+		Vector2(6, -14), Vector2(5, 0), Vector2(-2, 3)]), r.colors["hair"], 1.8, 0.75)
 
 
 func draw_hair_front(r: FighterRenderer) -> void:
@@ -173,7 +183,7 @@ func draw_hair_front(r: FighterRenderer) -> void:
 	])
 	r.shaded_poly(bangs, hc, 2.0, 0.85)
 	# Side lock framing the face.
-	r.shaded_poly(PackedVector2Array([Vector2(12, -5), Vector2(14.5, 3), Vector2(13, 12), Vector2(11, 5)]), hc, 1.5, 0.7)
+	r.shaded_poly(PackedVector2Array([Vector2(11, -6), Vector2(13.5, 0), Vector2(12, 5), Vector2(10, 1)]), hc, 1.5, 0.7)
 	for st in [[Vector2(-6, -12), Vector2(0, -14.5)], [Vector2(3, -13.5), Vector2(8, -12)]]:
 		r.draw_line(st[0], st[1], FighterRenderer.hl(hc), 1.2, true)
 	r.poly(FighterRenderer.star_pts(Vector2(8, -12.5), 3.6, 1.6), r.colors["trim"], 1.1)

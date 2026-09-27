@@ -10,29 +10,23 @@ var slots := [
 var cpu_step := 0  # 0 = P1 picks, 1 = picks CPU fighter, 2 = difficulty
 var start_timer := -1.0
 var t := 0.0
-var chibis: Array[FighterRenderer] = []
+var defs: Array[CharacterDef] = [null, null]
 
 
 func _ready() -> void:
-	for i in 2:
-		var r := FighterRenderer.new()
-		r.base_scale = 1.35
-		r.facing = 1 if i == 0 else -1
-		r.position = Vector2(245 if i == 0 else 395, 305)
-		add_child(r)
-		chibis.append(r)
-	_refresh_chibis()
+	# The paintings are smooth illustration. The fight viewport stays pixelated.
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	_refresh()
 
 
 func _cpu() -> bool:
 	return GameState.mode == "cpu"
 
 
-func _refresh_chibis() -> void:
+func _refresh() -> void:
 	for i in 2:
 		var id: String = GameState.CHARACTERS[slots[i]["char"]]
-		chibis[i].setup(GameState.make_character(id), i == 1 and slots[0]["char"] == slots[1]["char"])
-		chibis[i].base_scale = 1.35 * chibis[i].def.size
+		defs[i] = GameState.make_character(id)
 
 
 func _process(delta: float) -> void:
@@ -43,13 +37,6 @@ func _process(delta: float) -> void:
 			_start_fight()
 	else:
 		_handle_input()
-	for i in 2:
-		var r := chibis[i]
-		r.t = t * 60.0
-		var ready: bool = slots[i]["ready"] or (_cpu() and i == 1 and cpu_step >= 2)
-		r.prop = r.def.win_prop if ready else ""
-		r.expr = "happy" if ready else "normal"
-		r.update_pose(r.def.pose("intro" if ready else "idle", {"lean": 6 + sin(t * 3.0 + i) * 2.0}), 0.15)
 	queue_redraw()
 
 
@@ -136,7 +123,7 @@ func _change_char(i: int, dev: int) -> void:
 	if d != 0:
 		slots[i]["char"] = posmod(slots[i]["char"] + d, n)
 		Sfx.play("select")
-		_refresh_chibis()
+		_refresh()
 
 
 func _slot_of(dev: int) -> int:
@@ -159,6 +146,11 @@ func _draw() -> void:
 	UI.text(self, Vector2(320, 30), "SELECT YOUR FIGHTER", 24, Color(1, 0.9, 0.3), HORIZONTAL_ALIGNMENT_CENTER, 8, Color(0.5, 0.05, 0.2))
 	UI.text(self, Vector2(320, 200), "VS", 40, Color(1, 0.85, 0.2), HORIZONTAL_ALIGNMENT_CENTER, 10, Color(0.6, 0.05, 0.2))
 	for i in 2:
+		var bob := sin(t * 2.4 + i) * 3.0
+		# Inset toward the middle so the headband and the wand stay off the move list.
+		var box := Rect2(64.0 if i == 0 else 366.0, 196.0 + bob, 214.0, 142.0)
+		if defs[i] != null:
+			Portrait.draw(self, defs[i].id, box, i == 1)
 		_draw_slot(i)
 	if start_timer >= 0.0:
 		UI.text(self, Vector2(320, 250), "GET READY!", 22, Color.WHITE)
@@ -168,7 +160,7 @@ func _draw() -> void:
 func _draw_slot(i: int) -> void:
 	var s: Dictionary = slots[i]
 	var cx := 150.0 if i == 0 else 490.0
-	var def := chibis[i].def
+	var def := defs[i]
 	var is_cpu := _cpu() and i == 1
 	var label := "PLAYER %d" % (i + 1) if not is_cpu else "CPU"
 	UI.text(self, Vector2(cx, 60), label, 16, Color(1, 1, 1, 0.9))
@@ -198,12 +190,12 @@ func _draw_slot(i: int) -> void:
 		col = Color(0.5, 1, 0.5)
 	if status != "":
 		UI.text(self, Vector2(cx, 128), status, 14, col)
-	UI.text(self, Vector2(14.0 if i == 0 else 626.0, 240), "(HYPER needs a full meter)", 9, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
+	UI.text(self, Vector2(14.0 if i == 0 else 626.0, 208), "(HYPER needs a full meter)", 9, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
 	if s["dev"] != Controls.NONE and not is_cpu:
 		UI.text(self, Vector2(cx, 322), Controls.device_name(s["dev"]), 10, Color(1, 1, 1, 0.8))
-	UI.text(self, Vector2(14.0 if i == 0 else 626.0, 152), "SPECIAL MOVES", 10, Color(1, 0.8, 0.95), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
+	UI.text(self, Vector2(14.0 if i == 0 else 626.0, 142), "SPECIAL MOVES", 10, Color(1, 0.8, 0.95), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
 	for j in def.specials_text.size():
 		var row: Array = def.specials_text[j]
-		var y := 170.0 + j * 16.0
+		var y := 156.0 + j * 14.0
 		var x := 14.0 if i == 0 else 626.0
 		UI.text(self, Vector2(x, y), "%s: %s" % [row[0], row[1]], 10, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)

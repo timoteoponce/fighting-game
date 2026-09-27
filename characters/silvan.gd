@@ -1,8 +1,8 @@
 class_name SilvanDef
 extends CharacterDef
-## Silvan: two years old, still in diapers, and somehow part puppy. He can't
-## reach far and he can't hit hard, but nobody on the roster runs or jumps like
-## he does. The archetype gap: a tiny, relentless pest.
+## Silvan: two years old, in pants and little boots, and somehow part puppy. He
+## can't reach far and he can't hit hard, but nobody on the roster runs or jumps
+## like he does. The archetype gap: a tiny, relentless pest.
 
 
 func _init() -> void:
@@ -17,16 +17,16 @@ func _init() -> void:
 	colors = {
 		"skin": Color("ffd9b8"), "hair": Color("8a5a32"), "shirt": Color("ffe27a"),
 		"sleeve": Color("ffe27a"), "forearm": Color("ffd9b8"), "hands": Color("ffd9b8"),
-		"pants": Color("ffd9b8"), "legs": Color("ffd9b8"), "shoes": Color("ffd9b8"),
-		"eyes": Color("5b7f3a"), "accent": Color("6fc4ff"), "diaper": Color("fbfbff"),
+		"pants": Color("3a78c4"), "legs": Color("3a78c4"), "shoes": Color("6e4630"),
+		"eyes": Color("5b7f3a"), "accent": Color("6fc4ff"),
 		"fur": Color("a8703f"), "nose": Color("3a2a22"), "tongue": Color("ff7f9e"),
 	}
-	# Player 2 is the "were-puppy" palette: darker fur, storm-blue diaper tape.
+	# Player 2 is the "were-puppy" palette: darker fur, green shirt.
 	alt_colors = colors.duplicate()
 	alt_colors.merge({
 		"shirt": Color("b6e36f"), "sleeve": Color("b6e36f"), "hair": Color("3a2a22"),
 		"fur": Color("54402f"), "accent": Color("ff8ac4"), "eyes": Color("c8a13a"),
-		"diaper": Color("dfe8ff"),
+		"pants": Color("2a4e86"), "legs": Color("2a4e86"), "shoes": Color("3a2a22"),
 	}, true)
 	# Fastest walk and highest jump on the roster; everything else is a trade
 	# against that. He is meant to be hard to pin down, not hard to survive.
@@ -188,6 +188,7 @@ func _init() -> void:
 		}),
 	}
 	size = 0.78  # he is two
+	build = 0.84  # slimmer than the old round diaper silhouette; still a toddler
 	scale_moves()
 
 
@@ -242,23 +243,6 @@ func draw_face(r: FighterRenderer) -> void:
 	var ear := r.chain_local("ear_f")
 	if ear.size() > 1:
 		r.ribbon(ear, 7.0, 4.0, r.colors["fur"])
-
-
-func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
-	# The diaper. Drawn over the hips so it reads instantly at 320x180, with the
-	# two tape tabs that make it unmistakable.
-	var up: Vector2 = s["up"]
-	var perp: Vector2 = s["perp"]
-	var hip: Vector2 = s["hip"]
-	var d: Color = r.colors["diaper"]
-	r.shaded_poly(PackedVector2Array([
-		hip + perp * 9.0 + up * 5.0, hip - perp * 9.0 + up * 5.0,
-		hip - perp * 7.5 - up * 7.0, hip - perp * 3.0 - up * 10.0,
-		hip + perp * 3.0 - up * 10.0, hip + perp * 7.5 - up * 7.0,
-	]), d, 1.6, 0.82)
-	for side in [-1.0, 1.0]:
-		r.part(hip + perp * (8.0 * side) + up * 5.5, hip + perp * (8.5 * side) + up * 1.0, 4.0, 4.0, r.colors["accent"])
-	r.draw_line(hip + perp * 8.0 + up * 4.0, hip - perp * 8.0 + up * 4.0, FighterRenderer.shade(d), 1.2, true)
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:

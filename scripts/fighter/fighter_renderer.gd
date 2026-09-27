@@ -625,7 +625,8 @@ func face(iris: Color, girl := false) -> void:
 		var rx := (3.5 if girl else 3.2) * (0.66 if i == 1 else 1.0) * pop
 		var ry := (4.9 if girl else 4.3) * pop
 		if expr == "attack":
-			ry *= 0.78
+			# Emilia squints harder than the boys: a decided glare, not a cute gasp.
+			ry *= 0.62 if girl else 0.78
 		match expr:
 			"hurt":
 				var sgn := 1.0 if i == 0 else -1.0
@@ -673,8 +674,17 @@ func face(iris: Color, girl := false) -> void:
 		var b1 := e + Vector2(2.4, -ry - 2.0)
 		match expr:
 			"attack":
-				b0.y -= 1.0
-				b1.y += 1.0
+				if girl:
+					# Inner corners drop toward the nose: a scowl, not a parallel slant.
+					if i == 0:
+						b0.y -= 1.4
+						b1.y += 2.4
+					else:
+						b0.y += 2.4
+						b1.y -= 1.4
+				else:
+					b0.y -= 1.0
+					b1.y += 1.0
 			"hurt", "shock":
 				b0.y += 1.0
 				b1.y -= 1.0
@@ -685,14 +695,23 @@ func face(iris: Color, girl := false) -> void:
 			"ko", "dizzy":
 				b0.y -= 1.4
 				b1.y -= 1.4
-		draw_line(b0, b1, OUT, 1.0 if girl else 1.6, true)
+		if girl and expr == "normal":
+			# Idle is decided, not smiling: a shallow V even between attacks.
+			if i == 0:
+				b1.y += 1.3
+			else:
+				b0.y += 1.3
+		draw_line(b0, b1, OUT, 1.35 if girl else 1.6, true)
 	draw_line(Vector2(12.2, 2.8), Vector2(11.4, 4.3), shade(colors["skin"]), 1.0, true)
 	if girl:
 		draw_colored_polygon(ellipse_pts(Vector2(5.5, 5.2), 2.0, 0.9), Color(1, 0.45, 0.6, 0.45))
 	var m := Vector2(8.5, 7.3)
 	match expr:
 		"attack":
-			poly(PackedVector2Array([m + Vector2(-1.8, -0.8), m + Vector2(2.0, -1.0), m + Vector2(0.6, 1.8)]), Color(0.55, 0.12, 0.18), 1.0)
+			if girl:
+				poly(PackedVector2Array([m + Vector2(-2.6, -1.4), m + Vector2(2.8, -1.6), m + Vector2(1.4, 2.6), m + Vector2(-1.2, 2.4)]), Color(0.45, 0.08, 0.12), 1.2)
+			else:
+				poly(PackedVector2Array([m + Vector2(-1.8, -0.8), m + Vector2(2.0, -1.0), m + Vector2(0.6, 1.8)]), Color(0.55, 0.12, 0.18), 1.0)
 		"hurt":
 			poly(ellipse_pts(m + Vector2(0, 0.3), 1.3, 1.7, 0.0, 10), Color(0.45, 0.1, 0.15), 1.0)
 		"happy":
@@ -710,4 +729,7 @@ func face(iris: Color, girl := false) -> void:
 		"smug":
 			draw_arc(m + Vector2(0.4, -1.0), 2.6, 0.25, 1.5, 8, Color(0.5, 0.12, 0.18), 1.4, true)
 		_:
-			draw_line(m + Vector2(-1.5, 0), m + Vector2(1.5, -0.2), OUT, 1.0, true)
+			if girl:
+				draw_line(m + Vector2(-2.1, -0.3), m + Vector2(2.1, 0.7), OUT, 1.4, true)
+			else:
+				draw_line(m + Vector2(-1.5, 0), m + Vector2(1.5, -0.2), OUT, 1.0, true)
