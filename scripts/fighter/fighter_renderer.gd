@@ -37,6 +37,14 @@ const POSES := {
 	"down": {"lean": 0, "head": 10, "arm_f": 150, "elb_f": 20, "arm_b": 200, "elb_b": 20,
 		"leg_f": 12, "knee_f": 8, "leg_b": -4, "knee_b": 20, "rot": -90, "ground": 0, "hip": -9},
 	"win": {"arm_f": 165, "elb_f": 10, "arm_b": 40, "elb_b": 110},
+	"dash": {"lean": 34, "head": -12, "arm_f": 10, "elb_f": 60, "arm_b": -45, "elb_b": 55,
+		"leg_f": 55, "knee_f": 80, "leg_b": -40, "knee_b": 50, "hip": -38},
+	"backdash": {"lean": -18, "head": -8, "arm_f": 60, "elb_f": 100, "arm_b": 80, "elb_b": 100,
+		"leg_f": 45, "knee_f": 70, "leg_b": -30, "knee_b": 20, "hip": -40},
+	"throw": {"lean": 16, "head": -6, "arm_f": 95, "elb_f": 10, "arm_b": 90, "elb_b": 14,
+		"leg_f": 26, "knee_f": 26, "leg_b": -22, "knee_b": 18},
+	"thrown": {"lean": -20, "head": -16, "arm_f": 150, "elb_f": 20, "arm_b": 165, "elb_b": 25,
+		"leg_f": 30, "knee_f": 40, "leg_b": -12, "knee_b": 30},
 	"intro": {},
 }
 
@@ -53,7 +61,10 @@ var prop_t := 0
 var head_only := false  # portraits: draw only head and shoulders
 var chains := {}  # name -> [points (global), previous points (global)]
 var sk := {}
+var prev_sk := {}  # last frame's skeleton, for motion smears
 var pose_vel := {}  # joint spring velocities
+## Limbs moving faster than this (pixels per frame) leave a smear behind them.
+const SMEAR_MIN := 7.0
 
 ## Per-joint spring response: legs snap, torso follows, arms and head trail
 ## behind with a little overshoot. That lag is what stops the puppet look.
@@ -83,6 +94,7 @@ func update_pose(target: Dictionary, speed: float) -> void:
 		pose[k] = float(pose[k]) + v
 	scale = Vector2(base_scale * facing, base_scale)
 	modulate = Color(2.2, 2.2, 2.2) if flash > 0 else Color.WHITE
+	prev_sk = sk
 	sk = skeleton()
 	if is_inside_tree() and def != null:
 		def.update_chains(self, sk)
@@ -104,6 +116,7 @@ func copy_from(src: FighterRenderer) -> void:
 	scale = src.scale
 	global_position = src.global_position
 	sk = src.sk.duplicate()
+	prev_sk = src.prev_sk.duplicate()
 	queue_redraw()
 
 
@@ -176,6 +189,7 @@ func _draw() -> void:
 		_draw_head(s)
 		return
 	def.draw_behind(self, s)
+	_smears(s)
 	# Back arm and leg: darker, they're further away.
 	part(s["sh_b"], s["elb_b"], 8.0, 7.0, dk(c["sleeve"]))
 	part(s["elb_b"], s["hand_b"], 6.5, 5.5, dk(c["forearm"]))
@@ -194,6 +208,25 @@ func _draw() -> void:
 	part(s["elb_f"], s["hand_f"], 6.5, 5.5, c["forearm"])
 	fist(s["hand_f"], c["hands"], s["hand_f"] - s["elb_f"])
 	def.draw_props(self, s)
+
+
+## Motion smear: a translucent streak from where a fast limb was last frame to
+## where it is now. Two frames of a hard kick read as one continuous arc instead
+## of two disconnected legs — the cheapest big win in hand-drawn animation.
+func _smears(s: Dictionary) -> void:
+	if prev_sk.is_empty():
+		return
+	for joint in ["hand_f", "foot_f", "hand_b", "foot_b"]:
+		if not prev_sk.has(joint):
+			continue
+		var a: Vector2 = prev_sk[joint]
+		var b: Vector2 = s[joint]
+		var d := b - a
+		if d.length() < SMEAR_MIN:
+			continue
+		var w: float = 7.0 if joint.begins_with("foot") else 5.5
+		var fade := clampf(d.length() / 40.0, 0.18, 0.5)
+		draw_colored_polygon(capsule_pts(a, b, w * 0.35, w * 0.6), Color(1, 1, 1, fade * 0.55))
 
 
 func _draw_head(s: Dictionary) -> void:

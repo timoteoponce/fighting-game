@@ -154,6 +154,8 @@ func _physics_process(_delta: float) -> void:
 		return
 	if hitstop > 0:
 		hitstop -= 1
+		for f in fighters:
+			f.freeze_visual()
 		return
 	if slowmo > 0:
 		slowmo -= 1
@@ -246,6 +248,22 @@ func on_hyper(f: Fighter, m: MoveData) -> void:
 	stage.hyper_color = f.renderer.colors["accent"]
 
 
+## A throw completed: same feedback a heavy hit gets, plus a stats entry.
+func on_throw(a: Fighter, d: Fighter, m: MoveData, res: String) -> void:
+	var key := "%s throw" % a.def.id
+	stats[key] = int(stats.get(key, 0)) + m.damage
+	var point := (a.position + d.position) * 0.5 + Vector2(0, -60)
+	effects.spawn("heavy", point)
+	effects.word(point)
+	Sfx.play(m.hit_sfx)
+	hitstop = maxi(hitstop, m.hitstop)
+	shake = maxf(shake, 5.0)
+	if res == "ko":
+		hitstop = 24
+		shake = 9.0
+		flash = 8
+
+
 func spawn_projectile(f: Fighter, spec: Dictionary) -> void:
 	var p := Projectile.new()
 	p.setup(f, spec)
@@ -328,7 +346,11 @@ func _resolve_bounds() -> void:
 	var b := fighters[1]
 	for pass_i in 2:
 		var dx := b.position.x - a.position.x
-		var solid := a.state != Fighter.S.KO and b.state != Fighter.S.KO
+		# A rolling fighter slips through; a throw drives both positions itself.
+		var solid := a.state != Fighter.S.KO and b.state != Fighter.S.KO \
+			and not a.passes_through() and not b.passes_through() \
+			and a.state != Fighter.S.THROW and a.state != Fighter.S.THROWN \
+			and b.state != Fighter.S.THROW and b.state != Fighter.S.THROWN
 		if solid and absf(dx) < PUSH_W and absf(b.position.y - a.position.y) < 70.0:
 			var s := signf(dx) if dx != 0.0 else float(a.facing)
 			var push := (PUSH_W - absf(dx)) * (0.5 if pass_i == 0 else 1.0)

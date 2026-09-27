@@ -9,8 +9,16 @@ const COMBO_WINDOW := 4  # max frames between L and H to count as "together"
 var hist := PackedInt32Array()
 var frame := 0
 var _press := {}  # bit -> frame of last press
+var _prev_press := {}  # bit -> frame of the press before that
 var _consumed := {}  # bit -> press frame already used
 var _combo_used := -1
+var _tap_used := {}  # bit -> double-tap already spent
+
+## Max frames between two taps of the same direction to count as a dash.
+## Generous on purpose: this is played on D-pads by kids, not on arcade sticks.
+const TAP_WINDOW := 14
+## How long a fresh double-tap stays available to be consumed.
+const TAP_GRACE := 6
 
 
 func _init() -> void:
@@ -24,6 +32,7 @@ func push(mask: int) -> void:
 	var edges := mask & ~prev
 	for bit in [Controls.UP, Controls.DOWN, Controls.LEFT, Controls.RIGHT, Controls.LIGHT, Controls.HEAVY, Controls.START]:
 		if edges & bit:
+			_prev_press[bit] = _press.get(bit, -1000)
 			_press[bit] = frame
 
 
@@ -65,8 +74,23 @@ func consume_combo() -> void:
 	consume(Controls.HEAVY)
 
 
+## True if `bit` was tapped twice quickly, recently, and not used yet.
+func double_tapped(bit: int) -> bool:
+	var last: int = _press.get(bit, -1000)
+	var before: int = _prev_press.get(bit, -1000)
+	if last - before > TAP_WINDOW or frame - last > TAP_GRACE:
+		return false
+	return int(_tap_used.get(bit, -1)) < last
+
+
+func consume_tap(bit: int) -> void:
+	_tap_used[bit] = _press.get(bit, frame)
+
+
 func clear() -> void:
 	hist.fill(0)
 	_press.clear()
+	_prev_press.clear()
 	_consumed.clear()
+	_tap_used.clear()
 	_combo_used = frame

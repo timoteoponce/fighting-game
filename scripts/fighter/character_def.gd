@@ -21,6 +21,7 @@ var win_prop := ""
 var intro_prop := ""
 var win_quote := ""
 var specials_text := []  # [[input, name], ...] for menus
+var _throw: MoveData
 
 
 ## Shrinks or grows hitboxes and projectile spawn points to match `size`.
@@ -41,6 +42,17 @@ func pose(pname: String, extra := {}) -> Dictionary:
 	p.merge(poses.get(pname, {}), true)
 	p.merge(extra, true)
 	return p
+
+
+## The universal throw. Characters may override this to retune it.
+func throw_data() -> MoveData:
+	if _throw == null:
+		_throw = MoveData.make({
+			"id": "throw", "display": "THROW", "level": 1, "damage": 110, "knockdown": true,
+			"kb": Vector2(6.5, -7.0), "hitstun": 24, "blockstun": 0, "hitstop": 10, "meter": 12.0,
+			"hit_sfx": "heavy",
+		})
+	return _throw
 
 
 # Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points.

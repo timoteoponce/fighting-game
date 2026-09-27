@@ -33,6 +33,10 @@ func _ready() -> void:
 	for id in ["ulises", "emilia"]:
 		_test_specials(id)
 		_test_combo(id)
+	_test_movement("ulises")
+	_test_throw("ulises")
+	_test_air_block()
+	_test_quick_rise()
 	_test_block()
 	_test_demo_match()
 	if OS.get_cmdline_user_args().has("--balance"):
@@ -116,6 +120,174 @@ func _test_specials(id: String) -> void:
 	_run(f, 200)
 	check(f.fighters[1].health < hp, "hyper damages the opponent (%d -> %d)" % [hp, f.fighters[1].health])
 	f.free()
+
+
+func _test_movement(id: String) -> void:
+	print("[%s movement]" % id)
+	var f := _new_fight(id, "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	var fwd := R if p1.facing > 0 else Lf
+	var back := Lf if p1.facing > 0 else R
+
+	# Double-tap forward: a dash that travels further than plain walking.
+	var x0 := p1.position.x
+	_script(p1, [[fwd, 2], [0, 2], [fwd, 2], [0, 40]])
+	var dashed := false
+	for i in 26:
+		f._physics_process(1.0 / 60.0)
+		dashed = dashed or p1.state == Fighter.S.DASH
+	check(dashed, "double-tap forward dashes")
+	check(absf(p1.position.x - x0) > p1.def.walk_speed * 20.0, "the dash covers more ground than a walk")
+	_run(f, 30)
+
+	# The roll is invulnerable through its middle.
+	_script(p1, [[fwd, 2], [0, 2], [fwd, 2], [0, 40]])
+	var rolled_invuln := false
+	for i in 26:
+		f._physics_process(1.0 / 60.0)
+		if p1.state == Fighter.S.DASH and p1.sf >= Fighter.ROLL_INVULN_FROM and p1.sf < Fighter.DASH_FRAMES - 4:
+			rolled_invuln = rolled_invuln or not p1.hurtbox_world().has_area()
+	check(rolled_invuln, "the forward roll is invulnerable through its middle")
+	_run(f, 30)
+
+	# Double-tap back retreats.
+	p1.position.x = p2.position.x - 120.0
+	x0 = p1.position.x
+	_script(p1, [[back, 2], [0, 2], [back, 2], [0, 40]])
+	var backdashed := false
+	for i in 28:
+		f._physics_process(1.0 / 60.0)
+		backdashed = backdashed or p1.state == Fighter.S.BACKDASH
+	check(backdashed, "double-tap back backdashes")
+	check(p1.position.x < x0, "the backdash retreats")
+	_run(f, 30)
+
+	# Up in the air jumps again; the second jump goes higher than one alone.
+	_script(p1, [[U, 3], [0, 12], [U, 3], [0, 60]])
+	var peak := Fighter.GROUND_Y
+	var double_jumped := false
+	for i in 70:
+		f._physics_process(1.0 / 60.0)
+		peak = minf(peak, p1.position.y)
+		double_jumped = double_jumped or (p1.state == Fighter.S.JUMP and p1.air_jumps == 0 and p1.vel.y < -6.0 and p1.sf > 12)
+	check(double_jumped, "Up in the air does a second jump")
+	# A single jump peaks at v^2 / 2g; the second one must clearly beat that.
+	var single := p1.def.jump_vel * p1.def.jump_vel / (2.0 * Fighter.GRAVITY)
+	check(Fighter.GROUND_Y - peak > single * 1.3,
+		"the double jump gains real height (peak %d vs %d for one jump)" % [int(Fighter.GROUND_Y - peak), int(single)])
+	_run(f, 40)
+
+	# Air dash: double-tap a direction in the air.
+	p1.position.x = p2.position.x - 200.0
+	_script(p1, [[U, 3], [0, 10], [fwd, 2], [0, 2], [fwd, 2], [0, 60]])
+	var air_dashed := false
+	for i in 60:
+		f._physics_process(1.0 / 60.0)
+		air_dashed = air_dashed or p1.air_dash_timer > 0
+	check(air_dashed, "double-tap a direction in the air dashes")
+	f.free()
+
+
+func _test_throw(id: String) -> void:
+	print("[%s throw]" % id)
+	var f := _new_fight(id, "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	p2.position.x = p1.position.x + 40.0
+	var hp := p2.health
+	_script(p1, [[LI | HE, 2], [0, 60]])
+	var threw := false
+	for i in 40:
+		f._physics_process(1.0 / 60.0)
+		threw = threw or p1.state == Fighter.S.THROW
+	check(threw, "L+H point-blank throws instead of firing the special")
+	check(p2.health < hp, "the throw damages the opponent (%d -> %d)" % [hp, p2.health])
+	check(f.projectiles.is_empty(), "no projectile came out of the throw")
+
+	# Far away, the very same input is still the projectile special.
+	_run(f, 120)
+	p2.position.x = p1.position.x + 260.0
+	_script(p1, [[LI | HE, 2], [0, 60]])
+	var seen := _watch_move(f, p1, 40)
+	check(seen.has(p1.def.moves["proj"].id), "L+H at range still does the projectile (%s)" % str(seen))
+
+	# Throws are breakable: press L+H back and nobody takes damage.
+	_run(f, 120)
+	p2.position.x = p1.position.x + 40.0
+	hp = p2.health
+	_script(p1, [[LI | HE, 2], [0, 60]])
+	_script(p2, [[0, 3], [LI | HE, 2], [0, 60]])
+	var broke := false
+	for i in 40:
+		f._physics_process(1.0 / 60.0)
+		broke = broke or (i > 24 and p1.state != Fighter.S.THROW and p2.state != Fighter.S.THROWN)
+	check(broke, "both fighters recover from a broken throw")
+	check(p2.health == hp, "a broken throw does no damage")
+	f.free()
+
+
+func _test_air_block() -> void:
+	print("[air block]")
+	var f := _new_fight("ulises", "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	# Park P2 in mid-air holding away from P1, then hit them.
+	p2.position = Vector2(p1.position.x + 70.0, Fighter.GROUND_Y - 70.0)
+	p2.facing = -1
+	p2.set_state(Fighter.S.JUMP, true)
+	p2.vel = Vector2(0, -2.0)
+	var away := R if p2.position.x > p1.position.x else Lf
+	_script(p2, [[away, 90]])
+	_run(f, 2)  # let the input buffer register the held direction
+	var hp := p2.health
+	var res := p2.take_hit(p1.def.moves["H"], p1.position.x)
+	check(res == "block", "holding away in the air blocks (got %s)" % res)
+	check(hp - p2.health == 0, "an air block takes no damage from a normal (lost %d)" % (hp - p2.health))
+	# The blocking fighter must fall back to the ground, not hover in the air.
+	_run(f, 120)
+	check(p2.on_ground(), "an air-blocking fighter lands again")
+
+	# Without holding away, the same hit connects.
+	_run(f, 60)
+	p2.position = Vector2(p1.position.x + 70.0, Fighter.GROUND_Y - 70.0)
+	p2.set_state(Fighter.S.JUMP, true)
+	p2.vel = Vector2(0, -2.0)
+	_script(p2, [[0, 60]])
+	_run(f, 2)
+	hp = p2.health
+	p2.take_hit(p1.def.moves["H"], p1.position.x)
+	check(p2.health < hp, "not holding away in the air still gets hit")
+	f.free()
+
+
+func _test_quick_rise() -> void:
+	print("[quick rise]")
+	var f := _new_fight("ulises", "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	# Put P2 on the floor, then measure how long it takes to become actionable.
+	var slow := _rise_frames(f, p2, false)
+	var fast := _rise_frames(f, p2, true)
+	check(fast < slow, "tapping gets you up sooner (%d vs %d frames)" % [fast, slow])
+	check(p1 != null, "both fighters survived the test")
+	f.free()
+
+
+## Knocks `fr` down and returns how many frames until they can act again.
+func _rise_frames(f: Fight, fr: Fighter, tap: bool) -> int:
+	fr.set_state(Fighter.S.KNOCKDOWN, true)
+	fr.vel = Vector2.ZERO
+	_script(fr, [[R if tap else 0, 90]])
+	for i in 90:
+		f._physics_process(1.0 / 60.0)
+		if fr.is_actionable():
+			return i
+	return 90
 
 
 func _test_combo(id: String) -> void:

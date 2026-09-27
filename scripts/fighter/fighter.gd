@@ -3,7 +3,8 @@ extends Node2D
 ## One fighter: state machine, movement, attacks and getting hit.
 ## All logic advances once per physics frame (60 per second) via step().
 
-enum S { INTRO, IDLE, WALK, CROUCH, JUMP, ATTACK, BLOCK, HITSTUN, LAUNCHED, KNOCKDOWN, GETUP, WIN, KO }
+enum S { INTRO, IDLE, WALK, CROUCH, JUMP, ATTACK, BLOCK, HITSTUN, LAUNCHED, KNOCKDOWN, GETUP, WIN, KO,
+	DASH, BACKDASH, THROW, THROWN }
 
 const GROUND_Y := 300.0
 const GRAVITY := 0.6
@@ -14,6 +15,29 @@ const HYPER_COST := 100.0
 const JUGGLE_LIMIT := 7
 const BUFFER := 6
 const SCALE := 1.25
+
+## Forward dash doubles as a KOF-style roll: it passes through the opponent and
+## is invulnerable through the middle, so it is both movement and an escape.
+const DASH_FRAMES := 20
+const DASH_SPEED := 8.0
+const ROLL_INVULN_FROM := 4
+const ROLL_INVULN_FRAMES := 10
+const DASH_CANCEL_FROM := 5  # attacks and jumps become available here
+## Backdash retreats with a short invulnerable startup: the panic button.
+const BACKDASH_FRAMES := 22
+const BACKDASH_SPEED := 8.5
+const BACKDASH_INVULN := 6
+## One air dash and one extra jump per trip into the air.
+const AIR_DASH_SPEED := 8.5
+const AIR_DASH_FRAMES := 12  # gravity is suspended for this long
+const AIR_JUMP_VEL := -9.0
+## Throws: L+H while touching a grounded opponent. Unblockable, but breakable
+## by pressing L+H back within the break window, so it never feels unfair.
+const THROW_RANGE := 66.0
+const THROW_HOLD := 16
+const THROW_BREAK_WINDOW := 10
+## Earliest frame a knocked-down fighter may tap to rise early (of 36).
+const QUICK_RISE_FROM := 10
 
 var def: CharacterDef
 var index := 0
@@ -45,7 +69,12 @@ var flash := 0
 var projectile: Projectile
 var land_timer := 0  # frames of landing squash (visual only)
 var hit_variant := 0
+var contact := 0  # frames of impact emphasis after a hit lands (visual only)
+var shook := 0  # frames of hit-reaction jitter (visual only)
 var super_jumping := false
+var air_jumps := 0  # extra jumps left before touching the ground
+var air_dashes := 0  # air dashes left before touching the ground
+var air_dash_timer := 0  # frames of suspended gravity during an air dash
 var ghosts: Array[FighterRenderer] = []  # MvC-style afterimages
 var _ghost_next := 0
 
@@ -76,6 +105,11 @@ func reset_for_round(x: float, face: int) -> void:
 	flash = 0
 	projectile = null
 	super_jumping = false
+	contact = 0
+	shook = 0
+	air_jumps = 0
+	air_dashes = 0
+	air_dash_timer = 0
 	for g in ghosts:
 		g.visible = false
 	buf.clear()
@@ -125,6 +159,10 @@ func step() -> void:
 		invuln -= 1
 	if flash > 0:
 		flash -= 1
+	if contact > 0:
+		contact -= 1
+	if shook > 0:
+		shook -= 1
 	if launch_window > 0:
 		launch_window -= 1
 	match state:
@@ -132,6 +170,12 @@ func step() -> void:
 			_ground_step()
 		S.JUMP:
 			_jump_step()
+		S.DASH, S.BACKDASH:
+			_dash_step()
+		S.THROW:
+			_throw_step()
+		S.THROWN:
+			_thrown_step()
 		S.ATTACK:
 			_attack_step()
 		S.HITSTUN:
@@ -148,6 +192,15 @@ func step() -> void:
 			_ko_step()
 		S.INTRO, S.WIN:
 			_idle_physics()
+	_update_visual()
+
+
+## Called by Fight during hitstop, when the simulation is deliberately frozen.
+## Nothing about the fight advances — only the impact jitter, so a held frame
+## still reads as a hard hit instead of a stutter.
+func freeze_visual() -> void:
+	if shook > 0:
+		shook -= 1
 	_update_visual()
 
 
@@ -192,12 +245,24 @@ func _to_neutral() -> void:
 func _ground_step() -> void:
 	if state == S.BLOCK and stun > 0:
 		stun -= 1
+		if position.y < GROUND_Y - 0.01:
+			# Air block: keep falling while guarding instead of hovering.
+			vel.x *= 0.9
+			if _air_physics():
+				_land()
+			elif stun <= 0:
+				set_state(S.JUMP, true)
+			return
 		vel.x *= 0.82
 		position.x += vel.x
 		return
 	_face_opponent()
 	var h := buf.current()
+	if _try_throw():
+		return
 	if _try_special():
+		return
+	if _try_dash():
 		return
 	if launch_window > 0 and h & Controls.UP:
 		_super_jump()
@@ -235,7 +300,91 @@ func _jump(h: int) -> void:
 	vel = Vector2(dx, def.jump_vel)
 	position.y -= 1.0
 	crouching = false
+	air_jumps = 1
+	air_dashes = 1
+	air_dash_timer = 0
+	# Spend the press, or holding Up would immediately burn the double jump.
+	buf.consume(Controls.UP)
 	set_state(S.JUMP, true)
+
+
+# --- Dashes, rolls and air movement ------------------------------------------
+
+## Double-tap forward or back on the ground. Forward is also the roll.
+func _try_dash() -> bool:
+	for bit: int in [_fwd(), _back()]:
+		if not buf.double_tapped(bit):
+			continue
+		buf.consume_tap(bit)
+		var back := bit == _back()
+		vel.x = 0.0
+		set_state(S.BACKDASH if back else S.DASH, true)
+		if back:
+			invuln = BACKDASH_INVULN
+		Sfx.play("whoosh", 1.15 if back else 0.95)
+		fight.effects.spawn("dust", Vector2(position.x, GROUND_Y))
+		return true
+	return false
+
+
+func _dash_step() -> void:
+	var back := state == S.BACKDASH
+	var total := BACKDASH_FRAMES if back else DASH_FRAMES
+	if not back:
+		# The roll is invulnerable through its middle, not its edges.
+		if sf == ROLL_INVULN_FROM:
+			invuln = ROLL_INVULN_FRAMES
+		if sf >= DASH_CANCEL_FROM:
+			if _try_throw() or _try_special() or _try_normal():
+				return
+			if buf.held(Controls.UP):
+				_jump(buf.current())
+				return
+	# Ease out, so the dash starts snappy and settles instead of stopping dead.
+	var k := 1.0 - float(sf) / float(total)
+	vel.x = (-BACKDASH_SPEED if back else DASH_SPEED) * facing * (0.35 + 0.85 * k)
+	position.x += vel.x
+	if sf >= total:
+		vel.x = 0.0
+		_to_neutral()
+
+
+## A rolling fighter slips through the opponent instead of pushing them.
+func passes_through() -> bool:
+	return state == S.DASH and sf >= ROLL_INVULN_FROM and sf <= DASH_FRAMES - 3
+
+
+## Double jump and air dash, one of each per trip into the air.
+func _try_air_moves() -> bool:
+	if super_jumping:
+		return false
+	if air_jumps > 0 and buf.pressed_within(Controls.UP, 4):
+		buf.consume(Controls.UP)
+		air_jumps -= 1
+		air_dash_timer = 0
+		var h := buf.current()
+		var dx := vel.x
+		if h & _fwd():
+			dx = def.jump_x * facing
+		elif h & _back():
+			dx = -def.jump_x * facing
+		vel = Vector2(dx, AIR_JUMP_VEL)
+		Sfx.play("whoosh", 1.2)
+		fight.effects.spawn("ring", position + Vector2(0, -40))
+		return true
+	if air_dashes <= 0:
+		return false
+	for bit: int in [_fwd(), _back()]:
+		if not buf.double_tapped(bit):
+			continue
+		buf.consume_tap(bit)
+		air_dashes -= 1
+		var sgn := -1.0 if bit == _back() else 1.0
+		vel = Vector2(AIR_DASH_SPEED * facing * sgn, 0.0)
+		air_dash_timer = AIR_DASH_FRAMES
+		Sfx.play("whoosh", 1.05)
+		return true
+	return false
 
 
 func _super_jump() -> void:
@@ -251,6 +400,8 @@ func _super_jump() -> void:
 
 
 func _jump_step() -> void:
+	if _try_air_moves():
+		return
 	if _try_normal():
 		return
 	if _air_physics():
@@ -258,11 +409,17 @@ func _jump_step() -> void:
 
 
 func _air_physics() -> bool:
-	vel.y += GRAVITY
+	if air_dash_timer > 0:
+		# Air dashes float: gravity resumes when the dash runs out.
+		air_dash_timer -= 1
+		vel.y *= 0.5
+	else:
+		vel.y += GRAVITY
 	position += vel
 	if position.y >= GROUND_Y:
 		position.y = GROUND_Y
 		vel.y = 0.0
+		air_dash_timer = 0
 		return true
 	return false
 
@@ -270,6 +427,8 @@ func _air_physics() -> bool:
 func _land() -> void:
 	vel = Vector2.ZERO
 	land_timer = 6
+	air_jumps = 0
+	air_dashes = 0
 	Sfx.play("land")
 	fight.effects.spawn("dust", position)
 	_to_neutral()
@@ -300,8 +459,19 @@ func _launched_step() -> void:
 func _knockdown_step() -> void:
 	vel.x *= 0.8
 	position.x += vel.x
+	# Quick-rise: tap anything once you've hit the floor to get up early.
+	if sf >= QUICK_RISE_FROM and sf < 36 and buf.current() != 0:
+		_quick_rise()
+		return
 	if sf >= 36:
 		set_state(S.GETUP, true)
+
+
+func _quick_rise() -> void:
+	set_state(S.GETUP, true)
+	invuln = 12
+	Sfx.play("whoosh", 1.3)
+	fight.effects.spawn("dust", Vector2(position.x, GROUND_Y))
 
 
 func _ko_step() -> void:
@@ -426,10 +596,7 @@ func _attack_step() -> void:
 	var dashing := m.dash_speed != 0.0 and sf >= m.dash_from and sf <= m.dash_to
 	if dashing:
 		vel.x = m.dash_speed * facing
-	if sf == m.startup + 1 and m.hitbox.size != Vector2.ZERO:
-		var hb := hitbox_world()
-		if hb.has_area():
-			fight.effects.spawn("slash", hb.get_center(), {"dir": facing, "r": maxf(hb.size.x, hb.size.y) * 0.6})
+	_fire_events(sf)
 	if not m.projectile.is_empty() and sf == m.startup:
 		fight.spawn_projectile(self, m.projectile)
 	var airborne := position.y < GROUND_Y - 0.01 or vel.y < 0.0
@@ -449,6 +616,101 @@ func _attack_step() -> void:
 			_to_neutral()
 
 
+## Fires the move's authored FX/sound events for this state frame.
+func _fire_events(frame: int) -> void:
+	if move == null or fight == null:
+		return
+	for e in move.events_at(frame):
+		_fire_event(e[0], e[1])
+
+
+## `data.offset` is in the fighter's own space, facing right, like a hitbox.
+func _fire_event(kind: String, data: Dictionary) -> void:
+	var off: Vector2 = data.get("offset", Vector2.ZERO)
+	var at := position + Vector2(off.x * facing, off.y)
+	match kind:
+		"slash":
+			# Swoosh sized to the hitbox, unless the character overrides it.
+			var hb := to_world(move.hitbox)
+			if not hb.has_area():
+				return
+			var c: Vector2 = at if data.has("offset") else hb.get_center()
+			fight.effects.spawn("slash", c, {"dir": facing, "r": float(data.get("r", maxf(hb.size.x, hb.size.y) * 0.6))})
+		"fx":
+			fight.effects.spawn(String(data.get("kind", "dust")), at, data.duplicate())
+		"dust":
+			fight.effects.spawn("dust", Vector2(at.x, GROUND_Y))
+		"sfx":
+			Sfx.play(String(data.get("name", "whoosh")), float(data.get("pitch", 1.0)))
+		"voice":
+			Sfx.voice(def.id, String(data.get("line", "light")), index)
+		"shake":
+			fight.shake = maxf(fight.shake, float(data.get("amount", 2.0)))
+
+
+# --- Throws ------------------------------------------------------------------
+
+## L+H while touching a grounded, actionable opponent throws instead of firing
+## the projectile special. Point-blank only, which is the Marvel vs Capcom rule.
+func _try_throw() -> bool:
+	if not on_ground() or not buf.lh_combo():
+		return false
+	var o := opponent
+	if absf(o.position.x - position.x) > THROW_RANGE * def.size or not o.on_ground():
+		return false
+	if o.state in [S.THROW, S.THROWN, S.KNOCKDOWN, S.GETUP, S.KO, S.INTRO, S.WIN, S.LAUNCHED]:
+		return false
+	buf.consume_combo()
+	_face_opponent()
+	vel.x = 0.0
+	set_state(S.THROW, true)
+	o.set_state(S.THROWN, true)
+	o.move = null
+	o.vel = Vector2.ZERO
+	Sfx.play("whoosh", 0.7)
+	Sfx.voice(def.id, "heavy", index)
+	return true
+
+
+func _throw_step() -> void:
+	var o := opponent
+	if o.state != S.THROWN:
+		_to_neutral()
+		return
+	# Hold them at arm's length, facing us.
+	o.position = Vector2(position.x + facing * 34.0 * def.size, GROUND_Y)
+	o.facing = -facing
+	o.vel = Vector2.ZERO
+	if sf <= THROW_BREAK_WINDOW and o.buf.lh_combo():
+		o.buf.consume_combo()
+		_throw_break()
+		return
+	if sf < THROW_HOLD:
+		return
+	var m := def.throw_data()
+	var res := o.take_hit(m, position.x)
+	on_hit_landed(m, false)
+	fight.on_throw(self, o, m, res)
+	_to_neutral()
+
+
+func _throw_break() -> void:
+	var o := opponent
+	o._to_neutral()
+	o.vel = Vector2(facing * 3.5, 0.0)
+	vel = Vector2(-facing * 3.5, 0.0)
+	_to_neutral()
+	Sfx.play("block", 1.2)
+	fight.effects.spawn("block", (position + o.position) * 0.5 + Vector2(0, -70), {"dir": facing})
+	fight.hitstop = maxi(fight.hitstop, 8)
+
+
+func _thrown_step() -> void:
+	# The thrower drives our position; if they somehow stop, we recover.
+	if opponent.state != S.THROW:
+		_to_neutral()
+
+
 func hitbox_world() -> Rect2:
 	if state != S.ATTACK or move == null or move.hitbox.size == Vector2.ZERO:
 		return Rect2()
@@ -464,7 +726,7 @@ func hurtbox_world() -> Rect2:
 		return Rect2()
 	var r := Rect2(-24, -125, 48, 125)
 	match state:
-		S.KNOCKDOWN, S.GETUP, S.KO, S.INTRO, S.WIN:
+		S.KNOCKDOWN, S.GETUP, S.KO, S.INTRO, S.WIN, S.THROW, S.THROWN:
 			return Rect2()
 		S.LAUNCHED:
 			if juggle > JUGGLE_LIMIT:
@@ -491,15 +753,17 @@ func on_hit_landed(m: MoveData, blocked: bool) -> void:
 		move_connected = true
 		hits_done += 1
 		hit_timer = m.hit_interval
+		contact = m.hitstop + 2
 		if m.launch and not blocked:
 			launch_window = 30
 
 
 func _can_block(dir: int) -> bool:
-	if not on_ground():
-		return false
 	if state == S.BLOCK and stun > 0:
 		return true
+	# Air blocking: a safety net for a player who jumped in at the wrong moment.
+	if not on_ground():
+		return state == S.JUMP and buf.held(Controls.RIGHT if dir > 0 else Controls.LEFT)
 	if not is_actionable():
 		return false
 	return buf.held(Controls.RIGHT if dir > 0 else Controls.LEFT)
@@ -524,6 +788,7 @@ func take_hit(m: MoveData, from_x: float) -> String:
 	health = maxi(0, health - dmg)
 	meter = minf(MAX_METER, meter + dmg / 18.0)
 	flash = 4
+	shook = m.hitstop + 3
 	crouching = false
 	move = null
 	launch_window = 0
@@ -564,6 +829,8 @@ func _update_visual() -> void:
 	renderer.facing = facing
 	renderer.flash = flash
 	renderer.t = buf.frame
+	# Visual-only impact jitter. Never touch `position` here: that is simulation.
+	renderer.position = Vector2(randf_range(-1.6, 1.6), randf_range(-1.2, 1.2)) if shook > 0 else Vector2.ZERO
 	var tgt := _pose_target()
 	renderer.update_pose(tgt[0], tgt[1])
 	match state:
@@ -599,7 +866,9 @@ func _update_ghosts() -> void:
 			g.z_index = -1
 			fight.world.add_child(g)
 			ghosts.append(g)
-	var active := (state == S.ATTACK and move != null and move.level >= 2) or (state == S.JUMP and super_jumping)
+	var active := (state == S.ATTACK and move != null and move.level >= 2) \
+		or (state == S.JUMP and (super_jumping or air_dash_timer > 0)) \
+		or state == S.DASH or state == S.BACKDASH
 	for g in ghosts:
 		if g.visible:
 			g.modulate.a -= 0.06
@@ -638,6 +907,21 @@ func _pose_target() -> Array:
 			}), 0.6]
 		S.CROUCH:
 			return [def.pose("crouch"), 0.4]
+		S.DASH:
+			# The roll tucks and spins forward, then lands back on its feet.
+			var k := clampf(float(sf) / float(DASH_FRAMES), 0.0, 1.0)
+			var p := def.pose("dash")
+			p["rot"] = -360.0 * smoothstep(0.1, 0.92, k)
+			p["lean"] = 34.0 + sin(k * PI) * 18.0
+			return [p, 1.0]
+		S.BACKDASH:
+			var kb := clampf(float(sf) / float(BACKDASH_FRAMES), 0.0, 1.0)
+			return [def.pose("backdash", {"hip": -40.0 - sin(kb * PI) * 14.0, "lean": -18.0 + kb * 16.0}), 0.6]
+		S.THROW:
+			var kt := clampf(float(sf) / float(THROW_HOLD), 0.0, 1.0)
+			return [def.pose("throw", {"lean": 16.0 - kt * 26.0, "arm_f": 95.0 + kt * 35.0, "arm_b": 90.0 + kt * 35.0}), 0.7]
+		S.THROWN:
+			return [def.pose("thrown", {"rot": -10.0 - sin(t * 0.4) * 8.0}), 0.5]
 		S.BLOCK:
 			return [def.pose("crouch_block" if crouching else "block"), 0.5]
 		S.JUMP:
@@ -648,14 +932,17 @@ func _pose_target() -> Array:
 			return [def.pose("jump", {"leg_f": 30, "knee_f": 40, "leg_b": -10, "knee_b": 30, "lean": 0, "arm_f": 110, "arm_b": 10}), 0.45]
 		S.ATTACK:
 			var base := "crouch" if move.crouch else ("jump" if move.air else "idle")
-			if sf <= move.startup:
-				return [def.pose(base, move.pose_s), 0.55]
-			var p := def.pose(base, move.pose_a)
-			if move.spin != 0.0:
+			var key := move.pose_at(sf)
+			var p := def.pose(base, key[0])
+			if move.spin != 0.0 and sf > move.startup:
 				var k := clampf(float(sf - move.startup) / (move.active + move.recovery * 0.6), 0.0, 1.0)
 				p["rot"] = move.spin * k
 				return [p, 1.0]
-			return [p, 0.6]
+			if contact > 0 and move.contact_pose:
+				# Impact frame: exaggerate the pose while the world is frozen.
+				p.merge(move.contact_pose, true)
+				return [p, 1.0]
+			return [p, float(key[1])]
 		S.HITSTUN:
 			if hit_variant == 1:
 				# Gut hit: fold forward instead of snapping back.
