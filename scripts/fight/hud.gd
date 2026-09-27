@@ -19,6 +19,8 @@ var portraits: Array[FighterRenderer] = []
 var cutin_portrait: FighterRenderer
 var overlay: Node2D
 var cutin_bg: Node2D
+var cutin_fx: Node2D  # dimmer + focus lines; separate because cutin_bg clips
+var cutin_slammed := false  # the portrait's landing squish fires once per cut-in
 
 
 func _ready() -> void:
@@ -33,6 +35,9 @@ func _ready() -> void:
 		r.position = Vector2(0, 58)
 		clip.add_child(r)
 		portraits.append(r)
+	cutin_fx = Node2D.new()
+	cutin_fx.draw.connect(_draw_cutin_fx)
+	add_child(cutin_fx)
 	cutin_bg = Node2D.new()
 	cutin_bg.draw.connect(_draw_cutin_bg)
 	cutin_bg.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
@@ -82,13 +87,24 @@ func _process(_delta: float) -> void:
 			cutin_portrait.setup(owner.def, owner.index == 1 and fight.fighters[0].def.id == fight.fighters[1].def.id)
 		var left := owner.index == 0
 		cutin_portrait.facing = 1 if left else -1
-		var k := minf(1.0, (Fight.HYPER_FREEZE - fight.freeze) / 8.0)
-		cutin_portrait.position = Vector2(lerpf(-120.0, 150.0, k) if left else lerpf(760.0, 490.0, k), 330)
-		cutin_portrait.expr = "attack"
+		# Slam in past the mark and spring back, creep forward during the hold,
+		# then whip back out the way it came.
+		var e := _cutin_e()
+		var x := lerpf(-140.0, 150.0, _back_out(e / 8.0)) + e * 0.6 - _cutin_out() * 320.0
+		cutin_portrait.position = Vector2(x if left else 640.0 - x, 330)
+		if e >= 8.0 and not cutin_slammed:
+			cutin_slammed = true
+			cutin_portrait.squish(0.35)
+			cutin_portrait.eye_pop = 9
+		# Shout first, then the smug "you're finished" look.
+		cutin_portrait.expr = "attack" if e < 30.0 else "smug"
 		cutin_portrait.t = frame
 		cutin_portrait.update_pose(owner.def.pose("idle", {"head": -6}), 1.0)
 	cutin_portrait.visible = fight.freeze > 0
+	if fight.freeze <= 0:
+		cutin_slammed = false
 	queue_redraw()
+	cutin_fx.queue_redraw()
 	cutin_bg.queue_redraw()
 	overlay.queue_redraw()
 
@@ -249,29 +265,92 @@ func _banner(o: Node2D) -> void:
 	UI.title(o, Vector2(320, 182), fight.banner, int(46 * pop))
 
 
+## Frames since the hyper froze the world.
+func _cutin_e() -> float:
+	return float(Fight.HYPER_FREEZE - fight.freeze)
+
+
+## 0 during the cut-in, rising to 1 over its last 8 frames as it leaves.
+func _cutin_out() -> float:
+	return clampf((_cutin_e() - Fight.HYPER_FREEZE + 8.0) / 8.0, 0.0, 1.0)
+
+
+## Ease-out with overshoot: goes a little past 1 and settles back. It's what
+## makes things slam into place instead of sliding.
+static func _back_out(x: float) -> float:
+	x = clampf(x, 0.0, 1.0) - 1.0
+	return 1.0 + x * x * (2.7 * x + 1.7)
+
+
+## The slanted band: wipes across in 6 frames, pinches shut vertically on exit.
+func _cutin_band() -> PackedVector2Array:
+	var x_end := 640.0 * minf(1.0, _cutin_e() / 6.0)
+	var h := 47.0 * (1.0 - _cutin_out())
+	var c := 182.0
+	if fight.freeze_owner.index == 0:
+		return PackedVector2Array([Vector2(0, c - h + 15), Vector2(x_end, c - h - 15), Vector2(x_end, c + h - 15), Vector2(0, c + h + 15)])
+	return PackedVector2Array([Vector2(640 - x_end, c - h - 15), Vector2(640, c - h + 15), Vector2(640, c + h + 15), Vector2(640 - x_end, c + h - 15)])
+
+
+## Dims the arena and fires manga focus lines at the portrait. The lines are
+## reshuffled every other frame so the whole screen seems to vibrate.
+func _draw_cutin_fx() -> void:
+	if fight.freeze <= 0 or fight.freeze_owner == null:
+		return
+	var fade := minf(1.0, _cutin_e() / 4.0) * (1.0 - _cutin_out())
+	cutin_fx.draw_rect(Rect2(0, 0, 640, 360), Color(0.04, 0.02, 0.1, 0.5 * fade))
+	var c := Vector2(150.0 if fight.freeze_owner.index == 0 else 490.0, 182.0)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = frame >> 1
+	for i in 48:
+		var ang := TAU * i / 48.0 + rng.randf_range(-0.06, 0.06)
+		var r0 := rng.randf_range(90.0, 170.0)
+		var w := rng.randf_range(0.008, 0.022)
+		cutin_fx.draw_colored_polygon(PackedVector2Array([
+			c + Vector2.from_angle(ang) * r0,
+			c + Vector2.from_angle(ang - w) * 760.0,
+			c + Vector2.from_angle(ang + w) * 760.0,
+		]), Color(1, 1, 1, 0.5 * fade))
+
+
 func _draw_cutin_bg() -> void:
 	if fight.freeze <= 0 or fight.freeze_owner == null:
 		return
-	var k := minf(1.0, (Fight.HYPER_FREEZE - fight.freeze) / 6.0)
 	var left := fight.freeze_owner.index == 0
 	var col := fight.cutin_color
-	var x_end := 640.0 * k
-	var band := PackedVector2Array([Vector2(0, 150), Vector2(x_end, 120), Vector2(x_end, 214), Vector2(0, 244)]) if left else \
-		PackedVector2Array([Vector2(640 - x_end, 120), Vector2(640, 150), Vector2(640, 244), Vector2(640 - x_end, 214)])
-	cutin_bg.draw_polygon(band, PackedColorArray([col.darkened(0.2), col.lightened(0.1), col.darkened(0.5), col.darkened(0.6)]))
+	cutin_bg.draw_polygon(_cutin_band(), PackedColorArray([col.darkened(0.2), col.lightened(0.1), col.darkened(0.5), col.darkened(0.6)]))
 	for i in 14:
 		var x := fmod(i * 53.0 + frame * (18.0 if left else -18.0), 700.0) - 30.0
 		cutin_bg.draw_line(Vector2(x, 110), Vector2(x + 40, 250), Color(1, 1, 1, 0.14), 8.0)
 
 
 func _cutin_text(o: Node2D) -> void:
-	var k := minf(1.0, (Fight.HYPER_FREEZE - fight.freeze) / 8.0)
+	var e := _cutin_e()
+	var out := _cutin_out()
 	var left := fight.freeze_owner.index == 0
-	var band_top := [Vector2(0, 150), Vector2(640 * minf(1.0, k * 1.3), 120)]
-	o.draw_line(band_top[0] if left else Vector2(640, 150), Vector2(640, 120) if left else Vector2(0, 120), Color(1, 1, 1, 0.9), 3.0)
-	var tx := lerpf(700.0, 420.0, k) if left else lerpf(-60.0, 220.0, k)
+	var band := _cutin_band()
+	o.draw_line(band[0], band[1], Color(1, 1, 1, 0.9), 3.0)
+	o.draw_line(band[3], band[2], Color(1, 1, 1, 0.9), 3.0)
+	var k := _back_out((e - 4.0) / 8.0)
+	var tx := (lerpf(700.0, 420.0, k) + out * 400.0) if left else (lerpf(-60.0, 220.0, k) - out * 400.0)
 	UI.text(o, Vector2(tx, 160), fight.freeze_owner.def.display, 16, Color(1, 1, 1, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 4, Color("15102a"), UI.arcade_font())
-	UI.title(o, Vector2(tx, 196), fight.cutin_text, 30, Color(1, 0.95, 0.4), HORIZONTAL_ALIGNMENT_CENTER, Color(0.4, 0.05, 0.3))
+	# The move name lands a beat later, oversized, on a jagged comic burst, and
+	# shudders for a few frames like it hit the screen.
+	var ne := e - 10.0
+	if ne < 0.0:
+		return
+	var pop := 1.0 + 0.8 * maxf(0.0, 1.0 - ne / 6.0)
+	var size := int(30 * pop)
+	var jit := Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0)) if ne < 8.0 else Vector2.ZERO
+	var at := Vector2(tx, 196) + jit
+	var half_w := UI.arcade_font().get_string_size(fight.cutin_text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5 + 18.0
+	var burst := PackedVector2Array()
+	for q in FighterRenderer.star_pts(Vector2.ZERO, 1.0, 0.7, 16, frame * 0.03):
+		burst.append(at + Vector2(0, -size * 0.35) + q * Vector2(half_w, size * 0.95) * (1.0 - out))
+	o.draw_colored_polygon(FighterRenderer.safe(burst), fight.cutin_color.darkened(0.45))
+	o.draw_polyline(Stage._closed(burst), Color(1, 1, 1, 0.95), 2.5, true)
+	if out < 1.0:
+		UI.title(o, at, fight.cutin_text, size, Color(1, 0.95, 0.4), HORIZONTAL_ALIGNMENT_CENTER, Color(0.4, 0.05, 0.3))
 
 
 func _menu(o: Node2D) -> void:
