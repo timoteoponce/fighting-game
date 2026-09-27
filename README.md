@@ -16,7 +16,8 @@ cd UlisesVsEmilia
 ```
 
 - Needs a graphics card or driver with **OpenGL 3.3** (almost any PC from the last 12+ years; Mesa drivers are fine).
-- **F11** (or Alt+Enter) toggles fullscreen.
+- The game starts in **fullscreen**. **F11** (or Alt+Enter) switches between fullscreen and a window.
+  To start windowed: `./UlisesVsEmilia.x86_64 --windowed`
 - If the gamepad isn't detected, check that your user can read `/dev/input/event*`
   (`ls -l /dev/input/`). On most desktops this works out of the box; otherwise add
   your user to the `input` group: `sudo usermod -aG input $USER` and log in again.
@@ -41,6 +42,24 @@ cd UlisesVsEmilia
 | Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON |
 
 **Super combo:** L, L, H (the H launches) → hold **Up** to super jump → L, L, H in the air.
+
+## Custom voices (record your own screams!)
+
+Fighters shout on attacks, specials, hits, K.O. and wins. The voices are synthesized,
+but you can replace any of them with real recordings: make a `voices` folder next to
+`UlisesVsEmilia.x86_64` and add WAV (16-bit) or OGG files named like this:
+
+```
+voices/ulises/light.wav    voices/emilia/light.wav     quick "Ha!"
+voices/ulises/heavy.wav    voices/emilia/heavy.wav     strong "Hyaah!"
+voices/ulises/special.wav  ...                         special move shout
+voices/ulises/hyper.wav                                big hyper yell
+voices/ulises/hurt.wav                                 getting hit "Ugh!"
+voices/ulises/ko.wav                                   knocked out
+voices/ulises/win.wav                                  victory "Yeah!"
+```
+
+Any file you leave out keeps its synthesized voice. Keep clips short (under a second).
 
 ## PS2 controllers with USB adapters
 

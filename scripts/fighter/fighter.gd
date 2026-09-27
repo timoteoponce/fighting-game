@@ -400,6 +400,9 @@ func _start_move(m: MoveData) -> void:
 	z_index = 1
 	opponent.z_index = 0
 	Sfx.play(m.sfx)
+	var line: String = ["light", "heavy", "special", "hyper"][m.level]
+	if m.level > 0 or randf() < 0.5:
+		Sfx.voice(def.id, line, index)
 	if m.level == 3:
 		meter -= HYPER_COST
 		fight.on_hyper(self, m)
@@ -526,9 +529,12 @@ func take_hit(m: MoveData, from_x: float) -> String:
 	launch_window = 0
 	if health == 0:
 		set_state(S.KO, true)
+		Sfx.voice(def.id, "ko", index)
 		vel = Vector2(dir * 4.0, -9.0)
 		position.y -= 1.0
 		return "ko"
+	if combo <= 1 or m.level >= 1 and randf() < 0.5:
+		Sfx.voice(def.id, "hurt", index)
 	var airborne := not on_ground() or state == S.LAUNCHED
 	if airborne:
 		juggle += 1

@@ -209,6 +209,7 @@ func _update_phase() -> void:
 					w.move = null
 					w.vel = Vector2.ZERO
 					w.set_state(Fighter.S.WIN, true)
+					Sfx.voice(w.def.id, "win", w.index)
 			if phase_t == 100:
 				_banner("DRAW!" if winner < 0 else "%s!" % fighters[winner].def.display)
 			if phase_t >= 210:
