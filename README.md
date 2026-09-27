@@ -1,11 +1,14 @@
 # Ulises vs Emilia: Ultimate Friends Showdown
 
-A 2D fighting game in the style of Marvel vs Capcom, with two chibi fighters:
+A 2D fighting game in the style of Marvel vs Capcom, with a roster of chibi
+fighters drawn entirely in code — there is not a single image file in the repo.
 
 - **Ulises**: soccer, running, reading and video games. Fast, with a soccer-ball shot and a pixel-beam hyper.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
+- **Mateo**: drums, basketball and dinosaurs. The big one — slow, tough, and the hardest single hits on the roster.
+- **Silvan**: two years old, still in diapers, and somehow part puppy. Fastest walk and highest jump, weakest hits.
 
-Modes: **VS Player** (2 players, local) and **VS CPU** (Easy / Normal / Hard).
+Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Normal / Hard).
 
 ## Running on Linux (x86_64)
 
@@ -34,12 +37,16 @@ cd UlisesVsEmilia
 
 ### Special moves: press L and H together
 
-| Input | Ulises | Emilia |
-|---|---|---|
-| L + H | Power Shot (soccer ball) | Wand Spark |
-| Forward + L + H | Sprint Dash | Cartwheel Rush |
-| Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) |
-| Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON |
+| Input | Ulises | Emilia | Mateo | Silvan |
+|---|---|---|---|---|
+| L + H | Power Shot (soccer ball) | Wand Spark | Bass Drop | Bark Blast |
+| Forward + L + H | Sprint Dash | Cartwheel Rush | Shoulder Charge | Puppy Dash |
+| Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
+| Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | DRUM SOLO FINISH | MOON HOWL |
+
+**Throw:** L + H while *touching* a grounded opponent grabs them instead of
+firing the projectile. The victim can break it by pressing L + H back within
+10 frames.
 
 **Super combo:** L, L, H (the H launches) → hold **Up** to super jump → L, L, H in the air.
 
@@ -85,10 +92,33 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 
 Code map:
 
-- `autoload/controls.gd`: per-device input reading and joypad remapping.
+- `autoload/controls.gd`: per-device input reading, joypad remapping and axis calibration.
+- `autoload/game_state.gd`: match setup, screen switching, and the roster scanned from `characters/`.
 - `scripts/fighter/fighter.gd`: fighter state machine, cancels, hits and blocking.
-- `scripts/fighter/chibi_renderer.gd`: the posable, code-drawn chibi.
+- `scripts/fighter/fighter_renderer.gd`: the posable, code-drawn chibi.
+- `scripts/fighter/move_data.gd`: frame data, animation clips and the per-frame FX event track.
 - `characters/*.gd`: each character's stats, frame data, poses and drawing details.
+- `characters/_template.gd`: a complete, commented starting point for a new fighter.
 - `scripts/fight/`: the match (rounds, collisions, camera), projectiles, stages, HUD and effects.
 - `scripts/input/cpu_input.gd`: the CPU opponent (it sends the same button presses a player would).
 - `scripts/ui/`: title, character select, how to play and controller setup screens.
+
+## Adding a character
+
+A fighter is one file. There is no list to register in, no audio table and no
+match statement to edit.
+
+1. Copy `characters/_template.gd` to `characters/yourname.gd`.
+2. Rename the class on line 1 — `class_name YournameDef` — and set `id` to a
+   lowercase one-word name.
+3. Drop the leading underscore from the filename. Files starting with `_` are
+   skipped by the roster scanner, which is the only reason the template itself
+   never shows up on the select screen.
+4. Run `godot --headless --path . -- --test`. The character validation checks
+   name every missing move, colour or out-of-range frame number, so a
+   half-finished fighter fails with a clear message instead of crashing
+   mid-match.
+
+`roster_order` controls where the fighter sits on the select screen (lower comes
+first), and `voice_pitch` is the only thing the synthesized shouts need — around
+250 Hz reads as a boy, 330 Hz as a girl, 430 Hz as a toddler.

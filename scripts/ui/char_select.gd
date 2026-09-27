@@ -176,6 +176,10 @@ func _draw_slot(i: int) -> void:
 	var name_text: String = ("<  %s  >" % def.display) if choosing else def.display
 	UI.text(self, Vector2(cx, 90), name_text, 26, Color(1, 0.95, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 8, Color(0.1, 0.05, 0.2))
 	UI.text(self, Vector2(cx, 108), "Likes: " + def.likes, 10, Color(1, 1, 1, 0.9))
+	# With more than two fighters, say how far through the roster you are —
+	# otherwise cycling through names feels endless.
+	if GameState.CHARACTERS.size() > 2:
+		UI.text(self, Vector2(cx, 120), "%d / %d" % [int(s["char"]) + 1, GameState.CHARACTERS.size()], 9, Color(1, 1, 1, 0.55))
 	var status := ""
 	var col := Color.WHITE
 	if is_cpu:

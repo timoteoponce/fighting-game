@@ -30,7 +30,10 @@ class Scripted:
 
 
 func _ready() -> void:
-	for id in ["ulises", "emilia"]:
+	_test_roster()
+	for id in GameState.CHARACTERS:
+		_test_character_def(id)
+	for id in GameState.CHARACTERS:
 		_test_specials(id)
 		_test_combo(id)
 	_test_movement("ulises")
@@ -49,6 +52,76 @@ func check(cond: bool, what: String) -> void:
 	print(("  ok   " if cond else "  FAIL ") + what)
 	if not cond:
 		failures += 1
+
+
+## The roster comes from scanning `characters/`. If that ever breaks — most
+## likely in an exported build where scripts ship as .gdc or .remap — the game
+## has no fighters at all, so check it loudly and first.
+func _test_roster() -> void:
+	print("[roster]")
+	check(GameState.CHARACTERS.size() >= 2, "the scanner found at least two fighters (%s)" % [GameState.CHARACTERS])
+	check(not GameState.has_character("template"), "the _template.gd starting point is not on the roster")
+	var seen := {}
+	var all_unique := true
+	for id in GameState.CHARACTERS:
+		if seen.has(id):
+			all_unique = false
+		seen[id] = true
+	check(all_unique, "every character id is unique")
+	for id in GameState.CHARACTERS:
+		check(GameState.make_character(id) is CharacterDef, "'%s' builds a CharacterDef" % id)
+
+
+## Everything a new fighter can forget. This is the safety net behind
+## `characters/_template.gd`: a half-finished character fails here with a clear
+## message instead of crashing mid-match.
+func _test_character_def(id: String) -> void:
+	print("[character: %s]" % id)
+	var d := GameState.make_character(id)
+	check(d.display != "", "%s has a display name" % id)
+	check(d.voice_pitch > 80.0 and d.voice_pitch < 600.0, "%s has a usable voice pitch (%.0f Hz)" % [id, d.voice_pitch])
+	check(d.walk_speed > d.back_speed, "%s walks forward faster than backward" % id)
+	check(d.jump_vel < 0.0, "%s jumps upward (jump_vel is negative)" % id)
+
+	var missing_colors: Array[String] = []
+	for key: String in CharacterDef.REQUIRED_COLORS:
+		if not d.colors.has(key) or not d.alt_colors.has(key):
+			missing_colors.append(key)
+	check(missing_colors.is_empty(), "%s defines every required colour%s" % [id, "" if missing_colors.is_empty() else ", missing " + str(missing_colors)])
+	check(d.colors.get("shirt") != d.alt_colors.get("shirt"), "%s's alt palette differs, so a mirror match is readable" % id)
+
+	var missing_moves: Array[String] = []
+	for key: String in CharacterDef.REQUIRED_MOVES:
+		if not d.moves.has(key):
+			missing_moves.append(key)
+	check(missing_moves.is_empty(), "%s defines all ten moves%s" % [id, "" if missing_moves.is_empty() else ", missing " + str(missing_moves)])
+	if not missing_moves.is_empty():
+		return
+
+	var bad_frames: Array[String] = []
+	var behind: Array[String] = []
+	var no_offence: Array[String] = []
+	for key: String in CharacterDef.REQUIRED_MOVES:
+		var m: MoveData = d.moves[key]
+		if m.startup < 1 or m.active < 1 or m.recovery < 1 or m.startup > 60 or m.recovery > 90:
+			bad_frames.append(key)
+		var hits := m.hitbox.size.x > 0.0 and m.hitbox.size.y > 0.0
+		var shoots := not m.projectile.is_empty()
+		if not hits and not shoots:
+			no_offence.append(key)
+		# Hitboxes reach forward (+X). A box entirely behind the fighter means
+		# the Rect2 was authored with the wrong sign and will never connect.
+		if hits and m.hitbox.end.x <= 0.0:
+			behind.append(key)
+	check(bad_frames.is_empty(), "%s's frame data is in range%s" % [id, "" if bad_frames.is_empty() else ", odd: " + str(bad_frames)])
+	check(no_offence.is_empty(), "%s's moves all hit or shoot something%s" % [id, "" if no_offence.is_empty() else ", inert: " + str(no_offence)])
+	check(behind.is_empty(), "%s's hitboxes reach forward%s" % [id, "" if behind.is_empty() else ", backwards: " + str(behind)])
+
+	check(d.moves["H"].launch, "%s's heavy launches, so air combos work" % id)
+	check(d.moves["anti"].invuln > 0, "%s's anti-air special has invulnerability" % id)
+	check(d.moves["hyper"].level >= 3, "%s's hyper is a level 3 move" % id)
+	check(d.specials_text.size() >= 4, "%s lists its specials for the move list" % id)
+	check(d.throw_data() != null, "%s has a throw" % id)
 
 
 func _new_fight(p1: String, p2: String) -> Fight:
@@ -297,11 +370,24 @@ func _test_combo(id: String) -> void:
 	var p1 := f.fighters[0]
 	var p2 := f.fighters[1]
 	p2.position.x = p1.position.x + 45.0
-	_script(p1, [[LI, 2], [0, 6], [LI, 2], [0, 8], [HE, 2], [0, 14], [U, 4], [0, 8], [LI, 2], [0, 6], [LI, 2], [0, 7], [HE, 2], [0, 60]])
+	# The gaps are derived from this character's own frame data rather than
+	# hard-coded, so a slower fighter is tested for "can chain into a launcher"
+	# instead of "chains on Ulises' exact timing".
+	# A chain cancel only opens once the previous move connects, and hitstop
+	# freezes the fighter for a few frames on top of that, so each gap is
+	# startup + hitstop + 1 rather than a hard-coded number.
+	var d := GameState.make_character(id)
+	var lg: int = d.moves["L"].startup + d.moves["L"].hitstop + 1
+	var hg: int = d.moves["H"].startup + d.moves["H"].hitstop + 1
+	var jg: int = d.moves["jL"].startup + d.moves["jL"].hitstop + 1
+	_script(p1, [
+		[LI, 2], [0, lg], [LI, 2], [0, lg], [HE, 2], [0, hg],
+		[U, 4], [0, 8], [LI, 2], [0, jg], [LI, 2], [0, jg], [HE, 2], [0, 60],
+	])
 	var max_combo := 0
 	var launched := false
 	var jumped := false
-	for i in 120:
+	for i in 170:
 		f._physics_process(1.0 / 60.0)
 		max_combo = maxi(max_combo, p2.combo)
 		launched = launched or p2.state == Fighter.S.LAUNCHED
@@ -357,13 +443,27 @@ func _test_demo_match() -> void:
 ## Not a pass/fail check: CPU vs CPU win counts per character.
 func _balance_report() -> void:
 	print("[balance: CPU vs CPU, HARD]")
-	var tally := {"ulises": 0, "emilia": 0}
+	# Every unordered pairing, played from both sides, so a new character shows
+	# up as a matchup number instead of a guess.
+	var roster := GameState.CHARACTERS
+	var pairs := []
+	for i in roster.size():
+		for j in range(i + 1, roster.size()):
+			pairs.append([roster[i], roster[j]])
+	if pairs.is_empty():
+		return
+	var per_pair := maxi(2, int(60.0 / pairs.size() / 2.0) * 2)
+	var tally := {}
+	var matchups := {}
+	for id in roster:
+		tally[id] = 0
 	var dmg := {}
 	var sides := [0, 0]
-	for n in 60:
+	for n in pairs.size() * per_pair:
+		var pair: Array = pairs[n / per_pair]
 		GameState.mode = "demo"
-		GameState.chars = ["ulises", "emilia"] if n % 2 == 0 else ["emilia", "ulises"]
-		GameState.cpu_level = 2
+		GameState.chars = [pair[0], pair[1]] if n % 2 == 0 else [pair[1], pair[0]]
+		GameState.cpu_level = 3
 		var f := Fight.new()
 		add_child(f)
 		f.set_physics_process(false)
@@ -376,9 +476,20 @@ func _balance_report() -> void:
 			dmg[k] = int(dmg.get(k, 0)) + f.stats[k]
 		if f.winner >= 0:
 			sides[f.winner] += 1
-			tally[GameState.chars[f.winner]] += 1
+			var won: String = GameState.chars[f.winner]
+			tally[won] = int(tally[won]) + 1
+			var key: String = "%s vs %s" % [pair[0], pair[1]]
+			var mu: Array = matchups.get(key, [0, 0])
+			mu[0 if won == pair[0] else 1] += 1
+			matchups[key] = mu
 		f.free()
+	print("       %d matches per pairing, %d pairings" % [per_pair, pairs.size()])
 	print("       wins: %s   by side (P1, P2): %s" % [str(tally), str(sides)])
+	var mkeys := matchups.keys()
+	mkeys.sort()
+	for k in mkeys:
+		var mu: Array = matchups[k]
+		print("       %-28s %d - %d" % [k, mu[0], mu[1]])
 	var keys := dmg.keys()
 	keys.sort()
 	for k in keys:

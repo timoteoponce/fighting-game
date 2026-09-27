@@ -5,6 +5,15 @@ extends RefCounted
 ##
 ## Move keys: L, H, cL, cH, jL, jH (normals), proj, rush, anti (specials), hyper.
 
+## Every character must define all ten. `char-validate` in the test suite
+## enforces this, so a half-finished fighter fails loudly instead of crashing
+## mid-match.
+const REQUIRED_MOVES := ["L", "H", "cL", "cH", "jL", "jH", "proj", "rush", "anti", "hyper"]
+## Colour keys the shared body renderer reads. Characters may add more for
+## their own `draw_behind` / `draw_front` parts (capes, skirts, headbands).
+const REQUIRED_COLORS := ["skin", "hair", "shirt", "sleeve", "forearm", "hands",
+	"pants", "legs", "shoes", "eyes", "accent"]
+
 var id := ""
 var size := 1.0  # body scale; hitboxes are scaled to match by scale_moves()
 var display := ""
