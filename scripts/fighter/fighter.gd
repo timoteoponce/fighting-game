@@ -602,8 +602,10 @@ func _pose_target() -> Array:
 	var t := float(buf.frame)
 	match state:
 		S.IDLE:
-			var b := sin(t * 0.08)
-			return [def.pose("idle", {"lean": 6 + b * 2.0, "elb_f": 75 + b * 5.0, "elb_b": 95 - b * 5.0}), 0.25]
+			# Bouncy fighting stance: knees pump, guard breathes.
+			var b := sin(t * 0.13)
+			return [def.pose("idle", {"lean": 9 + b * 2.0, "knee_f": 24 + b * 9.0, "knee_b": 22 + b * 9.0, "leg_f": 24 + b * 4.0,
+				"elb_f": 80 + b * 6.0, "elb_b": 95 - b * 6.0, "head": -2 - b * 2.0}), 0.35]
 		S.WALK:
 			var ph := t * 0.28 * signf(vel.x * facing)
 			var s := sin(ph)

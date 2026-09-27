@@ -164,7 +164,7 @@ func _draw() -> void:
 	# Back arm and leg: darker, they're further away.
 	part(s["sh_b"], s["elb_b"], 8.0, 7.0, dk(c["sleeve"]))
 	part(s["elb_b"], s["hand_b"], 6.5, 5.5, dk(c["forearm"]))
-	fist(s["hand_b"], dk(c["hands"]))
+	fist(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["elb_b"])
 	part(s["hip_b"], s["knee_b"], 11.0, 8.5, dk(c["pants"]))
 	part(s["knee_b"], s["foot_b"], 8.5, 6.5, dk(c["legs"]))
 	shoe(s["foot_b"], s["foot_dir_b"], dk(c["shoes"]))
@@ -177,7 +177,7 @@ func _draw() -> void:
 	_draw_head(s)
 	part(s["sh_f"], s["elb_f"], 8.0, 7.0, c["sleeve"])
 	part(s["elb_f"], s["hand_f"], 6.5, 5.5, c["forearm"])
-	fist(s["hand_f"], c["hands"])
+	fist(s["hand_f"], c["hands"], s["hand_f"] - s["elb_f"])
 	def.draw_props(self, s)
 
 
@@ -246,6 +246,8 @@ func part(a: Vector2, b: Vector2, w1: float, w2: float, col: Color) -> void:
 		n = -n
 	draw_colored_polygon(capsule_pts(a + n * r1 * 0.3, b + n * r2 * 0.3, r1 * 0.7, r2 * 0.7), col)
 	draw_line(a + n * r1 * 0.55, b + n * r2 * 0.55, hl(col), maxf(1.0, r2 * 0.28), true)
+	# Cool rim light on the shadow side, like arcade sprite shading.
+	draw_line(a - n * r1 * 0.78, b - n * r2 * 0.78, Color(0.7, 0.8, 1.0, 0.35), maxf(0.8, r2 * 0.16), true)
 
 
 func ball(p: Vector2, r: float, col: Color) -> void:
@@ -254,8 +256,16 @@ func ball(p: Vector2, r: float, col: Color) -> void:
 	draw_circle(p + LIGHT * r * 0.25, r * 0.75, col, true, -1.0, true)
 
 
-func fist(p: Vector2, col: Color) -> void:
-	ball(p, 4.0, col)
+## A clenched fist pointing along `d` (the forearm direction).
+func fist(p: Vector2, col: Color, d := Vector2.DOWN) -> void:
+	d = d.normalized()
+	var n := Vector2(-d.y, d.x)
+	var box := PackedVector2Array([p - n * 3.6 - d * 1.5, p + n * 3.6 - d * 1.5, p + n * 4.0 + d * 3.2,
+		p + n * 2.8 + d * 5.2, p - n * 2.8 + d * 5.2, p - n * 4.0 + d * 3.2])
+	shaded_poly(box, col, 1.6, 0.78)
+	for k in [-1.4, 1.4]:
+		draw_line(p + n * k + d * 2.4, p + n * k + d * 4.6, shade(col), 0.9, true)
+	part(p + n * 3.2 - d * 0.5, p + n * 2.6 + d * 2.6, 2.6, 2.4, col)
 
 
 ## Filled polygon with an outline. Self-intersecting shapes (a twisted cape)
@@ -390,12 +400,12 @@ func chain_local(name: String) -> PackedVector2Array:
 
 ## Anime face in head space. `girl` = bigger eyes with lashes and blush.
 func face(iris: Color, girl := false) -> void:
-	var eyes := [Vector2(5.2, 0.6), Vector2(10.6, 0.3)]
+	var eyes := [Vector2(4.8, 0.9), Vector2(10.7, 0.6)]
 	var blink := int(t) % 190 < 6 and expr == "normal"
 	for i in 2:
 		var e: Vector2 = eyes[i]
-		var rx := (2.6 if girl else 2.2) * (0.6 if i == 1 else 1.0)
-		var ry := 3.7 if girl else 2.9
+		var rx := (3.2 if girl else 2.8) * (0.62 if i == 1 else 1.0)
+		var ry := 4.6 if girl else 3.7
 		if expr == "attack":
 			ry *= 0.78
 		match expr:
@@ -412,9 +422,11 @@ func face(iris: Color, girl := false) -> void:
 					draw_colored_polygon(ellipse_pts(e + Vector2(0.5, 0.4), rx * 0.78, ry * 0.8), iris)
 					draw_colored_polygon(ellipse_pts(e + Vector2(0.5, -ry * 0.25), rx * 0.78, ry * 0.4), iris.darkened(0.35))
 					draw_circle(e + Vector2(0.7, 0.5), rx * 0.36, OUT, true, -1.0, true)
-					draw_circle(e + Vector2(-0.2, -ry * 0.35), rx * 0.28, Color.WHITE, true, -1.0, true)
+					draw_circle(e + Vector2(-0.2, -ry * 0.35), rx * 0.3, Color.WHITE, true, -1.0, true)
+					draw_circle(e + Vector2(1.0, ry * 0.4), rx * 0.14, Color(1, 1, 1, 0.8), true, -1.0, true)
+					draw_colored_polygon(ellipse_pts(e + Vector2(0.5, ry * 0.45), rx * 0.55, ry * 0.18), iris.lightened(0.35))
 					# Upper eyelid line.
-					draw_line(e + Vector2(-rx - 0.4, -ry + 0.9), e + Vector2(rx + 0.4, -ry + 0.2), OUT, 1.5 if girl else 1.2, true)
+					draw_line(e + Vector2(-rx - 0.4, -ry + 0.9), e + Vector2(rx + 0.5, -ry + 0.1), OUT, 2.2 if girl else 1.6, true)
 					if girl and i == 0:
 						draw_line(e + Vector2(rx, -ry + 0.4), e + Vector2(rx + 1.8, -ry - 0.8), OUT, 1.0, true)
 		# Eyebrows.
