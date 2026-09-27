@@ -18,6 +18,10 @@ func _ready() -> void:
 		elif arg == "--test":
 			add_child(load("res://tests/sim_test.gd").new())
 			return
+		elif arg.begins_with("--chars="):
+			GameState.chars = Array(arg.trim_prefix("--chars=").split(","))
+		elif arg.begins_with("--stage="):
+			GameState.stage = arg.trim_prefix("--stage=")
 		elif arg.begins_with("--screen="):
 			start = arg.trim_prefix("--screen=")
 	_switch(start)

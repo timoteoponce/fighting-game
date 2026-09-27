@@ -16,7 +16,7 @@ const FORE := 10.0
 const HEAD_R := 17.0
 
 const POSES := {
-	"idle": {"lean": 6, "head": 0, "arm_f": 35, "elb_f": 95, "arm_b": 50, "elb_b": 95,
+	"idle": {"lean": 6, "head": 0, "arm_f": 30, "elb_f": 75, "arm_b": 50, "elb_b": 95,
 		"leg_f": 18, "knee_f": 14, "leg_b": -16, "knee_b": 12, "rot": 0, "hip": -27, "ground": 1},
 	"crouch": {"lean": 32, "head": -14, "arm_f": 50, "elb_f": 100, "arm_b": 60, "elb_b": 100,
 		"leg_f": 85, "knee_f": 135, "leg_b": 15, "knee_b": 140},
@@ -123,8 +123,8 @@ func _draw() -> void:
 	# Head, drawn in its own rotated space centred on (0, 0).
 	draw_set_transform(s["head"], s["head_ang"], Vector2.ONE)
 	def.draw_hair_back(self)
+	ball(Vector2(-13, 3), 4.0, c["skin"])
 	ball(Vector2.ZERO, HEAD_R, c["skin"])
-	ball(Vector2(-5, 3), 3.5, c["skin"])
 	def.draw_face(self)
 	def.draw_hair_front(self)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)

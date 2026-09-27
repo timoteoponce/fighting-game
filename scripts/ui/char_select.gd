@@ -18,7 +18,7 @@ func _ready() -> void:
 		var r := ChibiRenderer.new()
 		r.base_scale = 1.8
 		r.facing = 1 if i == 0 else -1
-		r.position = Vector2(235 if i == 0 else 405, 305)
+		r.position = Vector2(245 if i == 0 else 395, 305)
 		add_child(r)
 		chibis.append(r)
 	_refresh_chibis()
@@ -193,6 +193,7 @@ func _draw_slot(i: int) -> void:
 		col = Color(0.5, 1, 0.5)
 	if status != "":
 		UI.text(self, Vector2(cx, 128), status, 14, col)
+	UI.text(self, Vector2(14.0 if i == 0 else 626.0, 240), "(HYPER needs a full meter)", 9, Color(1, 1, 1, 0.6), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
 	if s["dev"] != Controls.NONE and not is_cpu:
 		UI.text(self, Vector2(cx, 322), Controls.device_name(s["dev"]), 10, Color(1, 1, 1, 0.8))
 	UI.text(self, Vector2(14.0 if i == 0 else 626.0, 152), "SPECIAL MOVES", 10, Color(1, 0.8, 0.95), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
@@ -200,4 +201,4 @@ func _draw_slot(i: int) -> void:
 		var row: Array = def.specials_text[j]
 		var y := 170.0 + j * 16.0
 		var x := 14.0 if i == 0 else 626.0
-		UI.text(self, Vector2(x, y), "%s: %s" % [row[0], row[1]], 9, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
+		UI.text(self, Vector2(x, y), "%s: %s" % [row[0], row[1]], 10, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)

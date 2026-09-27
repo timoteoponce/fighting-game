@@ -569,7 +569,7 @@ func _pose_target() -> Array:
 	match state:
 		S.IDLE:
 			var b := sin(t * 0.08)
-			return [def.pose("idle", {"lean": 6 + b * 2.0, "elb_f": 95 + b * 5.0, "elb_b": 95 - b * 5.0}), 0.25]
+			return [def.pose("idle", {"lean": 6 + b * 2.0, "elb_f": 75 + b * 5.0, "elb_b": 95 - b * 5.0}), 0.25]
 		S.WALK:
 			var ph := t * 0.28 * signf(vel.x * facing)
 			var s := sin(ph)

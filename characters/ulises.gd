@@ -14,7 +14,7 @@ func _init() -> void:
 	}
 	alt_colors = colors.duplicate()
 	alt_colors.merge({"shirt": Color("e0402f"), "accent": Color("ffffff"), "legs": Color("e0402f"), "shoes": Color("ffd23f")}, true)
-	walk_speed = 3.6
+	walk_speed = 3.4
 	back_speed = 2.8
 	jump_vel = -10.5
 	jump_x = 4.0
@@ -24,7 +24,7 @@ func _init() -> void:
 		["L + H", "Power Shot"],
 		["FWD + L + H", "Sprint Dash"],
 		["DOWN + L + H", "Bicycle Kick"],
-		["BACK + L + H", "GAME OVER COMBO (full meter)"],
+		["BACK + L + H", "GAME OVER COMBO"],
 	]
 	poses = {
 		"intro": {"arm_f": 160, "elb_f": 15, "arm_b": 30, "elb_b": 100, "lean": -4},
@@ -60,7 +60,7 @@ func _init() -> void:
 			"pose_s": {"leg_f": -40, "knee_f": 40, "lean": -5, "arm_f": 60, "arm_b": -20},
 			"pose_a": {"leg_f": 95, "knee_f": 5, "lean": -10, "arm_b": 60, "arm_f": -20}}),
 		"rush": MoveData.make({"id": "sprint dash", "display": "SPRINT DASH", "level": 2, "startup": 6, "active": 16,
-			"recovery": 14, "damage": 100, "hitbox": Rect2(4, -84, 40, 66), "dash_speed": 9.0, "dash_from": 6, "dash_to": 22,
+			"recovery": 14, "damage": 100, "hitbox": Rect2(4, -84, 40, 66), "dash_speed": 8.0, "dash_from": 6, "dash_to": 22,
 			"knockdown": true, "kb": Vector2(4, -5), "hitstun": 20, "blockstun": 14, "chip": 0.15, "hitstop": 8,
 			"meter": 8.0, "hit_sfx": "heavy",
 			"pose_s": {"lean": 20, "leg_f": 40, "knee_f": 60},
@@ -74,7 +74,7 @@ func _init() -> void:
 		"hyper": MoveData.make({"id": "game over combo", "display": "GAME OVER COMBO!", "level": 3, "startup": 16, "active": 1,
 			"recovery": 50, "invuln": 45, "prop": "controller", "sfx": "special",
 			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(560, 56), "offset": Vector2(30, -58), "life": 56,
-				"hits": 12, "interval": 4, "damage": 25, "hitstun": 16, "kb": Vector2(1.2, 0), "chip": 0.2, "hitstop": 3,
+				"hits": 12, "interval": 4, "damage": 20, "hitstun": 16, "kb": Vector2(1.2, 0), "chip": 0.2, "hitstop": 3,
 				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "special"},
 			"pose_s": {"arm_f": 80, "elb_f": 60, "arm_b": 80, "elb_b": 60, "lean": -5},
 			"pose_a": {"arm_f": 90, "elb_f": 0, "arm_b": 95, "elb_b": 0, "lean": 8}}),
@@ -110,7 +110,6 @@ func draw_hair_front(r: ChibiRenderer) -> void:
 		Vector2(1, -8), Vector2(-3, -9), Vector2(-7, -5), Vector2(-10, 1), Vector2(-13, 6),
 	])
 	r.poly(hair, colors["hair"], 2.0)
-	r.draw_line(Vector2(-6, -17), Vector2(2, -18), colors["hair"].lightened(0.3), 2.0, true)
 
 
 func draw_props(r: ChibiRenderer, s: Dictionary) -> void:

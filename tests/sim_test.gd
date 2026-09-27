@@ -35,6 +35,8 @@ func _ready() -> void:
 		_test_combo(id)
 	_test_block()
 	_test_demo_match()
+	if OS.get_cmdline_user_args().has("--balance"):
+		_balance_report()
 	print("FAILURES: %d" % failures)
 	get_tree().quit(1 if failures > 0 else 0)
 
@@ -178,3 +180,34 @@ func _test_demo_match() -> void:
 	check(min_hp < 1000, "CPUs deal damage")
 	check(f.phase == "over", "match finishes (%d frames, %.1f min, rounds %d, wins %s)" % [frames, frames / 3600.0, f.round_num, str(f.wins)])
 	f.free()
+
+
+## Not a pass/fail check: CPU vs CPU win counts per character.
+func _balance_report() -> void:
+	print("[balance: CPU vs CPU, HARD]")
+	var tally := {"ulises": 0, "emilia": 0}
+	var dmg := {}
+	var sides := [0, 0]
+	for n in 60:
+		GameState.mode = "demo"
+		GameState.chars = ["ulises", "emilia"] if n % 2 == 0 else ["emilia", "ulises"]
+		GameState.cpu_level = 2
+		var f := Fight.new()
+		add_child(f)
+		f.set_physics_process(false)
+		f.set_process(false)
+		var frames := 0
+		while f.phase != "over" and frames < 60 * 60 * 8:
+			f._physics_process(1.0 / 60.0)
+			frames += 1
+		for k in f.stats:
+			dmg[k] = int(dmg.get(k, 0)) + f.stats[k]
+		if f.winner >= 0:
+			sides[f.winner] += 1
+			tally[GameState.chars[f.winner]] += 1
+		f.free()
+	print("       wins: %s   by side (P1, P2): %s" % [str(tally), str(sides)])
+	var keys := dmg.keys()
+	keys.sort()
+	for k in keys:
+		print("       %-28s %6d" % [k, dmg[k]])

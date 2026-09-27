@@ -3,7 +3,8 @@ extends Node2D
 ## A match: two fighters, rounds, timer, hit detection, camera and menus.
 
 const STAGE_W := 1000.0
-const HALF_VIEW := 320.0
+const ZOOM := 1.2
+const HALF_VIEW := 320.0 / ZOOM
 const WALL := 24.0
 const PUSH_W := 34.0
 const ROUNDS_TO_WIN := 2
@@ -39,11 +40,12 @@ var paused := false
 var menu_items: Array = []
 var menu_idx := 0
 var menu_title := ""
+var stats := {}  # "character move" -> damage dealt (for balance testing)
 
 
 func _ready() -> void:
 	stage = Stage.new()
-	stage.kind = ["field", "library"].pick_random()
+	stage.kind = GameState.stage if GameState.stage != "" else ["field", "library"].pick_random()
 	add_child(stage)
 	var ids: Array = GameState.chars
 	for i in 2:
@@ -67,7 +69,8 @@ func _ready() -> void:
 	debug_draw.draw.connect(_draw_debug)
 	add_child(debug_draw)
 	camera = Camera2D.new()
-	camera.position = Vector2(STAGE_W * 0.5, 180)
+	camera.position = Vector2(STAGE_W * 0.5, 342.0 - 180.0 / ZOOM)
+	camera.zoom = Vector2(ZOOM, ZOOM)
 	add_child(camera)
 	camera.make_current()
 	var layer := CanvasLayer.new()
@@ -264,7 +267,10 @@ func _resolve_hits() -> void:
 
 func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projectile) -> void:
 	var from_x := a.position.x if p == null or p.anchored else p.position.x
+	var hp := d.health
 	var res := d.take_hit(m, from_x)
+	var key := "%s %s" % [a.def.id, m.id if p == null else p.kind]
+	stats[key] = int(stats.get(key, 0)) + hp - d.health
 	var blocked := res == "block"
 	if p != null:
 		p.register_hit()
