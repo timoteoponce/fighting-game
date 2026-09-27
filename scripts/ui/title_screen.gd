@@ -12,7 +12,7 @@ func _ready() -> void:
 	for i in 2:
 		var r := FighterRenderer.new()
 		r.setup(GameState.make_character(GameState.CHARACTERS[i]))
-		r.base_scale = 1.75
+		r.base_scale = 1.75 * r.def.size
 		r.facing = 1 if i == 0 else -1
 		r.position = Vector2(105 if i == 0 else 535, 318)
 		add_child(r)

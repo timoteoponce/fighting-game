@@ -82,6 +82,8 @@ func _init() -> void:
 			"pose_s": {"arm_f": 80, "elb_f": 60, "arm_b": 80, "elb_b": 60, "lean": -5},
 			"pose_a": {"arm_f": 90, "elb_f": 0, "arm_b": 95, "elb_b": 0, "lean": 8}}),
 	}
+	size = 0.9  # Ulises is about 10% shorter than Emilia
+	scale_moves()
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:

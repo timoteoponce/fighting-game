@@ -4,6 +4,10 @@ extends Node2D
 
 const STAGE_W := 1000.0
 const ZOOM := 1.2
+## The world renders into a low-res buffer (KOF-98 style pixels), shown at an
+## exact integer scale. PIXEL = buffer size / logical 640x360 screen.
+const PIXEL := 0.5
+const BUFFER_SIZE := Vector2i(320, 180)
 const HALF_VIEW := 320.0 / ZOOM
 const BASE_CAM_Y := 342.0 - 180.0 / ZOOM  # ground sits near the bottom of the screen
 const WALL := 24.0
@@ -18,6 +22,8 @@ var effects: Effects
 var camera: Camera2D
 var hud: Hud
 var debug_draw: Node2D
+var world: SubViewport  # everything in the arena lives here
+var cam_z := ZOOM  # logical camera zoom (before PIXEL)
 
 var hitstop := 0
 var freeze := 0
@@ -46,9 +52,20 @@ var stats := {}  # "character move" -> damage dealt (for balance testing)
 
 
 func _ready() -> void:
+	world = SubViewport.new()
+	world.size = BUFFER_SIZE
+	world.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
+	world.msaa_2d = Viewport.MSAA_DISABLED
+	add_child(world)
+	var screen := TextureRect.new()
+	screen.texture = world.get_texture()
+	screen.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	screen.size = Vector2(640, 360)
+	screen.stretch_mode = TextureRect.STRETCH_SCALE
+	add_child(screen)
 	stage = Stage.new()
 	stage.kind = GameState.stage if GameState.stage != "" else ["field", "library"].pick_random()
-	add_child(stage)
+	world.add_child(stage)
 	var ids: Array = GameState.chars
 	for i in 2:
 		var f := Fighter.new()
@@ -59,21 +76,21 @@ func _ready() -> void:
 			src = CpuInput.new(GameState.cpu_level)
 		f.setup(GameState.make_character(ids[i]), i, src, i == 1 and ids[0] == ids[1])
 		f.fight = self
-		add_child(f)
+		world.add_child(f)
 		fighters.append(f)
 	fighters[0].opponent = fighters[1]
 	fighters[1].opponent = fighters[0]
 	effects = Effects.new()
 	effects.z_index = 5
-	add_child(effects)
+	world.add_child(effects)
 	debug_draw = Node2D.new()
 	debug_draw.z_index = 10
 	debug_draw.draw.connect(_draw_debug)
-	add_child(debug_draw)
+	world.add_child(debug_draw)
 	camera = Camera2D.new()
 	camera.position = Vector2(STAGE_W * 0.5, BASE_CAM_Y)
-	camera.zoom = Vector2(ZOOM, ZOOM)
-	add_child(camera)
+	camera.zoom = Vector2(ZOOM, ZOOM) * PIXEL
+	world.add_child(camera)
 	camera.make_current()
 	var layer := CanvasLayer.new()
 	add_child(layer)
@@ -155,7 +172,7 @@ func _physics_process(_delta: float) -> void:
 	hyper_on = hyper_on or projectiles.any(func(p: Projectile) -> bool: return p.m.level == 3)
 	stage.dim = move_toward(stage.dim, 1.0 if hyper_on else 0.0, 0.05)
 	stage.cam_y = camera.position.y
-	stage.cam_zoom = camera.zoom.x
+	stage.cam_zoom = cam_z
 	_update_phase()
 
 
@@ -232,7 +249,7 @@ func spawn_projectile(f: Fighter, spec: Dictionary) -> void:
 	var p := Projectile.new()
 	p.setup(f, spec)
 	p.z_index = 2
-	add_child(p)
+	world.add_child(p)
 	projectiles.append(p)
 	if int(spec.get("level", 2)) < 3:
 		f.projectile = p
@@ -340,8 +357,8 @@ func _update_camera() -> void:
 	var top := minf(fighters[0].position.y, fighters[1].position.y) - 175.0
 	var bottom := maxf(fighters[0].position.y, fighters[1].position.y) + 30.0
 	var z := clampf(360.0 / (bottom - top), 0.85, ZOOM)
-	var cam_z := lerpf(camera.zoom.x, z, 0.12)
-	camera.zoom = Vector2(cam_z, cam_z)
+	cam_z = lerpf(cam_z, z, 0.12)
+	camera.zoom = Vector2(cam_z, cam_z) * PIXEL
 	var base_y := 342.0 - 180.0 / cam_z
 	camera.position.y = minf(base_y, (top + bottom) * 0.5)
 	camera.position.x = clampf(mid, 320.0 / cam_z, STAGE_W - 320.0 / cam_z)

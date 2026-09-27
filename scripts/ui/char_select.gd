@@ -32,6 +32,7 @@ func _refresh_chibis() -> void:
 	for i in 2:
 		var id: String = GameState.CHARACTERS[slots[i]["char"]]
 		chibis[i].setup(GameState.make_character(id), i == 1 and slots[0]["char"] == slots[1]["char"])
+		chibis[i].base_scale = 1.35 * chibis[i].def.size
 
 
 func _process(delta: float) -> void:

@@ -53,6 +53,14 @@ var prop_t := 0
 var head_only := false  # portraits: draw only head and shoulders
 var chains := {}  # name -> [points (global), previous points (global)]
 var sk := {}
+var pose_vel := {}  # joint spring velocities
+
+## Per-joint spring response: legs snap, torso follows, arms and head trail
+## behind with a little overshoot. That lag is what stops the puppet look.
+const JOINT_RESPONSE := {
+	"leg_f": 1.0, "knee_f": 1.0, "leg_b": 1.0, "knee_b": 1.0, "hip": 1.0,
+	"lean": 0.8, "rot": 1.0, "arm_f": 0.75, "elb_f": 0.7, "arm_b": 0.65, "elb_b": 0.6, "head": 0.5,
+}
 
 
 func setup(d: CharacterDef, alt := false) -> void:
@@ -64,10 +72,15 @@ func setup(d: CharacterDef, alt := false) -> void:
 
 func update_pose(target: Dictionary, speed: float) -> void:
 	for k in target:
-		if k == "ground" or not pose.has(k):
+		if k == "ground" or not pose.has(k) or speed >= 1.0:
 			pose[k] = target[k]
-		else:
-			pose[k] = lerpf(float(pose[k]), float(target[k]), speed)
+			pose_vel[k] = 0.0
+			continue
+		# Underdamped spring: moves fast, overshoots slightly, settles.
+		var stiff := clampf(speed, 0.05, 0.9) * float(JOINT_RESPONSE.get(k, 1.0)) * 0.55
+		var v := float(pose_vel.get(k, 0.0)) * 0.62 + (float(target[k]) - float(pose[k])) * stiff
+		pose_vel[k] = v
+		pose[k] = float(pose[k]) + v
 	scale = Vector2(base_scale * facing, base_scale)
 	modulate = Color(2.2, 2.2, 2.2) if flash > 0 else Color.WHITE
 	sk = skeleton()
@@ -118,8 +131,10 @@ func skeleton() -> Dictionary:
 	s["knee_b"] = s["hip_b"] + dir(p["leg_b"]) * THIGH
 	s["foot_b"] = s["knee_b"] + dir(p["leg_b"] - p["knee_b"]) * SHIN
 	s["neck"] = up * TORSO
-	s["sh_f"] = up * (TORSO - 3.0) + perp * 1.5
-	s["sh_b"] = up * (TORSO - 2.5) - perp * 3.0
+	# Torso twist: a reaching front arm drags its shoulder forward, the back one pulls away.
+	var twist := clampf((float(p["arm_f"]) - 45.0) / 50.0, -0.6, 1.0)
+	s["sh_f"] = up * (TORSO - 3.0 - absf(twist) * 1.5) + perp * (1.5 + twist * 4.0)
+	s["sh_b"] = up * (TORSO - 2.5) - perp * (3.0 + twist * 2.0)
 	s["elb_f"] = s["sh_f"] + dir(p["arm_f"]) * UPPER
 	s["hand_f"] = s["elb_f"] + dir(p["arm_f"] + p["elb_f"]) * FORE
 	s["elb_b"] = s["sh_b"] + dir(p["arm_b"]) * UPPER

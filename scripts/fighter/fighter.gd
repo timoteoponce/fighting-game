@@ -43,6 +43,8 @@ var invuln := 0
 var launch_window := 0
 var flash := 0
 var projectile: Projectile
+var land_timer := 0  # frames of landing squash (visual only)
+var hit_variant := 0
 var super_jumping := false
 var ghosts: Array[FighterRenderer] = []  # MvC-style afterimages
 var _ghost_next := 0
@@ -54,7 +56,7 @@ func setup(d: CharacterDef, idx: int, src, alt: bool) -> void:
 	input_source = src
 	renderer = FighterRenderer.new()
 	renderer.setup(def, alt)
-	renderer.base_scale = SCALE
+	renderer.base_scale = SCALE * def.size
 	add_child(renderer)
 
 
@@ -267,6 +269,7 @@ func _air_physics() -> bool:
 
 func _land() -> void:
 	vel = Vector2.ZERO
+	land_timer = 6
 	Sfx.play("land")
 	fight.effects.spawn("dust", position)
 	_to_neutral()
@@ -470,7 +473,7 @@ func hurtbox_world() -> Rect2:
 		_:
 			if crouching and on_ground():
 				r = Rect2(-26, -88, 52, 88)
-	return to_world(r)
+	return to_world(Rect2(r.position * def.size, r.size * def.size))
 
 
 func to_world(r: Rect2) -> Rect2:
@@ -544,6 +547,7 @@ func take_hit(m: MoveData, from_x: float) -> String:
 	else:
 		stun = m.hitstun
 		vel = Vector2(dir * m.kb.x, 0.0)
+		hit_variant = 1 - hit_variant
 		set_state(S.HITSTUN, true)
 	return "hit"
 
@@ -587,7 +591,7 @@ func _update_ghosts() -> void:
 			var g := FighterRenderer.new()
 			g.visible = false
 			g.z_index = -1
-			fight.add_child(g)
+			fight.world.add_child(g)
 			ghosts.append(g)
 	var active := (state == S.ATTACK and move != null and move.level >= 2) or (state == S.JUMP and super_jumping)
 	for g in ghosts:
@@ -605,6 +609,10 @@ func _update_ghosts() -> void:
 
 func _pose_target() -> Array:
 	var t := float(buf.frame)
+	if land_timer > 0:
+		land_timer -= 1
+		if state == S.IDLE or state == S.WALK:
+			return [def.pose("crouch", {"lean": 14, "head": 4, "arm_f": 50, "arm_b": 70}), 0.8]
 	match state:
 		S.IDLE:
 			# Bouncy fighting stance: knees pump, guard breathes.
@@ -615,17 +623,23 @@ func _pose_target() -> Array:
 			var ph := t * 0.28 * signf(vel.x * facing)
 			var s := sin(ph)
 			var c := cos(ph)
+			var fwd := signf(vel.x * facing) > 0.0
 			return [def.pose("idle", {
-				"lean": 10, "leg_f": 8 + s * 26, "knee_f": 12 + maxf(0.0, c) * 34,
-				"leg_b": -8 - s * 26, "knee_b": 12 + maxf(0.0, -c) * 34,
-				"arm_f": 35 - s * 18, "arm_b": 45 + s * 18,
-			}), 0.5]
+				"lean": (12 if fwd else 2) + absf(c) * 3.0, "head": -3 - absf(c) * 2.0,
+				"leg_f": 8 + s * 30, "knee_f": 16 + maxf(0.0, c) * 40,
+				"leg_b": -8 - s * 30, "knee_b": 16 + maxf(0.0, -c) * 40,
+				"arm_f": 40 - s * 14, "elb_f": 85 + s * 10, "arm_b": 50 + s * 22, "elb_b": 90 - s * 10,
+			}), 0.6]
 		S.CROUCH:
 			return [def.pose("crouch"), 0.4]
 		S.BLOCK:
 			return [def.pose("crouch_block" if crouching else "block"), 0.5]
 		S.JUMP:
-			return [def.pose("jump"), 0.3]
+			if vel.y < -3.0:
+				return [def.pose("jump", {"leg_f": 75, "knee_f": 110, "leg_b": 30, "knee_b": 100, "lean": 10}), 0.5]
+			if vel.y < 2.0:
+				return [def.pose("jump", {"leg_f": 85, "knee_f": 125, "leg_b": 45, "knee_b": 120, "lean": 14, "head": 6}), 0.5]
+			return [def.pose("jump", {"leg_f": 30, "knee_f": 40, "leg_b": -10, "knee_b": 30, "lean": 0, "arm_f": 110, "arm_b": 10}), 0.45]
 		S.ATTACK:
 			var base := "crouch" if move.crouch else ("jump" if move.air else "idle")
 			if sf <= move.startup:
@@ -637,7 +651,10 @@ func _pose_target() -> Array:
 				return [p, 1.0]
 			return [p, 0.6]
 		S.HITSTUN:
-			return [def.pose("hit"), 0.6]
+			if hit_variant == 1:
+				# Gut hit: fold forward instead of snapping back.
+				return [def.pose("hit", {"lean": 28, "head": 20, "arm_f": 20, "elb_f": 80, "arm_b": 10, "elb_b": 70, "knee_f": 30, "knee_b": 25}), 0.8]
+			return [def.pose("hit"), 0.8]
 		S.LAUNCHED:
 			return [def.pose("launched"), 0.3]
 		S.KNOCKDOWN:

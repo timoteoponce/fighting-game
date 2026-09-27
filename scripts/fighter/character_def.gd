@@ -6,6 +6,7 @@ extends RefCounted
 ## Move keys: L, H, cL, cH, jL, jH (normals), proj, rush, anti (specials), hyper.
 
 var id := ""
+var size := 1.0  # body scale; hitboxes are scaled to match by scale_moves()
 var display := ""
 var likes := ""
 var colors := {}
@@ -20,6 +21,15 @@ var win_prop := ""
 var intro_prop := ""
 var win_quote := ""
 var specials_text := []  # [[input, name], ...] for menus
+
+
+## Shrinks or grows hitboxes and projectile spawn points to match `size`.
+func scale_moves() -> void:
+	for key in moves:
+		var m: MoveData = moves[key]
+		m.hitbox = Rect2(m.hitbox.position * size, m.hitbox.size * size)
+		if m.projectile.has("offset"):
+			m.projectile["offset"] = m.projectile["offset"] * size
 
 
 ## Pose = idle, overlaid with the named base pose, this character's version of
