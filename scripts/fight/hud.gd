@@ -91,7 +91,7 @@ func _process(_delta: float) -> void:
 		# then whip back out the way it came.
 		var e := _cutin_e()
 		var x := lerpf(-140.0, 150.0, _back_out(e / 8.0)) + e * 0.6 - _cutin_out() * 320.0
-		cutin_portrait.position = Vector2(x if left else 640.0 - x, 330)
+		cutin_portrait.position = Vector2(x if left else 640.0 - x, 312)
 		if e >= 8.0 and not cutin_slammed:
 			cutin_slammed = true
 			cutin_portrait.squish(0.35)
@@ -285,7 +285,7 @@ static func _back_out(x: float) -> float:
 ## The slanted band: wipes across in 6 frames, pinches shut vertically on exit.
 func _cutin_band() -> PackedVector2Array:
 	var x_end := 640.0 * minf(1.0, _cutin_e() / 6.0)
-	var h := 47.0 * (1.0 - _cutin_out())
+	var h := 54.0 * (1.0 - _cutin_out())
 	var c := 182.0
 	if fight.freeze_owner.index == 0:
 		return PackedVector2Array([Vector2(0, c - h + 15), Vector2(x_end, c - h - 15), Vector2(x_end, c + h - 15), Vector2(0, c + h + 15)])
@@ -331,26 +331,32 @@ func _cutin_text(o: Node2D) -> void:
 	var band := _cutin_band()
 	o.draw_line(band[0], band[1], Color(1, 1, 1, 0.9), 3.0)
 	o.draw_line(band[3], band[2], Color(1, 1, 1, 0.9), 3.0)
-	var k := _back_out((e - 4.0) / 8.0)
-	var tx := (lerpf(700.0, 420.0, k) + out * 400.0) if left else (lerpf(-60.0, 220.0, k) - out * 400.0)
-	UI.text(o, Vector2(tx, 160), fight.freeze_owner.def.display, 16, Color(1, 1, 1, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 4, Color("15102a"), UI.arcade_font())
-	# The move name lands a beat later, oversized, on a jagged comic burst, and
-	# shudders for a few frames like it hit the screen.
+	# Text lives in the half of the band away from the portrait, and is sized
+	# to fit there, so it can never sit on the face.
+	var font := UI.arcade_font()
+	var slide := (1.0 - _back_out((e - 4.0) / 8.0)) * 340.0 + out * 400.0
 	var ne := e - 10.0
+	var pop := 1.0 + 0.35 * maxf(0.0, 1.0 - ne / 6.0) if ne >= 0.0 else 1.0
+	var size := 28
+	while size > 16 and font.get_string_size(fight.cutin_text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x > 330.0:
+		size -= 2
+	var half_w := font.get_string_size(fight.cutin_text, HORIZONTAL_ALIGNMENT_LEFT, -1, int(size * pop)).x * 0.5 + 16.0
+	var tx := (610.0 - half_w + slide) if left else (30.0 + half_w - slide)
+	UI.text(o, Vector2(tx, 158), fight.freeze_owner.def.display, 16, Color(1, 1, 1, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 4, Color("15102a"), font)
+	# The move name lands a beat later on a jagged comic burst and shudders for
+	# a few frames like it hit the screen.
 	if ne < 0.0:
 		return
-	var pop := 1.0 + 0.8 * maxf(0.0, 1.0 - ne / 6.0)
-	var size := int(30 * pop)
-	var jit := Vector2(randf_range(-2.0, 2.0), randf_range(-2.0, 2.0)) if ne < 8.0 else Vector2.ZERO
-	var at := Vector2(tx, 196) + jit
-	var half_w := UI.arcade_font().get_string_size(fight.cutin_text, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5 + 18.0
+	var sz := int(size * pop)
+	var jit := Vector2(randf_range(-1.5, 1.5), randf_range(-1.5, 1.5)) if ne < 8.0 else Vector2.ZERO
+	var at := Vector2(tx, 200) + jit
 	var burst := PackedVector2Array()
-	for q in FighterRenderer.star_pts(Vector2.ZERO, 1.0, 0.7, 16, frame * 0.03):
-		burst.append(at + Vector2(0, -size * 0.35) + q * Vector2(half_w, size * 0.95) * (1.0 - out))
+	for q in FighterRenderer.star_pts(Vector2.ZERO, 1.0, 0.8, 18, frame * 0.03):
+		burst.append(at + Vector2(0, -sz * 0.36) + q * Vector2(half_w, sz * 0.9) * (1.0 - out))
 	o.draw_colored_polygon(FighterRenderer.safe(burst), fight.cutin_color.darkened(0.45))
 	o.draw_polyline(Stage._closed(burst), Color(1, 1, 1, 0.95), 2.5, true)
 	if out < 1.0:
-		UI.title(o, at, fight.cutin_text, size, Color(1, 0.95, 0.4), HORIZONTAL_ALIGNMENT_CENTER, Color(0.4, 0.05, 0.3))
+		UI.title(o, at, fight.cutin_text, sz, Color(1, 0.95, 0.4), HORIZONTAL_ALIGNMENT_CENTER, Color(0.4, 0.05, 0.3))
 
 
 func _menu(o: Node2D) -> void:

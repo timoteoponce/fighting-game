@@ -98,6 +98,12 @@ func _ready() -> void:
 	camera.zoom = Vector2(ZOOM, ZOOM) * PIXEL
 	world.add_child(camera)
 	camera.make_current()
+	effects.cam = camera
+	# Comic words and speech bubbles: above the arena, below the HUD, and at
+	# screen resolution so the lettering stays crisp.
+	var comic := CanvasLayer.new()
+	add_child(comic)
+	comic.add_child(effects.ink)
 	var layer := CanvasLayer.new()
 	add_child(layer)
 	hud = Hud.new()
@@ -275,7 +281,7 @@ func on_hyper(f: Fighter, m: MoveData) -> void:
 		o.renderer.emote("sweat", 50)
 		o.renderer.eye_pop = 9
 		if not o.def.hurt_lines.is_empty():
-			effects.say(o.position + Vector2(0, -74.0 * o.def.size), o.def.hurt_lines[0], -o.facing)
+			effects.say(o.position + Vector2(0, -74.0 * o.def.size), o.def.hurt_lines[0], -o.facing, o.index)
 
 
 ## A throw completed: same feedback a heavy hit gets, plus a stats entry.
@@ -380,7 +386,7 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		effects.word(point, 0)
 	# The victim yelps. Rare enough that it stays funny instead of nagging.
 	if m.level >= 1 and randf() < 0.3 and not d.def.hurt_lines.is_empty():
-		effects.say(d.position + Vector2(0, -74.0 * d.def.size), d.def.hurt_lines.pick_random(), -d.facing)
+		effects.say(d.position + Vector2(0, -74.0 * d.def.size), d.def.hurt_lines.pick_random(), -d.facing, d.index)
 	# Characters react to each other: a long combo gets a gloat from whoever
 	# is dishing it out. Once per combo, on the 5th hit exactly.
 	elif d.combo == 5 and res != "ko":
@@ -400,7 +406,7 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 func _taunt(f: Fighter) -> void:
 	if f.def.taunt_lines.is_empty():
 		return
-	effects.say(f.position + Vector2(0, -74.0 * f.def.size), f.def.taunt_lines.pick_random(), f.facing)
+	effects.say(f.position + Vector2(0, -74.0 * f.def.size), f.def.taunt_lines.pick_random(), f.facing, f.index)
 	f.renderer.emote("note", 50)
 
 

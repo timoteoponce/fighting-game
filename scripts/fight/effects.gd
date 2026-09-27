@@ -13,9 +13,19 @@ const WORDS_SUPER := ["KABOOM!", "MEGA POW!", "YOWZA!", "SPLAT!", "KERBLAM!", "B
 const WORDS := WORDS_HEAVY  # kept for older call sites
 const GLOW_KINDS := ["hit", "heavy", "super", "block", "sparkle", "slash", "ring"]
 
+## One impact word at a time, and never a new one sooner than this many frames
+## after the last. A 12-hit hyper used to stack twelve words into a pile.
+const WORD_GAP := 14
+
 var parts: Array = []
 var glow: Node2D
-var top: Node2D
+var top: Node2D  # world space, pixelated with the arena: gag props
+## Screen space, sharp: impact words and speech bubbles. Text drawn inside the
+## 320x180 buffer turns to mush, so `Fight` parents this to a CanvasLayer.
+var ink: Node2D
+## The arena camera, used to map world positions onto `ink`. Null in a bare
+## Effects (identity mapping).
+var cam: Camera2D
 
 
 func _ready() -> void:
@@ -28,6 +38,20 @@ func _ready() -> void:
 	top = Node2D.new()
 	top.draw.connect(_draw_top)
 	add_child(top)
+	ink = Node2D.new()
+	ink.draw.connect(_draw_ink)
+
+
+## Current on-screen zoom of the arena (screen pixels per world unit).
+func _z() -> float:
+	return cam.zoom.x / Fight.PIXEL if cam != null else 1.0
+
+
+## Arena position -> screen position on the 640x360 overlay.
+func _screen(p: Vector2) -> Vector2:
+	if cam == null:
+		return p
+	return (p - cam.get_screen_center_position()) * _z() + Vector2(320, 180)
 
 
 func spawn(kind: String, pos: Vector2, data := {}) -> void:
@@ -42,12 +66,23 @@ func word(pos: Vector2, level := 1) -> void:
 		pool = WORDS_SUPER
 	elif level >= 1:
 		pool = WORDS_HEAVY
+	for e in parts:
+		if e["k"] == "text" and e["t"] < WORD_GAP and int(e["d"]["level"]) >= level:
+			return
+	parts = parts.filter(func(e: Dictionary) -> bool: return e["k"] != "text")
 	spawn("text", pos + Vector2(randf_range(-10, 10), -24), {"text": pool.pick_random(), "level": level})
 
 
-## A speech bubble with a fighter's own line in it.
-func say(pos: Vector2, text: String, dir := 1) -> void:
-	spawn("bubble", pos + Vector2(0, -34), {"text": text, "dir": dir})
+## A speech bubble with a fighter's own line in it. `who` is the speaker's
+## index: each speaker has one bubble at a time, and a bubble that would land on
+## top of the other speaker's is lifted clear of it.
+func say(pos: Vector2, text: String, dir := 1, who := -1) -> void:
+	parts = parts.filter(func(e: Dictionary) -> bool: return not (e["k"] == "bubble" and e["d"]["who"] == who))
+	var at := pos + Vector2(0, -34)
+	for e in parts:
+		if e["k"] == "bubble" and absf(e["p"].x - at.x) < 90.0 and absf(e["p"].y - at.y) < 26.0:
+			at.y = e["p"].y - 30.0
+	spawn("bubble", at, {"text": text, "dir": dir, "who": who})
 
 
 ## Knocks a character's belongings loose: Mateo drops a drumstick, Silvan loses
@@ -83,6 +118,7 @@ func step() -> void:
 	queue_redraw()
 	glow.queue_redraw()
 	top.queue_redraw()
+	ink.queue_redraw()
 
 
 func _draw() -> void:
@@ -169,66 +205,88 @@ func _draw_glow() -> void:
 
 func _draw_top() -> void:
 	for e in parts:
+		if e["k"] == "gag":
+			_draw_gag(e)
+
+
+func _draw_ink() -> void:
+	for e in parts:
 		match e["k"]:
 			"text": _draw_word(e)
 			"bubble": _draw_bubble(e)
-			"gag": _draw_gag(e)
 
 
 ## A comic impact word sitting on a jagged starburst, like a 60s TV punch card.
+## Drawn in screen space, so sizes are world sizes times the camera zoom.
 func _draw_word(e: Dictionary) -> void:
 	var k := float(e["t"]) / float(e["life"])
 	var level := int(e["d"].get("level", 1))
-	var p: Vector2 = e["p"]
+	var z := _z()
 	# Overshoot then settle: the word snaps out too big and springs back.
-	var pop := 1.0 + 0.7 * maxf(0.0, 1.0 - k * 5.0)
+	var pop := 1.0 + 0.5 * maxf(0.0, 1.0 - k * 6.0)
 	var a := minf(1.0, (1.0 - k) * 3.0)
 	var txt: String = e["d"]["text"]
-	var size := int((20 + level * 3) * pop)
+	var size := int((16 + level * 3) * pop * z)
+	var font := UI.arcade_font()
 	var rng := RandomNumberGenerator.new()
 	rng.seed = e["d"]["seed"]
-	var tilt := rng.randf_range(-0.18, 0.18)
-	var at := p + Vector2(0, -14.0 * k)
-	# Burst: a ragged star that pulses out from behind the letters.
-	var burst_r := (18.0 + level * 8.0) * (0.7 + 1.1 * k) * pop
+	var tilt := rng.randf_range(-0.12, 0.12)
+	var at := _screen(e["p"] + Vector2(0, -10.0 * k))
+	var c := at + Vector2(0, -size * 0.36)
+	var half_w := font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5
+	# Burst: a ragged star sized to the word, so long words never spill out.
+	var rx := half_w + size * 0.55
+	var ry := size * 0.95
 	var pts := PackedVector2Array()
-	var spikes := 11
+	var spikes := 14
 	for i in spikes * 2:
 		var ang := TAU * i / float(spikes * 2) + tilt
-		var r := burst_r * (1.0 if i % 2 == 0 else 0.56) * (0.85 + rng.randf() * 0.3)
-		pts.append(at + Vector2(cos(ang) * (0.35 * txt.length() + 1.1), sin(ang)) * r * 0.55)
+		var r := (1.0 if i % 2 == 0 else 0.74) * (0.94 + rng.randf() * 0.12)
+		pts.append(c + Vector2(cos(ang) * rx, sin(ang) * ry) * r)
 	var burst: Color = [Color(1, 0.95, 0.5), Color(1, 0.7, 0.25), Color(1, 0.45, 0.6), Color(0.6, 0.85, 1)][mini(level, 3)]
-	top.draw_colored_polygon(FighterRenderer.safe(pts), Color(burst, 0.85 * a))
-	top.draw_polyline(Stage._closed(pts), Color(0.12, 0.08, 0.16, a), 2.0, true)
-	UI.text(top, at, txt, size, Color(1, 0.98, 0.9, a),
-		HORIZONTAL_ALIGNMENT_CENTER, 7, Color(0.75, 0.08, 0.2, a), UI.arcade_font())
+	ink.draw_colored_polygon(pts, Color(burst, 0.92 * a))
+	ink.draw_polyline(Stage._closed(pts), Color(0.12, 0.08, 0.16, a), 2.5, true)
+	UI.text(ink, at, txt, size, Color(1, 0.98, 0.9, a),
+		HORIZONTAL_ALIGNMENT_CENTER, maxi(3, size / 5), Color(0.75, 0.08, 0.2, a), font)
 
 
-## Speech bubble with a tail pointing back at whoever said it.
+## Speech bubble with a tail pointing down at whoever said it. Drawn as an ink
+## silhouette with a paper fill on top, so the outline is one clean line all
+## the way round the body and the tail.
 func _draw_bubble(e: Dictionary) -> void:
 	var k := float(e["t"]) / float(e["life"])
-	var a := minf(1.0, (1.0 - k) * 4.0) * minf(1.0, e["t"] / 3.0)
-	var grow := minf(1.0, e["t"] / 4.0)
-	var p: Vector2 = e["p"] + Vector2(0, -10.0 * k)
+	var a := minf(1.0, (1.0 - k) * 4.0)
+	var grow := _back_out(minf(1.0, e["t"] / 6.0))
+	var z := _z()
 	var dir := float(e["d"].get("dir", 1))
 	var txt: String = e["d"]["text"]
-	var w := (14.0 + txt.length() * 5.0) * grow
-	var h := 15.0 * grow
-	var body := PackedVector2Array()
-	# Wobbly outline: sampling the ellipse with a little per-point noise reads
-	# as hand-drawn rather than as a computer-perfect oval.
-	var rng := RandomNumberGenerator.new()
-	rng.seed = e["d"]["seed"]
-	for i in 20:
-		var ang := TAU * i / 20.0
-		body.append(p + Vector2(cos(ang) * w, sin(ang) * h) * (0.94 + rng.randf() * 0.12))
-	# Tail.
-	body.append(p + Vector2(dir * w * 0.1, h * 0.8))
-	body.append(p + Vector2(dir * w * 0.22, h * 2.0))
-	body.append(p + Vector2(dir * w * 0.42, h * 0.75))
-	top.draw_colored_polygon(FighterRenderer.safe(body), Color(1, 1, 0.97, 0.95 * a))
-	top.draw_polyline(Stage._closed(body), Color(0.12, 0.08, 0.16, a), 2.0, true)
-	UI.text(top, p + Vector2(0, 6), txt, 11, Color(0.12, 0.08, 0.16, a), HORIZONTAL_ALIGNMENT_CENTER, 0, Color.TRANSPARENT, UI.arcade_font())
+	var size := int(12 * z)
+	var font := UI.arcade_font()
+	var c := _screen(e["p"] + Vector2(0, -6.0 * k))
+	var rx := (font.get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x * 0.5 + 9.0 * z) * grow
+	var ry := size * 0.95 * grow
+	if rx < 1.0:
+		return
+	var ink_col := Color(0.12, 0.08, 0.16, a)
+	var paper := Color(1, 1, 0.97, a)
+	var tail := PackedVector2Array([
+		c + Vector2(dir * rx * 0.1 - 5.0 * z, ry * 0.6),
+		c + Vector2(dir * rx * 0.5, ry + 11.0 * z * grow),
+		c + Vector2(dir * rx * 0.1 + 5.0 * z, ry * 0.6),
+	])
+	ink.draw_colored_polygon(FighterRenderer.ellipse_pts(c, rx + 2.0, ry + 2.0, 0.0, 32), ink_col)
+	ink.draw_polyline(Stage._closed(tail), ink_col, 4.0, true)
+	ink.draw_colored_polygon(tail, ink_col)
+	ink.draw_colored_polygon(FighterRenderer.ellipse_pts(c, rx, ry, 0.0, 32), paper)
+	ink.draw_colored_polygon(tail, paper)
+	if grow > 0.8:
+		UI.text(ink, c + Vector2(0, size * 0.36), txt, size, ink_col, HORIZONTAL_ALIGNMENT_CENTER, 0, Color.TRANSPARENT, font)
+
+
+## Ease-out with a little overshoot, for things that pop into place.
+static func _back_out(x: float) -> float:
+	x = clampf(x, 0.0, 1.0) - 1.0
+	return 1.0 + x * x * (2.7 * x + 1.7)
 
 
 ## Belongings knocked loose. Each item is a few primitives — the point is that
