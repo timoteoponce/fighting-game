@@ -250,19 +250,23 @@ func _draw() -> void:
 	# Back arm and leg: darker, they're further away.
 	part(s["sh_b"], s["elb_b"], 8.0 * b, 7.0 * b, dk(c["sleeve"]))
 	part(s["elb_b"], s["hand_b"], 6.5 * b, 5.5 * b, dk(c["forearm"]))
+	_weld_arm(s, "b", b, dk(c["sleeve"]))
 	fist(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["elb_b"])
 	part(s["hip_b"], s["knee_b"], 11.0 * b, 8.5 * b, dk(c["pants"]))
 	part(s["knee_b"], s["foot_b"], 8.5 * b, 6.5 * b, dk(c["legs"]))
+	_weld_leg(s, "b", b, dk(c["pants"]))
 	shoe(s["foot_b"], s["foot_dir_b"], dk(c["shoes"]))
 	torso(s)
 	def.draw_torso(self, s)
 	part(s["hip_f"], s["knee_f"], 11.0 * b, 8.5 * b, c["pants"])
 	part(s["knee_f"], s["foot_f"], 8.5 * b, 6.5 * b, c["legs"])
+	_weld_leg(s, "f", b, c["pants"])
 	shoe(s["foot_f"], s["foot_dir_f"], c["shoes"])
 	def.draw_over_legs(self, s)
 	_draw_head(s)
 	part(s["sh_f"], s["elb_f"], 8.0 * b, 7.0 * b, c["sleeve"])
 	part(s["elb_f"], s["hand_f"], 6.5 * b, 5.5 * b, c["forearm"])
+	_weld_arm(s, "f", b, c["sleeve"])
 	fist(s["hand_f"], c["hands"], s["hand_f"] - s["elb_f"])
 	def.draw_props(self, s)
 	_draw_emotes(s)
@@ -432,6 +436,21 @@ static func capsule_pts(a: Vector2, b: Vector2, r1: float, r2: float) -> PackedV
 	for i in 7:
 		pts.append(a + Vector2.from_angle(base - PI * 0.5 - PI * i / 6.0) * r1)
 	return pts
+
+
+## Cover the ink ring where two capsules meet, so a limb reads as one tube.
+func weld(p: Vector2, r: float, col: Color) -> void:
+	draw_circle(p, r + INK * 0.45, col, true, -1.0, true)
+
+
+func _weld_arm(s: Dictionary, side: String, b: float, col: Color) -> void:
+	weld(s["elb_" + side], 3.5 * b, col)
+	weld(s["sh_" + side], 4.0 * b, col)
+
+
+func _weld_leg(s: Dictionary, side: String, b: float, col: Color) -> void:
+	weld(s["knee_" + side], 4.25 * b, col)
+	weld(s["hip_" + side], 5.5 * b, col)
 
 
 ## A cel-shaded tapered limb: outline, shadow, lit side and a highlight.
