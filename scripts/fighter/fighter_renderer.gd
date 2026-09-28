@@ -276,11 +276,12 @@ func _draw() -> void:
 	part(s["sh_f"], s["elb_f"], 8.0 * b, 7.0 * b, c["sleeve"])
 	part(s["elb_f"], s["wrist_f"], 6.5 * b, 5.5 * b, c["forearm"])
 	_weld_arm(s, "f", b, c["sleeve"])
+	# Props draw before the fist so the hand wraps over them and reads as gripped.
+	def.draw_props(self, s)
 	if open:
 		open_hand(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
 	else:
 		fist(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
-	def.draw_props(self, s)
 	_draw_emotes(s)
 
 
@@ -706,6 +707,10 @@ func face(iris: Color, girl := false) -> void:
 				draw_polyline(PackedVector2Array([e + Vector2(-2.0 * sgn, -2.0), e + Vector2(1.5 * sgn, 0), e + Vector2(-2.0 * sgn, 2.0)]), OUT, 1.4, true)
 			"happy":
 				draw_arc(e + Vector2(0, 1.2), 2.2, PI, TAU, 8, OUT, 1.5, true)
+			"win":
+				# Bigger, brighter happy arcs — the "I won!" face.
+				draw_arc(e + Vector2(0, 1.4), 2.8, PI, TAU, 10, OUT, 1.8, true)
+				draw_arc(e + Vector2(0, 1.4), 2.0, PI, TAU, 8, Color(1, 1, 1, 0.5), 0.8, true)
 			"ko":
 				# Classic knocked-out X eyes.
 				var r := 3.0
@@ -789,6 +794,10 @@ func face(iris: Color, girl := false) -> void:
 			poly(ellipse_pts(m + Vector2(0, 0.3), 1.3, 1.7, 0.0, 10), Color(0.45, 0.1, 0.15), 1.0)
 		"happy":
 			draw_colored_polygon(PackedVector2Array([m + Vector2(-2.2, -0.8), m + Vector2(2.2, -1.0), m + Vector2(0.8, 1.6), m + Vector2(-1.0, 1.4)]), Color(0.55, 0.12, 0.18))
+		"win":
+			# Open grin with a tongue — pure joy.
+			draw_colored_polygon(PackedVector2Array([m + Vector2(-2.8, -1.0), m + Vector2(2.8, -1.0), m + Vector2(1.8, 2.2), m + Vector2(-1.8, 2.2)]), Color(0.45, 0.08, 0.12))
+			draw_colored_polygon(PackedVector2Array([m + Vector2(-1.2, 0.8), m + Vector2(1.2, 0.8), m + Vector2(0.6, 2.4), m + Vector2(-0.6, 2.4)]), Color(1.0, 0.45, 0.55))
 		"ko", "shock":
 			# Jaw on the floor: a big round wail of a mouth.
 			poly(ellipse_pts(m + Vector2(0, 1.2), 2.6, 3.4, 0.0, 12), Color(0.45, 0.1, 0.15), 1.2)

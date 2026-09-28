@@ -36,8 +36,8 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 160, "elb_f": 15, "arm_b": 30, "elb_b": 100, "lean": -4},
-		"win": {"lean": 0, "head": 14, "leg_f": 82, "knee_f": 12, "leg_b": 76, "knee_b": 28,
-			"arm_f": 72, "elb_f": 65, "arm_b": 84, "elb_b": 62},
+		"win": {"lean": 4, "head": 8, "leg_f": 70, "knee_f": 15, "leg_b": -30, "knee_b": 20,
+			"arm_f": 175, "elb_f": 5, "arm_b": 55, "elb_b": 45},
 	}
 	moves = {
 		"L": MoveData.make({"id": "jab", "startup": 4, "active": 3, "recovery": 8, "damage": 40,
@@ -178,7 +178,8 @@ func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 			var bounce := absf(sin(r.t * 0.12)) * 16.0
 			Projectile.draw_soccer_ball(r, s["hand_f"] + Vector2(0, -12 - bounce), 8.0, r.t * 0.1)
 		"book":
-			var c: Vector2 = (s["hand_f"] + s["hand_b"]) * 0.5 + Vector2(2, -5)
+			# Held open in the left hand, presented outward like a trophy.
+			var c: Vector2 = s["hand_b"] + Vector2(4, -10)
 			r.poly(PackedVector2Array([c, c + Vector2(-14, -4), c + Vector2(-14, 10), c + Vector2(0, 13)]), Color("fffaf0"), 1.5)
 			r.poly(PackedVector2Array([c, c + Vector2(14, -4), c + Vector2(14, 10), c + Vector2(0, 13)]), Color("fffaf0"), 1.5)
 			for i in 3:

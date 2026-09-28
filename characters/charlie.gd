@@ -47,7 +47,8 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 70, "elb_f": 60, "arm_b": 30, "elb_b": 90, "lean": 4, "head": 6},
-		"win": {"arm_f": 150, "elb_f": 60, "arm_b": 150, "elb_b": 60, "head": -14, "lean": -3},
+		"win": {"arm_f": 165, "elb_f": 20, "arm_b": 165, "elb_b": 20, "head": -18, "lean": -5,
+			"leg_f": 30, "leg_b": -30},
 	}
 	moves = {
 		# Slower than everyone else's light, but those noodle arms reach.

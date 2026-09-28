@@ -37,7 +37,7 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 165, "elb_f": 10, "arm_b": 25, "elb_b": 110, "lean": -6},
-		"win": {"arm_f": 150, "elb_f": 150, "arm_b": 20, "elb_b": 115, "leg_b": -26, "head": 10, "lean": -4},
+		"win": {"arm_f": 160, "elb_f": 15, "arm_b": -20, "elb_b": 140, "leg_f": 20, "leg_b": -20, "head": -5, "lean": -3},
 	}
 	moves = {
 		"L": MoveData.make({"id": "wand poke", "startup": 4, "active": 3, "recovery": 8, "damage": 42,

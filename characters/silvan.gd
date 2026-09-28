@@ -45,7 +45,8 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 140, "elb_f": 60, "arm_b": 140, "elb_b": 60, "head": 12, "lean": -4},
-		"win": {"arm_f": 160, "elb_f": 30, "arm_b": 160, "elb_b": 30, "head": 18, "leg_f": 70, "knee_f": 60, "lean": -6},
+		"win": {"arm_f": 170, "elb_f": 10, "arm_b": 40, "elb_b": 30, "head": 12,
+			"leg_f": 60, "knee_f": 40, "leg_b": -20, "knee_b": 30, "lean": -4},
 	}
 	moves = {
 		# Three-frame light: the fastest button in the game, and the weakest.
@@ -248,7 +249,8 @@ func draw_face(r: FighterRenderer) -> void:
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 	match r.prop:
 		"bone":
-			var c: Vector2 = (s["hand_f"] + s["hand_b"]) * 0.5 + Vector2(2, -4)
+			# Held up in the right hand like a trophy.
+			var c: Vector2 = s["hand_f"] + Vector2(0, -3)
 			var bone := Color("fff3d8")
 			r.part(c + Vector2(-8, 0), c + Vector2(8, 0), 4.0, 4.0, bone)
 			for e in [-9.0, 9.0]:

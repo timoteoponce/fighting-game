@@ -861,6 +861,7 @@ func _update_visual() -> void:
 			renderer.prop_t = sf
 		S.WIN:
 			renderer.prop = def.win_prop
+			renderer.prop_t = sf
 		S.INTRO:
 			renderer.prop = def.intro_prop
 		_:
@@ -880,7 +881,7 @@ func _expression() -> String:
 		S.HITSTUN, S.LAUNCHED, S.THROWN:
 			return "hurt"
 		S.WIN:
-			return "happy"
+			return "win"
 		S.BLOCK:
 			return "shock" if stun > 0 and opponent != null and opponent.combo >= 2 else "attack"
 		S.ATTACK:
@@ -998,7 +999,11 @@ func _pose_target() -> Array:
 			return [def.pose("down" if on_ground() else "launched"), 0.3]
 		S.WIN:
 			var b2 := sin(t * 0.1)
-			return [def.pose("win", {"lean": def.pose("win")["lean"] + b2 * 2.0}), 0.2]
+			# A slow vertical bob and a gentle lean sway, so the pose breathes
+			# instead of being held rigid.
+			var bob := sin(t * 0.16) * 3.0
+			return [def.pose("win", {"lean": def.pose("win")["lean"] + b2 * 2.0,
+				"hip": def.pose("win").get("hip", -42.0) + bob}), 0.2]
 		S.INTRO:
 			return [def.pose("intro"), 0.2]
 	return [def.pose("idle"), 0.3]

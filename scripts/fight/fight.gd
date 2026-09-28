@@ -235,6 +235,10 @@ func _update_phase() -> void:
 					w.move = null
 					w.vel = Vector2.ZERO
 					w.set_state(Fighter.S.WIN, true)
+					# A little stretch and a sparkle pop as they strike the pose, so
+					# the win reads as a pop rather than a slide into place.
+					w.renderer.squish(-0.22)
+					effects.spawn("sparkle", w.position + Vector2(0, -60.0 * w.def.size))
 					Sfx.voice(w.def.id, "win", w.index, w.def.voice_pitch)
 			if phase_t == 100:
 				_banner("DRAW!" if winner < 0 else "%s!" % fighters[winner].def.display)
