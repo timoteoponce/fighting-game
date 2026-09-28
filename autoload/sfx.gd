@@ -280,33 +280,48 @@ const MELODY_TITLE := [
 var _synth_music: AudioStreamWAV
 var _synth_player: AudioStreamPlayer
 var _music_mode := "fight"
+## Both tracks are built once and cached: a loop is ~300k samples of trig, so
+## rebuilding on every screen switch would hitch.
+var _loops := {}
+var _jingle: AudioStreamPlayer
 
 
 func _start_synth_music() -> void:
-	_synth_music = _build_synth_loop()
 	_synth_player = AudioStreamPlayer.new()
 	_synth_player.volume_db = -16.0
-	_synth_player.stream = _synth_music
 	add_child(_synth_player)
-	_synth_player.play()
+	_jingle = AudioStreamPlayer.new()
+	_jingle.volume_db = -10.0
+	add_child(_jingle)
+	set_music_mode("fight")
 
 
 func set_music_mode(mode: String) -> void:
 	_music_mode = mode
 	if _synth_player == null:
 		return
-	_synth_music = _build_synth_loop()
-	_synth_player.stream = _synth_music
+	if not _loops.has(mode):
+		_loops[mode] = _build_synth_loop(mode)
+	_synth_player.stream = _loops[mode]
 	_synth_player.play()
 
 
-func _build_synth_loop() -> AudioStreamWAV:
+## Short victory fanfare. Synth mode only: if the player dropped real files in
+## music/, a synthesized jingle on top of them would be wrong.
+func play_jingle() -> void:
+	if _jingle == null:
+		return
+	_jingle.stream = _build_jingle()
+	_jingle.play()
+
+
+func _build_synth_loop(mode: String) -> AudioStreamWAV:
 	var n := int(LOOP_DUR * RATE)
 	var data := PackedByteArray()
 	data.resize(n * 2)
 	var raw := PackedFloat32Array()
 	raw.resize(n)
-	var melody: Array = MELODY_TITLE if _music_mode == "title" else MELODY_FIGHT
+	var melody: Array = MELODY_TITLE if mode == "title" else MELODY_FIGHT
 	for i in n:
 		var t := float(i) / RATE
 		var step_f := t / STEP
@@ -367,6 +382,38 @@ func _pentatonic(degree: int) -> float:
 	var octave := degree / scale.size()
 	var idx := degree % scale.size()
 	return scale[idx] * pow(2.0, octave)
+
+
+## A rising arpeggio with a shimmer an octave up, ~1.6s. The last note rings out.
+func _build_jingle() -> AudioStreamWAV:
+	var notes := [N_C4, N_E4, N_G4, N_C5, N_E5, N_G5]
+	var dur := 1.6
+	var n := int(dur * RATE)
+	var data := PackedByteArray()
+	data.resize(n * 2)
+	var raw := PackedFloat32Array()
+	raw.resize(n)
+	for i in n:
+		var t := float(i) / RATE
+		var k := t / dur
+		var idx := mini(int(k * notes.size()), notes.size() - 1)
+		var f: float = notes[idx]
+		var phase := fmod(t * f, 1.0)
+		var s := (1.0 if phase < 0.5 else -1.0) * 0.3
+		var ph2 := fmod(t * f * 2.0, 1.0)
+		s += (1.0 if ph2 < 0.5 else -1.0) * 0.12 * k
+		var env := minf(1.0, k * 14.0)
+		if idx == notes.size() - 1:
+			env *= clampf(1.0 - (k - 0.8) * 5.0, 0.0, 1.0)
+		raw[i] = s * env
+	for i in n:
+		data.encode_s16(i * 2, int(clampf(raw[i], -1.0, 1.0) * 32767.0))
+	var w := AudioStreamWAV.new()
+	w.format = AudioStreamWAV.FORMAT_16_BITS
+	w.mix_rate = RATE
+	w.stereo = false
+	w.data = data
+	return w
 
 
 func _advance_music() -> void:

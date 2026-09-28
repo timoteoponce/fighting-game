@@ -70,7 +70,7 @@ func _ready() -> void:
 	screen.stretch_mode = TextureRect.STRETCH_SCALE
 	add_child(screen)
 	stage = Stage.new()
-	stage.kind = GameState.stage if GameState.stage != "" else ["field", "library"].pick_random()
+	stage.kind = GameState.stage if GameState.stage != "" else Stage.KINDS.pick_random()
 	world.add_child(stage)
 	var ids: Array = GameState.chars
 	for i in 2:
@@ -245,11 +245,13 @@ func _update_phase() -> void:
 					phase = "over"
 					phase_t = 0
 					_banner("%s WINS!" % fighters[winner].def.display)
+					Sfx.play_jingle()
+					_celebrate()
 				else:
 					round_num += 1
 					start_round()
 		"over":
-			if phase_t == 70:
+			if phase_t == 200:
 				_open_menu("", ["REMATCH", "CHARACTER SELECT", "TITLE SCREEN"])
 
 
@@ -462,13 +464,20 @@ func _update_camera() -> void:
 		mid = loser.position.x
 		z = KO_ZOOM
 		focus_y = loser.position.y - 60.0
+	else:
+		# Victory: the camera pushes in on the champion instead.
+		var champ := _win_focus()
+		if champ != null:
+			mid = champ.position.x
+			z = KO_ZOOM
+			focus_y = champ.position.y - 70.0
 	cam_z = lerpf(cam_z, z, 0.12)
 	camera.zoom = Vector2(cam_z, cam_z) * PIXEL
 	var base_y := 342.0 - 180.0 / cam_z
 	camera.position.y = minf(base_y, focus_y)
 	var x := clampf(mid, 320.0 / cam_z, STAGE_W - 320.0 / cam_z)
-	# Pan rather than cut while the KO camera is doing its thing.
-	camera.position.x = lerpf(camera.position.x, x, 0.18) if phase == "ko" else x
+	# Pan rather than cut while the KO or victory camera is doing its thing.
+	camera.position.x = lerpf(camera.position.x, x, 0.18) if phase == "ko" or phase == "over" else x
 	stage.cam_x = camera.position.x
 
 
@@ -479,6 +488,26 @@ func _ko_focus() -> Fighter:
 		return null
 	var loser := fighters[1 - winner]
 	return loser if loser.health <= 0 else null
+
+
+## The fighter the victory camera should push in on, or null. Mirrors
+## _ko_focus: only a clean win has someone to celebrate.
+func _win_focus() -> Fighter:
+	if phase != "over" or winner < 0:
+		return null
+	return fighters[winner]
+
+
+## The payoff: confetti in the winner's colours, their own line in a bubble,
+## and the camera pushing in on them while the loser stays down.
+func _celebrate() -> void:
+	if winner < 0:
+		return
+	var w := fighters[winner]
+	var acc: Color = w.renderer.colors["accent"]
+	effects.confetti(w.position + Vector2(0, -70.0 * w.def.size), [acc, acc.lightened(0.35), Color(1, 1, 1, 0.9)])
+	if not w.def.win_quote.is_empty():
+		effects.say(w.position, w.def.win_quote, w.facing, w.index)
 
 
 # --- Menus -------------------------------------------------------------------

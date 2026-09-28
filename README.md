@@ -3,8 +3,15 @@
 A 2D fighting game in the style of Marvel vs Capcom. The stage and the
 fighters in a match are drawn in code, so the body can move every frame.
 The paintings in `art/portraits/` are the title and character-select portraits.
-Drop `.ogg`, `.wav`, or `.mp3` files in `music/` and they play in order,
-quietly, behind the menus and the match.
+
+Music is synthesized in code too: a mellow track for the menus and a driving
+one for the fight, with a short fanfare when a match is won. Drop `.ogg`,
+`.wav`, or `.mp3` files in `music/` and those play instead, in order, quietly,
+behind the menus and the match.
+
+Six stages, picked at random each match: a soccer stadium at dusk, a magic
+library hall, a rooftop at night, a dojo at sunset, a beach at sunset and a
+snowy park.
 
 - **Ulises**: soccer, running, reading and video games. Fast, with a soccer-ball shot and a pixel-beam hyper.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
@@ -88,7 +95,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 
 - Engine: **Godot 4.7** (GDScript). Everything is drawn in code, so there are no image or sound files.
 - Run from source: `godot --path .`
-- CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`)
+- CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a 60-match CPU win/damage report)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/UlisesVsEmilia-linux-x86_64.tar.gz`
 - F1 during a fight shows hitboxes and inputs.

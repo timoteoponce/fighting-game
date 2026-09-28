@@ -47,10 +47,11 @@ godot --path . -- --screen=select                               # jump straight 
 - **Zero image/audio assets** — fighters, stages, HUD, sound effects and voices are all
   generated in code. Optional recorded voice overrides are read from
   `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd:66`).
-- **Pixel pipeline**: the arena renders into a `320x180` `SubViewport` (`Fight.world`,
-  `Fight.PIXEL = 0.5`) upscaled to a `640x360` screen. All gameplay/arena coordinates are
-  therefore 640x360 logical space, and `Fight.camera.zoom` already has `PIXEL` baked in.
-  Nearest filtering is set on both the SubViewport and the TextureRect. Anything that must
+- **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
+  `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
+  `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and
+  `Fight.camera.zoom` already has `PIXEL` baked in. Nearest filtering is set on
+  both the SubViewport and the TextureRect. Anything that must
   stay sharp (HUD, menus) belongs on a `CanvasLayer`, not in `world` — that's why `Hud` is
   parented to a `CanvasLayer` in `Fight._ready`.
 - **The frame loop lives in `Fight._physics_process`** (60 Hz fixed, `physics_ticks_per_second=60`).
@@ -79,10 +80,16 @@ godot --path . -- --screen=select                               # jump straight 
 - **Adding a character is one file.** Copy `characters/_template.gd`, rename the
   `class_name`, set `id`, drop the leading `_` from the filename. `GameState._scan_characters`
   finds it; there is **no list, no match statement and no audio table to edit**. Files
-  starting with `_` are skipped, which is the only reason the template isn't playable.
+  starting with `_` are skipped, which is only reason the template isn't playable.
   `roster_order` sets select-screen position, `voice_pitch` (Hz, on `CharacterDef`) is all
   the synthesized shouts need. `tests/sim_test.gd:_test_character_def` validates every
   registered fighter, so a half-finished one fails with a clear message.
+- **Adding a stage is one `match` branch.** `Stage.KINDS` (`scripts/fight/stage.gd`) is the
+  registry — add the name there and a `_draw_<name>()` method, then add a branch in
+  `Stage._draw`. `Fight._ready` picks from `Stage.KINDS` when `--stage` is empty. Every
+  stage's floor must be drawn at or below `Fighter.GROUND_Y` (300) so the fighters' feet
+  land on it, and the parallax helper `layer(f)` does the rest (`f=0` fixed to screen,
+  `f=1` moves with the fighters).
 
 ## Animation clips and the FX event track
 

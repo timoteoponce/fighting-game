@@ -32,6 +32,8 @@ func _ready() -> void:
 func _switch(screen: String) -> void:
 	if current:
 		current.queue_free()
+	# The fight gets the driving track; every other screen gets the mellow one.
+	Sfx.set_music_mode("fight" if screen == "fight" else "title")
 	match screen:
 		"select":
 			current = CharSelect.new()

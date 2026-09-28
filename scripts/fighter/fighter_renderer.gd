@@ -50,8 +50,6 @@ const POSES := {
 	"thrown": {"lean": -20, "head": -16, "arm_f": 150, "elb_f": 20, "arm_b": 165, "elb_b": 25,
 		"leg_f": 30, "knee_f": 40, "leg_b": -12, "knee_b": 30},
 	"intro": {},
-	"walk": {"lean": 8, "head": -2, "arm_f": 40, "elb_f": 70, "arm_b": 55, "elb_b": 85,
-		"leg_f": 30, "knee_f": 25, "leg_b": -20, "knee_b": 18, "hip": -42, "ground": 1},
 }
 
 var def: CharacterDef

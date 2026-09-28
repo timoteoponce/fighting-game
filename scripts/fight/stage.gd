@@ -1,12 +1,16 @@
 class_name Stage
 extends Node2D
-## Layered backgrounds drawn in code.
-## "field": soccer stadium at dusk (Ulises). "library": magic library hall (Emilia).
+## Layered backgrounds drawn in code. Six stages: "field" (soccer stadium at
+## dusk, Ulises), "library" (magic library hall, Emilia), "rooftop" (night
+## skyline), "dojo" (sunset), "beach" (sunset ocean) and "snow" (snowy park).
 ##
 ## Layers are authored as if the camera sits at (500, BASE_Y); layer(f) shifts
 ## each one so f = 1 moves with the fighters and f = 0 stays on screen.
+## Every stage's floor is drawn at or below Fighter.GROUND_Y (300) so the
+## fighters' feet land on it.
 
 const BASE_Y := 192.0
+const KINDS := ["field", "library", "rooftop", "dojo", "beach", "snow"]
 const CROWD := [Color("ff5a5a"), Color("ffd24a"), Color("5ac8ff"), Color("7dff8a"), Color("ff8ad8"), Color("ffffff"), Color("b28dff")]
 const BOOKS := [Color("c0392b"), Color("2980b9"), Color("27ae60"), Color("f1c40f"), Color("8e44ad"), Color("e67e22"), Color("ff7eb6"), Color("16a085")]
 
@@ -29,10 +33,19 @@ func layer(f: float) -> void:
 
 
 func _draw() -> void:
-	if kind == "library":
-		_draw_library()
-	else:
-		_draw_field()
+	match kind:
+		"library":
+			_draw_library()
+		"rooftop":
+			_draw_rooftop()
+		"dojo":
+			_draw_dojo()
+		"beach":
+			_draw_beach()
+		"snow":
+			_draw_snow()
+		_:
+			_draw_field()
 	draw_set_transform(Vector2.ZERO)
 	_draw_vignette()
 	if dim > 0.0:
@@ -304,9 +317,259 @@ func _bookshelf(pos: Vector2, seed: int) -> void:
 				draw_rect(Rect2(bx + bw - 3.0, y + 44 - bh, 2.0, bh), col.darkened(0.3))
 				bx += bw
 			i += 1
-		draw_rect(Rect2(pos.x, y + 44, w, 8), Color("6a3e20"))
-	draw_rect(Rect2(pos.x, pos.y, 6, h), Color("6a3e20"))
-	draw_rect(Rect2(pos.x + w - 6, pos.y, 6, h), Color("4a2a14"))
+			draw_rect(Rect2(pos.x, y + 44, w, 8), Color("6a3e20"))
+			draw_rect(Rect2(pos.x, pos.y, 6, h), Color("6a3e20"))
+			draw_rect(Rect2(pos.x + w - 6, pos.y, 6, h), Color("4a2a14"))
+
+
+# --- Rooftop at night ----------------------------------------------------------------
+
+func _draw_rooftop() -> void:
+	# Night sky with stars.
+	layer(0.0)
+	UI.gradient_rect(self, Rect2(-300, -400, 1600, 500), Color("05030f"), Color("1a1030"))
+	for i in 50:
+		var p := Vector2(fmod(i * 61.7, 1600.0) - 300.0, -380.0 + fmod(i * 41.3, 380.0))
+		draw_circle(p, 0.8 + (i % 3) * 0.3, Color(1, 1, 1, 0.3 + 0.4 * sin(t * 1.5 + i)))
+	# Moon.
+	draw_circle(Vector2(1050, 40), 22.0, Color("e8e4d0"), true, -1.0, true)
+	draw_circle(Vector2(1050, 40), 30.0, Color(1, 1, 1, 0.08), true, -1.0, true)
+	# Far skyline.
+	layer(0.2)
+	for i in 30:
+		var x := -250.0 + i * 52.0
+		var h := 60.0 + float((i * 43) % 90)
+		var w := 34.0 + float((i * 17) % 20)
+		draw_rect(Rect2(x, 230 - h, w, h + 40), Color("0d0a1c"))
+		for wy in range(int(h / 12)):
+			for wx in 3:
+				if (i + wy * 2 + wx) % 3 != 0:
+					draw_rect(Rect2(x + 6 + wx * 10, 236 - h + wy * 12, 4, 5), Color(1, 0.85, 0.4, 0.35 + 0.3 * sin(t * 2.0 + i + wy)))
+	# Near skyline, darker.
+	layer(0.45)
+	for i in 16:
+		var x := -200.0 + i * 100.0
+		var h := 40.0 + float((i * 31) % 60)
+		draw_rect(Rect2(x, 250 - h, 60, h + 60), Color("141026"))
+		for wy in range(int(h / 14)):
+			for wx in 4:
+				if (i + wy + wx) % 4 != 0:
+					draw_rect(Rect2(x + 8 + wx * 13, 256 - h + wy * 14, 5, 6), Color(0.7, 0.8, 1.0, 0.25))
+	# Rooftop floor: tar paper with a parapet.
+	layer(1.0)
+	UI.gradient_rect(self, Rect2(-300, 268, 1600, 200), Color("2a2438"), Color("1a1626"))
+	draw_rect(Rect2(-300, 268, 1600, 6), Color("3a3450"))
+	# Parapet wall behind the fighters.
+	draw_rect(Rect2(-300, 250, 1600, 20), Color("221c30"))
+	draw_rect(Rect2(-300, 250, 1600, 3), Color("3a3450"))
+	# Water tower.
+	var wt := Vector2(180, 250)
+	draw_rect(Rect2(wt.x - 3, wt.y - 56, 6, 56), Color("1a1626"))
+	draw_colored_polygon(PackedVector2Array([wt + Vector2(-22, -56), wt + Vector2(22, -56), wt + Vector2(18, -78), wt + Vector2(-18, -78)]), Color("241e33"))
+	draw_colored_polygon(PackedVector2Array([wt + Vector2(-18, -78), wt + Vector2(18, -78), wt + Vector2(0, -92)]), Color("2e2640"))
+	# AC units and vents.
+	for i in 5:
+		var ax := -100.0 + i * 260.0
+		draw_rect(Rect2(ax, 258, 34, 12), Color("2e2840"))
+		draw_rect(Rect2(ax, 258, 34, 2), Color("3e3856"))
+	# Blinking aircraft warning light on a distant tower.
+	var blink := sin(t * 2.0) > 0.0
+	if blink:
+		draw_circle(Vector2(1150, 120), 3.0, Color(1, 0.2, 0.25), true, -1.0, true)
+		draw_circle(Vector2(1150, 120), 8.0, Color(1, 0.2, 0.25, 0.25), true, -1.0, true)
+	# String lights along the parapet.
+	for i in 24:
+		var lx := -280.0 + i * 60.0
+		var ly := 252.0 + sin(i * 0.8) * 3.0
+		var lc: Color = [Color(1, 0.4, 0.4), Color(0.4, 1, 0.5), Color(0.4, 0.6, 1), Color(1, 0.9, 0.4)][i % 4]
+		draw_circle(Vector2(lx, ly), 1.6, lc, true, -1.0, true)
+		draw_circle(Vector2(lx, ly), 4.0, Color(lc, 0.2), true, -1.0, true)
+
+
+# --- Dojo at sunset ------------------------------------------------------------------
+
+func _draw_dojo() -> void:
+	# Warm sunset sky through the open front.
+	layer(0.0)
+	UI.gradient_rect(self, Rect2(-300, -400, 1600, 500), Color("2a1030"), Color("c0405a"))
+	UI.gradient_rect(self, Rect2(-300, 60, 1600, 200), Color("c0405a"), Color("ffb060"))
+	# Sun low over the trees.
+	var sun := Vector2(500, 210)
+	for i in 5:
+		draw_circle(sun, 70.0 - i * 10.0, Color(1, 0.7, 0.35, 0.08), true, -1.0, true)
+	draw_circle(sun, 26.0, Color("fff0c0"), true, -1.0, true)
+	# Distant trees.
+	layer(0.2)
+	for i in 20:
+		var x := -250.0 + i * 80.0
+		var h := 30.0 + float((i * 29) % 40)
+		draw_colored_polygon(PackedVector2Array([Vector2(x, 240), Vector2(x + 20, 240 - h), Vector2(x + 40, 240)]), Color("3a1a3a"))
+	# Dojo interior: back wall, pillars, beams.
+	layer(0.5)
+	UI.gradient_rect(self, Rect2(-300, 40, 1600, 240), Color("4a2a1a"), Color("2a160c"))
+	for i in 7:
+		var x := -250.0 + i * 220.0
+		draw_rect(Rect2(x - 10, 40, 20, 240), Color("3a2010"))
+		draw_rect(Rect2(x - 10, 40, 20, 4), Color("5a3620"))
+	# Roof beam.
+	draw_rect(Rect2(-300, 30, 1600, 14), Color("2a160c"))
+	draw_rect(Rect2(-300, 30, 1600, 3), Color("4a2a14"))
+	# Paper screens (shoji) with sunset glowing through.
+	for i in 4:
+		var sx := -180.0 + i * 380.0
+		UI.gradient_rect(self, Rect2(sx, 70, 120, 150), Color("ffd8a0"), Color("ff9060"))
+		draw_rect(Rect2(sx, 70, 120, 150), Color("3a2010"), false, 3.0)
+		for k in 3:
+			draw_line(Vector2(sx + k * 40, 70), Vector2(sx + k * 40, 220), Color("3a2010"), 2.0)
+		draw_line(Vector2(sx, 145), Vector2(sx + 120, 145), Color("3a2010"), 2.0)
+	# Hanging lanterns.
+	for i in 5:
+		var lx := -150.0 + i * 300.0
+		var sway := sin(t * 1.2 + i) * 3.0
+		draw_line(Vector2(lx, 44), Vector2(lx + sway, 70), Color("2a160c"), 2.0)
+		var lc: Color = [Color(1, 0.5, 0.3), Color(1, 0.8, 0.4)][i % 2]
+		draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(lx + sway, 88), 12, 16), lc)
+		draw_circle(Vector2(lx + sway, 88), 20.0, Color(lc, 0.15), true, -1.0, true)
+	# Wooden floor.
+	layer(1.0)
+	UI.gradient_rect(self, Rect2(-300, 268, 1600, 200), Color("6a4020"), Color("4a2a12"))
+	for i in 20:
+		var y := 272.0 + i * 9.0
+		draw_line(Vector2(-300, y), Vector2(1300, y), Color(0, 0, 0, 0.15), 1.0)
+	for i in 12:
+		var x := -280.0 + i * 130.0
+		draw_line(Vector2(x, 268), Vector2(x - 20, 468), Color(0, 0, 0, 0.1), 1.0)
+	# Tatami mats.
+	for i in 6:
+		var mx := -250.0 + i * 260.0
+		draw_rect(Rect2(mx, 280, 200, 60), Color("8a6a30"))
+		draw_rect(Rect2(mx, 280, 200, 60), Color("5a4020"), false, 2.0)
+	# Light shafts through the screens.
+	for i in 3:
+		var bx := 100.0 + i * 300.0
+		draw_colored_polygon(PackedVector2Array([Vector2(bx, 70), Vector2(bx + 60, 70), Vector2(bx + 160, 300), Vector2(bx + 40, 300)]), Color(1, 0.85, 0.5, 0.06))
+
+
+# --- Beach at sunset -----------------------------------------------------------------
+
+func _draw_beach() -> void:
+	# Sunset sky over the ocean.
+	layer(0.0)
+	UI.gradient_rect(self, Rect2(-300, -400, 1600, 300), Color("1a0a2a"), Color("6a2050"))
+	UI.gradient_rect(self, Rect2(-300, -100, 1600, 200), Color("6a2050"), Color("ff8040"))
+	UI.gradient_rect(self, Rect2(-300, 100, 1600, 140), Color("ff8040"), Color("ffd080"))
+	# Sun half-sunk in the sea.
+	var sun := Vector2(500, 195)
+	for i in 6:
+		draw_circle(sun, 80.0 - i * 10.0, Color(1, 0.7, 0.3, 0.07), true, -1.0, true)
+	draw_circle(sun, 30.0, Color("fff0c0"), true, -1.0, true)
+	# Clouds.
+	for c in [[Vector2(200, 60), 1.0], [Vector2(700, 40), 1.3], [Vector2(1000, 80), 0.9]]:
+		_cloud(c[0] + Vector2(fmod(t * 3.0, 60.0), 0), c[1])
+	# Sea with sun glitter.
+	layer(0.3)
+	UI.gradient_rect(self, Rect2(-300, 205, 1600, 70), Color("4a2060"), Color("8a4060"))
+	for i in 40:
+		var wx := -280.0 + fmod(i * 97.0 + t * 20.0, 1560.0)
+		var wy := 210.0 + fmod(i * 37.0, 48.0)
+		var near_sun := absf(wx - 500.0) < 120.0
+		var wc: Color = Color(1, 0.8, 0.4, 0.5) if near_sun else Color(1, 1, 1, 0.15)
+		draw_line(Vector2(wx, wy), Vector2(wx + 14.0, wy), wc, 1.2)
+	# Waves breaking on the shore.
+	layer(0.55)
+	for i in 8:
+		var wx := -250.0 + i * 200.0 + sin(t * 0.8 + i) * 20.0
+		draw_arc(Vector2(wx, 266), 40.0, PI, TAU, 16, Color(1, 1, 1, 0.25), 2.0, true)
+	# Palm trees.
+	layer(0.7)
+	for px in [-120.0, 1080.0]:
+		draw_colored_polygon(PackedVector2Array([Vector2(px - 4, 300), Vector2(px + 4, 300), Vector2(px + 2, 200), Vector2(px - 2, 200)]), Color("3a2010"))
+		for fr in 5:
+			var a := -0.4 - fr * 0.5
+			var tip := Vector2(px, 200) + Vector2.from_angle(a) * 70.0
+			draw_colored_polygon(PackedVector2Array([Vector2(px, 200), tip + Vector2.from_angle(a + 0.3) * 20.0, tip + Vector2.from_angle(a - 0.3) * 20.0]), Color("1a4a20"))
+	# Sand.
+	layer(1.0)
+	UI.gradient_rect(self, Rect2(-300, 268, 1600, 200), Color("e8c890"), Color("c8a060"))
+	for i in 50:
+		var p := Vector2(fmod(i * 137.0, 1600.0) - 300.0, 275.0 + fmod(i * 71.0, 120.0))
+		draw_circle(p, 1.0 + (i % 3) * 0.4, Color(0, 0, 0, 0.08), true, -1.0, true)
+	# Shoreline foam.
+	for i in 30:
+		var fx := -280.0 + i * 55.0
+		var fy := 272.0 + sin(t * 1.5 + i) * 3.0
+		draw_circle(Vector2(fx, fy), 2.0, Color(1, 1, 1, 0.3), true, -1.0, true)
+	# Beach props: a bucket and a ball.
+	draw_rect(Rect2(820, 288, 14, 12), Color("e04040"))
+	draw_rect(Rect2(820, 288, 14, 3), Color(1, 1, 1, 0.3))
+	draw_circle(Vector2(180, 292), 7.0, Color("40a0e0"), true, -1.0, true)
+	draw_circle(Vector2(180, 292), 9.0, Color(1, 1, 1, 0.2), true, -1.0, true)
+	# Gulls.
+	for i in 3:
+		var gx := fmod(t * 30.0 + i * 400.0, 1600.0) - 300.0
+		var gy := 60.0 + i * 25.0 + sin(t * 2.0 + i) * 8.0
+		var flap := sin(t * 8.0 + i) * 4.0
+		draw_arc(Vector2(gx - 6, gy - flap), 6.0, PI, TAU, 8, Color(1, 1, 1, 0.7), 1.5, true)
+		draw_arc(Vector2(gx + 6, gy - flap), 6.0, PI, TAU, 8, Color(1, 1, 1, 0.7), 1.5, true)
+
+
+# --- Snowy park ----------------------------------------------------------------------
+
+func _draw_snow() -> void:
+	# Dusk sky, cold and clear.
+	layer(0.0)
+	UI.gradient_rect(self, Rect2(-300, -400, 1600, 500), Color("0a0a1a"), Color("2a2a4a"))
+	UI.gradient_rect(self, Rect2(-300, 100, 1600, 140), Color("2a2a4a"), Color("5a5a7a"))
+	for i in 40:
+		var p := Vector2(fmod(i * 71.3, 1600.0) - 300.0, -380.0 + fmod(i * 47.7, 400.0))
+		draw_circle(p, 0.8 + (i % 3) * 0.3, Color(1, 1, 1, 0.25 + 0.35 * sin(t * 1.8 + i)))
+	# Moon.
+	draw_circle(Vector2(200, 60), 18.0, Color("e0e4f0"), true, -1.0, true)
+	draw_circle(Vector2(200, 60), 26.0, Color(1, 1, 1, 0.08), true, -1.0, true)
+	# Far treeline.
+	layer(0.2)
+	for i in 24:
+		var x := -250.0 + i * 65.0
+		var h := 40.0 + float((i * 37) % 50)
+		draw_colored_polygon(PackedVector2Array([Vector2(x, 250), Vector2(x + 24, 250 - h), Vector2(x + 48, 250)]), Color("1a1a30"))
+	# Snow-covered ground rising to a frozen pond.
+	layer(0.5)
+	UI.gradient_rect(self, Rect2(-300, 240, 1600, 120), Color("8a90a8"), Color("c0c8d8"))
+	# Bare trees.
+	for i in 6:
+		var tx := -200.0 + i * 220.0
+		var th := 60.0 + float((i * 23) % 40)
+		draw_colored_polygon(PackedVector2Array([Vector2(tx - 3, 260), Vector2(tx + 3, 260), Vector2(tx + 1, 260 - th), Vector2(tx - 1, 260 - th)]), Color("2a2018"))
+		for br in 3:
+			var ba := -0.6 - br * 0.5
+			var btip := Vector2(tx, 260 - th * 0.6) + Vector2.from_angle(ba) * 25.0
+			draw_line(Vector2(tx, 260 - th * 0.6), btip, Color("2a2018"), 2.0)
+	# String lights between the trees.
+	for i in 20:
+		var lx := -250.0 + i * 75.0
+		var ly := 200.0 + sin(i * 0.7) * 8.0
+		var lc: Color = [Color(1, 0.4, 0.4), Color(0.4, 1, 0.5), Color(0.5, 0.7, 1), Color(1, 0.9, 0.4)][i % 4]
+		draw_circle(Vector2(lx, ly), 1.5, lc, true, -1.0, true)
+		draw_circle(Vector2(lx, ly), 4.0, Color(lc, 0.2), true, -1.0, true)
+	# Snowy floor.
+	layer(1.0)
+	UI.gradient_rect(self, Rect2(-300, 268, 1600, 200), Color("d0d8e8"), Color("a0a8c0"))
+	# Frozen pond.
+	UI.gradient_rect(self, Rect2(300, 290, 400, 60), Color("8ab0d0"), Color("6a90b8"))
+	draw_rect(Rect2(300, 290, 400, 60), Color(1, 1, 1, 0.15), false, 2.0)
+	for i in 8:
+		var px2 := 320.0 + i * 45.0
+		draw_line(Vector2(px2, 295), Vector2(px2 + 20.0, 345), Color(1, 1, 1, 0.08), 1.0)
+	# Falling snow.
+	for i in 40:
+		var sx := fmod(i * 89.0 + t * (12.0 + float(i % 5) * 4.0), 1600.0) - 300.0
+		var sy := fmod(i * 53.0 + t * (20.0 + float(i % 7) * 6.0), 400.0) - 100.0
+		var drift := sin(t * 1.5 + i) * 8.0
+		draw_circle(Vector2(sx + drift, sy), 1.0 + (i % 3) * 0.4, Color(1, 1, 1, 0.5 + 0.3 * sin(t + i)), true, -1.0, true)
+	# Snow mounds.
+	for i in 8:
+		var mx := -250.0 + i * 200.0
+		draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(mx, 300), 40.0, 12.0), Color(1, 1, 1, 0.25))
 
 
 # --- Overlays -------------------------------------------------------------------------

@@ -3,7 +3,7 @@ extends Node2D
 ## Short-lived visual effects. Sparks draw on an additive "glow" layer so
 ## overlapping light adds up to white-hot, MvC style. Comic words go on top.
 
-const LIFE := {"hit": 12, "heavy": 18, "super": 22, "block": 12, "dust": 20, "text": 36, "sparkle": 24, "slash": 9, "ring": 18, "gag": 70, "bubble": 54}
+const LIFE := {"hit": 12, "heavy": 18, "super": 22, "block": 12, "dust": 20, "text": 36, "sparkle": 24, "slash": 9, "ring": 18, "gag": 70, "bubble": 54, "confetti": 170}
 ## Impact words, graded by how hard the hit was. Keeping the silly ones on the
 ## small hits and the loud ones on the big hits means the screen still tells you
 ## something even while it is being daft.
@@ -99,6 +99,24 @@ func gag(pos: Vector2, item: String, dir := 1) -> void:
 		"v": Vector2(randf_range(1.6, 4.0) * dir, randf_range(-7.5, -4.5)),
 		"spin": randf_range(-0.34, 0.34),
 	})
+
+
+## A burst of confetti in the winner's colours. One effect, many pieces: each
+## piece is computed analytically from the frame count, so there is no
+## per-piece state to integrate.
+func confetti(pos: Vector2, cols: Array, n := 26) -> void:
+	var d := {"n": n, "g": 0.16, "x0": [], "y0": [], "vx": [], "vy": [], "rot": [], "spin": [], "w": [], "h": [], "cols": []}
+	for i in n:
+		d["x0"].append(pos.x + randf_range(-30.0, 30.0))
+		d["y0"].append(pos.y + randf_range(-20.0, 10.0))
+		d["vx"].append(randf_range(-0.5, 0.5))
+		d["vy"].append(randf_range(-2.4, -0.8))
+		d["rot"].append(randf_range(0.0, TAU))
+		d["spin"].append(randf_range(-0.12, 0.12))
+		d["w"].append(randf_range(3.0, 6.0))
+		d["h"].append(randf_range(2.0, 4.0))
+		d["cols"].append(cols[i % cols.size()])
+	spawn("confetti", pos, d)
 
 
 func step() -> void:
@@ -212,6 +230,8 @@ func _draw_top() -> void:
 	for e in parts:
 		if e["k"] == "gag":
 			_draw_gag(e)
+		elif e["k"] == "confetti":
+			_draw_confetti(e)
 
 
 func _draw_ink() -> void:
@@ -286,6 +306,27 @@ func _draw_bubble(e: Dictionary) -> void:
 	ink.draw_colored_polygon(tail, paper)
 	if grow > 0.8:
 		UI.text(ink, c + Vector2(0, size * 0.36), txt, size, ink_col, HORIZONTAL_ALIGNMENT_CENTER, 0, Color.TRANSPARENT, font)
+
+
+## Confetti: small tumbling rectangles that settle on the floor. Drawn in world
+## space so it pixelates with the arena, like the gag props.
+func _draw_confetti(e: Dictionary) -> void:
+	var d: Dictionary = e["d"]
+	var n: int = d["n"]
+	var t := float(e["t"])
+	var g: float = d["g"]
+	for i in n:
+		var x: float = float(d["x0"][i]) + float(d["vx"][i]) * t
+		var y: float = float(d["y0"][i]) + float(d["vy"][i]) * t + 0.5 * g * t * t
+		if y > Fighter.GROUND_Y:
+			y = Fighter.GROUND_Y
+		top.draw_set_transform(Vector2(x, y), float(d["rot"][i]) + float(d["spin"][i]) * t, Vector2.ONE)
+		var w: float = float(d["w"][i])
+		var h: float = float(d["h"][i])
+		var col: Color = d["cols"][i]
+		top.draw_rect(Rect2(-w * 0.5, -h * 0.5, w, h), col)
+		top.draw_rect(Rect2(-w * 0.5, -h * 0.5, w, h * 0.4), col.lightened(0.25))
+	top.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Ease-out with a little overshoot, for things that pop into place.
