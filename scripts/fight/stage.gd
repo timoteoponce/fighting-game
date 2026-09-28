@@ -112,15 +112,20 @@ func _draw_field() -> void:
 		if i % 2 == 0:
 			draw_colored_polygon(PackedVector2Array([Vector2(-300 + i * 64, 244), Vector2(-236 + i * 64, 244),
 				Vector2(-236 + i * 64 + (i - 13) * 8, 444), Vector2(-300 + i * 64 + (i - 13) * 8, 444)]), Color(0, 0, 0, 0.07))
-	draw_line(Vector2(-300, 252), Vector2(1300, 252), Color(1, 1, 1, 0.8), 3.0)
-	draw_line(Vector2(500, 252), Vector2(500, 444), Color(1, 1, 1, 0.45), 3.0)
-	draw_polyline(_closed(FighterRenderer.ellipse_pts(Vector2(500, 306), 110, 26, 0.0, 48)), Color(1, 1, 1, 0.45), 3.0, true)
+	draw_line(Vector2(-300, 252), Vector2(1300, 252), Color(1, 1, 1, 0.8), 2.0)
+	draw_line(Vector2(500, 252), Vector2(500, 444), Color(1, 1, 1, 0.45), 2.0)
+	draw_polyline(_closed(FighterRenderer.ellipse_pts(Vector2(500, 306), 110, 26, 0.0, 48)), Color(1, 1, 1, 0.45), 2.0, true)
 	draw_circle(Vector2(500, 306), 3.0, Color(1, 1, 1, 0.6))
 	for gx in [70.0, 930.0]:
 		_goal(Vector2(gx, 252), -1.0 if gx < 500.0 else 1.0)
 	for i in 60:
 		var p := Vector2(fmod(i * 131.7, 1600.0) - 300.0, 256.0 + fmod(i * 71.3, 120.0))
-		draw_line(p, p + Vector2(1, -3), Color(0.2, 0.45, 0.15, 0.6), 1.0)
+		draw_line(p, p + Vector2(1, -3), Color(0.2, 0.45, 0.15, 0.6), 0.8)
+	# Ground fog/haze.
+	for i in 8:
+		var fx := -200.0 + i * 200.0 + sin(t * 0.3 + i) * 30.0
+		var fy := 280.0 + sin(t * 0.5 + i * 1.3) * 8.0
+		draw_circle(Vector2(fx, fy), 60.0 + sin(t * 0.4 + i) * 15.0, Color(1, 1, 1, 0.03))
 
 
 func _cloud(c: Vector2, s: float) -> void:
@@ -255,7 +260,7 @@ func _draw_library() -> void:
 	draw_rect(Rect2(-300, 282, 1600, 3), Color(1, 1, 1, 0.12))
 	var mc := Vector2(500, 318)
 	for i in 3:
-		draw_polyline(_closed(FighterRenderer.ellipse_pts(mc, 240.0 - i * 40.0, 28.0 - i * 5.0, 0.0, 64)), Color(1, 0.45, 0.85, 0.35 - i * 0.08), 2.0, true)
+		draw_polyline(_closed(FighterRenderer.ellipse_pts(mc, 240.0 - i * 40.0, 28.0 - i * 5.0, 0.0, 64)), Color(1, 0.45, 0.85, 0.35 - i * 0.08), 1.5, true)
 	for i in 16:
 		var a := TAU * i / 16.0 + t * 0.3
 		var p := mc + Vector2(cos(a) * 220.0, sin(a) * 25.0)
@@ -264,6 +269,16 @@ func _draw_library() -> void:
 		var sx := fmod(i * 83.0 + t * 10.0, 1400.0) - 200.0
 		var sy := 60.0 + fmod(i * 47.0, 220.0) + sin(t + i) * 8.0
 		draw_colored_polygon(FighterRenderer.star_pts(Vector2(sx, sy), 3.0, 1.2, 4, t), Color(1, 0.85, 1, 0.3 + 0.3 * sin(t * 3.0 + i)))
+	# Dust motes in light beams.
+	for i in 12:
+		var dx := 350.0 + fmod(i * 173.0 + t * 8.0, 300.0)
+		var dy := 100.0 + fmod(i * 97.0, 180.0) + sin(t * 0.8 + i) * 10.0
+		draw_circle(Vector2(dx, dy), 1.2, Color(1, 0.95, 0.8, 0.4 + 0.3 * sin(t * 2.0 + i)))
+	# Ground fog/haze.
+	for i in 6:
+		var fx := -100.0 + i * 250.0 + sin(t * 0.25 + i) * 40.0
+		var fy := 300.0 + sin(t * 0.4 + i * 1.5) * 6.0
+		draw_circle(Vector2(fx, fy), 50.0 + sin(t * 0.3 + i) * 12.0, Color(0.6, 0.5, 1, 0.04))
 
 
 func _bookshelf(pos: Vector2, seed: int) -> void:

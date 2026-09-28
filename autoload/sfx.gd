@@ -205,7 +205,8 @@ static func _bandpass(freq: float, q: float) -> Array:
 
 
 ## Tracks in music/ (ogg, wav, or mp3), next to the game or in the project.
-## They play in order, under the hits and the voices.
+## They play in order, under the hits and the voices. If no files exist,
+## a procedural chiptune loop is synthesized instead.
 func _start_music() -> void:
 	if "--test" in OS.get_cmdline_user_args():
 		return
@@ -219,12 +220,153 @@ func _start_music() -> void:
 				_music_files.append(dir.path_join(name))
 	_music_files.sort()
 	if _music_files.is_empty():
+		_start_synth_music()
 		return
 	_music = AudioStreamPlayer.new()
 	_music.volume_db = -16.0
 	_music.finished.connect(_advance_music)
 	add_child(_music)
 	_play_music(0)
+
+
+# --- Procedural chiptune music ---------------------------------------------------
+
+const BPM := 140.0
+const BARS := 8
+const BEAT := 60.0 / BPM
+const STEP := BEAT / 4.0  # 16th notes
+const TOTAL_STEPS := BARS * 16
+const LOOP_DUR := TOTAL_STEPS * STEP
+
+# Note frequencies (Hz) for chiptune synthesis.
+const N_C3 := 130.81
+const N_D3 := 146.83
+const N_E3 := 164.81
+const N_F3 := 174.61
+const N_G3 := 196.0
+const N_A3 := 220.0
+const N_B3 := 246.94
+const N_C4 := 261.63
+const N_D4 := 293.66
+const N_E4 := 329.63
+const N_F4 := 349.23
+const N_G4 := 392.0
+const N_A4 := 440.0
+const N_B4 := 493.88
+const N_C5 := 523.25
+const N_D5 := 587.33
+const N_E5 := 659.25
+const N_G5 := 783.99
+const N_A5 := 880.0
+
+# I-V-vi-IV progression in C major.
+const PROG := [N_C3, N_G3, N_A3, N_F3]
+const PROG_BASS := [N_C3 * 0.5, N_G3 * 0.5, N_A3 * 0.5, N_F3 * 0.5]
+
+# Pentatonic melody patterns (scale degrees, 0 = rest).
+const MELODY_FIGHT := [
+	0, -1, 4, -1, 7, -1, 4, -1, 9, -1, 7, -1, 4, -1, 2, -1,
+	0, -1, 4, -1, 7, -1, 9, -1, 12, -1, 9, -1, 7, -1, 4, -1,
+	5, -1, 9, -1, 12, -1, 9, -1, 7, -1, 4, -1, 2, -1, 0, -1,
+	7, -1, 9, -1, 12, -1, 14, -1, 12, -1, 9, -1, 7, -1, 4, -1,
+]
+const MELODY_TITLE := [
+	0, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 4, -1, -1, -1,
+	5, -1, -1, -1, 9, -1, -1, -1, 7, -1, -1, -1, 4, -1, -1, -1,
+	0, -1, -1, -1, 4, -1, -1, -1, 7, -1, -1, -1, 9, -1, -1, -1,
+	5, -1, -1, -1, 4, -1, -1, -1, 2, -1, -1, -1, 0, -1, -1, -1,
+]
+
+var _synth_music: AudioStreamWAV
+var _synth_player: AudioStreamPlayer
+var _music_mode := "fight"
+
+
+func _start_synth_music() -> void:
+	_synth_music = _build_synth_loop()
+	_synth_player = AudioStreamPlayer.new()
+	_synth_player.volume_db = -16.0
+	_synth_player.stream = _synth_music
+	add_child(_synth_player)
+	_synth_player.play()
+
+
+func set_music_mode(mode: String) -> void:
+	_music_mode = mode
+	if _synth_player == null:
+		return
+	_synth_music = _build_synth_loop()
+	_synth_player.stream = _synth_music
+	_synth_player.play()
+
+
+func _build_synth_loop() -> AudioStreamWAV:
+	var n := int(LOOP_DUR * RATE)
+	var data := PackedByteArray()
+	data.resize(n * 2)
+	var raw := PackedFloat32Array()
+	raw.resize(n)
+	var melody: Array = MELODY_TITLE if _music_mode == "title" else MELODY_FIGHT
+	for i in n:
+		var t := float(i) / RATE
+		var step_f := t / STEP
+		var step_i := int(step_f) % TOTAL_STEPS
+		var bar := step_i / 16
+		var chord_idx := bar % 4
+		var bass_note: float = PROG_BASS[chord_idx]
+		var mel_note: float = 0.0
+		if step_i < melody.size():
+			var deg: int = melody[step_i]
+			if deg >= 0:
+				mel_note = _pentatonic(deg)
+		# Bass: square wave, 8th notes.
+		var bass_on := step_i % 2 == 0
+		var bass_sig := 0.0
+		if bass_on:
+			var bass_phase := fmod(t * bass_note, 1.0)
+			bass_sig = (1.0 if bass_phase < 0.5 else -1.0) * 0.25
+		# Lead: pulse wave, 16th notes with envelope.
+		var mel_sig := 0.0
+		if mel_note > 0.0:
+			var mel_phase := fmod(t * mel_note, 1.0)
+			var pulse := 1.0 if mel_phase < 0.4 else -0.6
+			var mel_env := minf(1.0, (step_f - step_i) * 8.0) * (1.0 - (step_f - step_i) * 0.5)
+			mel_sig = pulse * 0.18 * mel_env
+		# Drums.
+		var kick_sig := 0.0
+		if step_i % 8 == 0:
+			var kick_t := fmod(t, BEAT * 2.0)
+			if kick_t < 0.08:
+				var kick_phase := kick_t / 0.08
+				kick_sig = sin(TAU * (140.0 - 100.0 * kick_phase) * kick_t) * (1.0 - kick_phase) * 0.5
+		var snare_sig := 0.0
+		if step_i % 16 == 8:
+			var snare_t := fmod(t, BEAT * 2.0)
+			if snare_t < 0.06:
+				var snare_phase := snare_t / 0.06
+				snare_sig = (randf_range(-1.0, 1.0) * 0.5 + (1.0 if snare_phase < 0.5 else -1.0) * 0.3) * (1.0 - snare_phase) * 0.3
+		var hihat_sig := 0.0
+		if step_i % 4 == 2:
+			var hihat_t := fmod(t, BEAT * 0.5)
+			if hihat_t < 0.03:
+				var hihat_phase := hihat_t / 0.03
+				hihat_sig = randf_range(-1.0, 1.0) * (1.0 - hihat_phase) * 0.12
+		raw[i] = bass_sig + mel_sig + kick_sig + snare_sig + hihat_sig
+	for i in n:
+		data.encode_s16(i * 2, int(clampf(raw[i], -1.0, 1.0) * 32767.0))
+	var w := AudioStreamWAV.new()
+	w.format = AudioStreamWAV.FORMAT_16_BITS
+	w.mix_rate = RATE
+	w.stereo = false
+	w.data = data
+	return w
+
+
+func _pentatonic(degree: int) -> float:
+	var scale := [N_C4, N_D4, N_E4, N_G4, N_A4, N_C5, N_D5, N_E5, N_G5, N_A5]
+	var octave := degree / scale.size()
+	var idx := degree % scale.size()
+	return scale[idx] * pow(2.0, octave)
 
 
 func _advance_music() -> void:

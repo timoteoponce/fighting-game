@@ -168,8 +168,8 @@ func draw_hair_front(r: FighterRenderer) -> void:
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
-	# Wristband.
-	r.part(s["elb_f"].lerp(s["hand_f"], 0.55), s["elb_f"].lerp(s["hand_f"], 0.7), 7.5, 7.0, r.colors["accent"])
+	if r.prop != "":
+		r.part(s["elb_f"].lerp(s["hand_f"], 0.55), s["elb_f"].lerp(s["hand_f"], 0.7), 7.5, 7.0, r.colors["accent"])
 	match r.prop:
 		"ball":
 			if r.prop_t < 12:

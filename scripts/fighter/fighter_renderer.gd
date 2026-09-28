@@ -16,11 +16,12 @@ const TORSO := 30.0
 const NECK := 4.0
 const UPPER := 15.0
 const FORE := 14.0
+const WRIST := 4.0
+const ANKLE := 3.5
 const HEAD := 11.0
 const HEAD_SCALE := 1.45  # default head size; each character sets its own in `CharacterDef.head_scale`
-## Ink line weight around every limb and shape. Thick lines are what make it
-## read as a cartoon rather than a painted figure at 320x180.
-const INK := 2.4
+## Ink line weight around every limb and shape. Thinner at full resolution.
+const INK := 1.2
 
 const POSES := {
 	"idle": {"lean": 6, "head": 0, "arm_f": 30, "elb_f": 80, "arm_b": 45, "elb_b": 95,
@@ -49,6 +50,8 @@ const POSES := {
 	"thrown": {"lean": -20, "head": -16, "arm_f": 150, "elb_f": 20, "arm_b": 165, "elb_b": 25,
 		"leg_f": 30, "knee_f": 40, "leg_b": -12, "knee_b": 30},
 	"intro": {},
+	"walk": {"lean": 8, "head": -2, "arm_f": 40, "elb_f": 70, "arm_b": 55, "elb_b": 85,
+		"leg_f": 30, "knee_f": 25, "leg_b": -20, "knee_b": 18, "hip": -42, "ground": 1},
 }
 
 var def: CharacterDef
@@ -195,23 +198,27 @@ func skeleton() -> Dictionary:
 	s["hip_f"] = perp * 2.0
 	s["hip_b"] = -perp * 2.0
 	s["knee_f"] = s["hip_f"] + dir(p["leg_f"]) * THIGH
-	s["foot_f"] = s["knee_f"] + dir(p["leg_f"] - p["knee_f"]) * SHIN
+	s["ankle_f"] = s["knee_f"] + dir(p["leg_f"] - p["knee_f"]) * SHIN
+	s["foot_f"] = s["ankle_f"] + dir(p["leg_f"] - p["knee_f"] + 90.0) * ANKLE
 	s["knee_b"] = s["hip_b"] + dir(p["leg_b"]) * THIGH
-	s["foot_b"] = s["knee_b"] + dir(p["leg_b"] - p["knee_b"]) * SHIN
+	s["ankle_b"] = s["knee_b"] + dir(p["leg_b"] - p["knee_b"]) * SHIN
+	s["foot_b"] = s["ankle_b"] + dir(p["leg_b"] - p["knee_b"] + 90.0) * ANKLE
 	s["neck"] = up * TORSO
 	# Torso twist: a reaching front arm drags its shoulder forward, the back one pulls away.
 	var twist := clampf((float(p["arm_f"]) - 45.0) / 50.0, -0.6, 1.0)
 	s["sh_f"] = up * (TORSO - 3.0 - absf(twist) * 1.5) + perp * (1.5 + twist * 4.0)
 	s["sh_b"] = up * (TORSO - 2.5) - perp * (3.0 + twist * 2.0)
 	s["elb_f"] = s["sh_f"] + dir(p["arm_f"]) * UPPER
-	s["hand_f"] = s["elb_f"] + dir(p["arm_f"] + p["elb_f"]) * FORE
+	s["wrist_f"] = s["elb_f"] + dir(p["arm_f"] + p["elb_f"]) * FORE
+	s["hand_f"] = s["wrist_f"] + dir(p["arm_f"] + p["elb_f"] + 15.0) * WRIST
 	s["elb_b"] = s["sh_b"] + dir(p["arm_b"]) * UPPER
-	s["hand_b"] = s["elb_b"] + dir(p["arm_b"] + p["elb_b"]) * FORE
+	s["wrist_b"] = s["elb_b"] + dir(p["arm_b"] + p["elb_b"]) * FORE
+	s["hand_b"] = s["wrist_b"] + dir(p["arm_b"] + p["elb_b"] + 15.0) * WRIST
 	var head_ang := lean * 0.5 + deg_to_rad(float(p["head"]))
 	s["head"] = s["neck"] + up.rotated(head_ang - lean) * (NECK + HEAD * 0.8 * hs)
 	var rot := deg_to_rad(float(p["rot"]))
-	var pts := ["hip", "hip_f", "hip_b", "knee_f", "foot_f", "knee_b", "foot_b", "neck", "sh_f", "sh_b",
-		"elb_f", "hand_f", "elb_b", "hand_b", "head"]
+	var pts := ["hip", "hip_f", "hip_b", "knee_f", "ankle_f", "foot_f", "knee_b", "ankle_b", "foot_b",
+		"neck", "sh_f", "sh_b", "elb_f", "wrist_f", "hand_f", "elb_b", "wrist_b", "hand_b", "head"]
 	for k in pts:
 		s[k] = (s[k] as Vector2).rotated(rot)
 	var offset := Vector2(0, float(p["hip"]))
@@ -245,29 +252,36 @@ func _draw() -> void:
 		_draw_head(s)
 		return
 	var b := def.build  # limb thickness: skinny < 1 < chunky
+	var open := expr == "happy" or expr == "smug"
 	def.draw_behind(self, s)
 	_smears(s)
 	# Back arm and leg: darker, they're further away.
 	part(s["sh_b"], s["elb_b"], 8.0 * b, 7.0 * b, dk(c["sleeve"]))
-	part(s["elb_b"], s["hand_b"], 6.5 * b, 5.5 * b, dk(c["forearm"]))
+	part(s["elb_b"], s["wrist_b"], 6.5 * b, 5.5 * b, dk(c["forearm"]))
 	_weld_arm(s, "b", b, dk(c["sleeve"]))
-	fist(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["elb_b"])
+	if open:
+		open_hand(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["wrist_b"])
+	else:
+		fist(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["wrist_b"])
 	part(s["hip_b"], s["knee_b"], 11.0 * b, 8.5 * b, dk(c["pants"]))
-	part(s["knee_b"], s["foot_b"], 8.5 * b, 6.5 * b, dk(c["legs"]))
+	part(s["knee_b"], s["ankle_b"], 8.5 * b, 6.5 * b, dk(c["legs"]))
 	_weld_leg(s, "b", b, dk(c["pants"]))
 	shoe(s["foot_b"], s["foot_dir_b"], dk(c["shoes"]))
 	torso(s)
 	def.draw_torso(self, s)
 	part(s["hip_f"], s["knee_f"], 11.0 * b, 8.5 * b, c["pants"])
-	part(s["knee_f"], s["foot_f"], 8.5 * b, 6.5 * b, c["legs"])
+	part(s["knee_f"], s["ankle_f"], 8.5 * b, 6.5 * b, c["legs"])
 	_weld_leg(s, "f", b, c["pants"])
 	shoe(s["foot_f"], s["foot_dir_f"], c["shoes"])
 	def.draw_over_legs(self, s)
 	_draw_head(s)
 	part(s["sh_f"], s["elb_f"], 8.0 * b, 7.0 * b, c["sleeve"])
-	part(s["elb_f"], s["hand_f"], 6.5 * b, 5.5 * b, c["forearm"])
+	part(s["elb_f"], s["wrist_f"], 6.5 * b, 5.5 * b, c["forearm"])
 	_weld_arm(s, "f", b, c["sleeve"])
-	fist(s["hand_f"], c["hands"], s["hand_f"] - s["elb_f"])
+	if open:
+		open_hand(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
+	else:
+		fist(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
 	def.draw_props(self, s)
 	_draw_emotes(s)
 
@@ -366,9 +380,8 @@ func _draw_emotes(s: Dictionary) -> void:
 					]), col, 1.3, true)
 
 
-## Motion smear: a translucent streak from where a fast limb was last frame to
-## where it is now. Two frames of a hard kick read as one continuous arc instead
-## of two disconnected legs — the cheapest big win in hand-drawn animation.
+## Motion smear: translucent streaks trailing fast limbs. Multiple frames of a
+## hard kick read as one continuous arc instead of disconnected legs.
 func _smears(s: Dictionary) -> void:
 	if prev_sk.is_empty():
 		return
@@ -382,7 +395,10 @@ func _smears(s: Dictionary) -> void:
 			continue
 		var w: float = 7.0 if joint.begins_with("foot") else 5.5
 		var fade := clampf(d.length() / 40.0, 0.18, 0.5)
-		draw_colored_polygon(capsule_pts(a, b, w * 0.35, w * 0.6), Color(1, 1, 1, fade * 0.55))
+		# Two trailing ghosts at different opacities for a smoother arc.
+		var mid := a.lerp(b, 0.5)
+		draw_colored_polygon(capsule_pts(a, mid, w * 0.3, w * 0.5), Color(1, 1, 1, fade * 0.35))
+		draw_colored_polygon(capsule_pts(mid, b, w * 0.35, w * 0.6), Color(1, 1, 1, fade * 0.55))
 
 
 func _draw_head(s: Dictionary) -> void:
@@ -401,8 +417,8 @@ func _draw_head(s: Dictionary) -> void:
 
 static func head_shape() -> PackedVector2Array:
 	var pts := PackedVector2Array()
-	for i in 13:
-		var a := deg_to_rad(160.0 + 200.0 * i / 12.0)
+	for i in 20:
+		var a := deg_to_rad(160.0 + 200.0 * i / 19.0)
 		pts.append(Vector2(cos(a), sin(a)) * HEAD + Vector2(0, -3))
 	pts.append_array(PackedVector2Array([Vector2(11.6, 1.5), Vector2(10.5, 5.5), Vector2(7, 9.5), Vector2(3, 10.8),
 		Vector2(-1, 9.5), Vector2(-5, 6.5), Vector2(-8.5, 3)]))
@@ -431,10 +447,10 @@ static func capsule_pts(a: Vector2, b: Vector2, r1: float, r2: float) -> PackedV
 	var d := b - a
 	var base := d.angle() if d.length_squared() > 0.0001 else PI * 0.5
 	var pts := PackedVector2Array()
-	for i in 7:
-		pts.append(b + Vector2.from_angle(base + PI * 0.5 - PI * i / 6.0) * r2)
-	for i in 7:
-		pts.append(a + Vector2.from_angle(base - PI * 0.5 - PI * i / 6.0) * r1)
+	for i in 10:
+		pts.append(b + Vector2.from_angle(base + PI * 0.5 - PI * i / 9.0) * r2)
+	for i in 10:
+		pts.append(a + Vector2.from_angle(base - PI * 0.5 - PI * i / 9.0) * r1)
 	return pts
 
 
@@ -446,14 +462,16 @@ func weld(p: Vector2, r: float, col: Color) -> void:
 func _weld_arm(s: Dictionary, side: String, b: float, col: Color) -> void:
 	weld(s["elb_" + side], 3.5 * b, col)
 	weld(s["sh_" + side], 4.0 * b, col)
+	weld(s["wrist_" + side], 3.0 * b, col)
 
 
 func _weld_leg(s: Dictionary, side: String, b: float, col: Color) -> void:
 	weld(s["knee_" + side], 4.25 * b, col)
 	weld(s["hip_" + side], 5.5 * b, col)
+	weld(s["ankle_" + side], 3.5 * b, col)
 
 
-## A cel-shaded tapered limb: outline, shadow, lit side and a highlight.
+## A cel-shaded tapered limb: outline, shadow, lit side, muscle tone and rim light.
 func part(a: Vector2, b: Vector2, w1: float, w2: float, col: Color) -> void:
 	var r1 := w1 * 0.5
 	var r2 := w2 * 0.5
@@ -463,9 +481,17 @@ func part(a: Vector2, b: Vector2, w1: float, w2: float, col: Color) -> void:
 	var n := Vector2(-d.y, d.x)
 	if n.dot(LIGHT) < 0.0:
 		n = -n
-	# Flat two-tone cel shading: a big lit area and a thin shadow edge. No rim
-	# light or gloss — that was the anime-painting look; cartoons keep it flat.
+	# Lit area.
 	draw_colored_polygon(capsule_pts(a + n * r1 * 0.22, b + n * r2 * 0.22, r1 * 0.8, r2 * 0.8), col)
+	# Muscle tone: a subtle mid-shade stripe along the limb.
+	var mid := a.lerp(b, 0.45)
+	var md := (b - a).normalized()
+	var mn := Vector2(-md.y, md.x)
+	if mn.dot(LIGHT) < 0.0:
+		mn = -mn
+	draw_colored_polygon(capsule_pts(mid - mn * r1 * 0.3, mid + mn * r1 * 0.3, r1 * 0.25, r2 * 0.25), col.darkened(0.12))
+	# Rim light on the lit edge.
+	draw_line(a + n * r1 * 0.75, b + n * r2 * 0.75, hl(col), 0.5, true)
 
 
 func ball(p: Vector2, r: float, col: Color) -> void:
@@ -490,10 +516,38 @@ func _fist(p: Vector2, col: Color, d: Vector2) -> void:
 	var n := Vector2(-d.y, d.x)
 	var box := PackedVector2Array([p - n * 3.6 - d * 1.5, p + n * 3.6 - d * 1.5, p + n * 4.0 + d * 3.2,
 		p + n * 2.8 + d * 5.2, p - n * 2.8 + d * 5.2, p - n * 4.0 + d * 3.2])
-	shaded_poly(box, col, 1.6, 0.78)
-	for k in [-1.4, 1.4]:
-		draw_line(p + n * k + d * 2.4, p + n * k + d * 4.6, shade(col), 0.9, true)
-	part(p + n * 3.2 - d * 0.5, p + n * 2.6 + d * 2.6, 2.6, 2.4, col)
+	shaded_poly(box, col, 1.2, 0.78)
+	# Individual finger segments.
+	for k in [-2.6, -0.9, 0.9, 2.6]:
+		var fw := 1.0 - absf(k) * 0.12
+		draw_line(p + n * k * fw + d * 2.8, p + n * k * fw + d * 4.8, shade(col), 0.7, true)
+	# Thumb.
+	part(p + n * 3.0 - d * 0.5, p + n * 2.4 + d * 2.8, 2.2, 2.0, col)
+	# Knuckle highlight.
+	draw_line(p - n * 2.8 + d * 3.4, p + n * 2.8 + d * 3.4, hl(col), 0.6, true)
+
+
+## An open hand with spread fingers, for win/intro poses.
+func open_hand(p: Vector2, col: Color, d := Vector2.DOWN) -> void:
+	draw_set_transform(p, 0.0, Vector2.ONE * EXTREMITY)
+	_open_hand(Vector2.ZERO, col, d)
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+func _open_hand(p: Vector2, col: Color, d: Vector2) -> void:
+	d = d.normalized()
+	var n := Vector2(-d.y, d.x)
+	# Palm.
+	var palm := PackedVector2Array([p - n * 3.0 - d * 1.0, p + n * 3.0 - d * 1.0,
+		p + n * 3.4 + d * 2.0, p - n * 3.4 + d * 2.0])
+	shaded_poly(palm, col, 1.0, 0.8)
+	# Four fingers.
+	for k: float in [-2.4, -0.8, 0.8, 2.4]:
+		var fw := 1.0 - absf(k) * 0.1
+		var tip := p + n * k * fw + d * (5.5 + (1.0 if k == 0.0 else 0.0))
+		part(p + n * k * fw + d * 2.0, tip, 1.6, 1.2, col)
+	# Thumb.
+	part(p + n * 2.8, p + n * 4.5 + d * 1.5, 2.0, 1.6, col)
 
 
 ## Filled polygon with an outline. Self-intersecting shapes (a twisted cape)
@@ -578,8 +632,10 @@ func _shoe(foot: Vector2, fwd: Vector2, col: Color) -> void:
 	var up := Vector2(fwd.y, -fwd.x)
 	var pts := PackedVector2Array([foot - fwd * 3.0 + up * 3.0, foot + fwd * 5.0 + up * 3.0, foot + fwd * 10.0 - up * 0.5,
 		foot + fwd * 9.0 - up * 3.0, foot - fwd * 4.0 - up * 3.0])
-	shaded_poly(pts, col, 1.8, 0.75)
-	draw_line(foot - fwd * 4.0 - up * 2.6, foot + fwd * 9.0 - up * 2.6, OUT.lightened(0.3), 1.5, true)
+	shaded_poly(pts, col, 1.2, 0.75)
+	draw_line(foot - fwd * 4.0 - up * 2.6, foot + fwd * 9.0 - up * 2.6, OUT.lightened(0.3), 1.0, true)
+	# Sole detail.
+	draw_line(foot - fwd * 3.0 - up * 2.8, foot + fwd * 8.0 - up * 2.8, shade(col), 0.8, true)
 
 
 func torso(s: Dictionary) -> void:

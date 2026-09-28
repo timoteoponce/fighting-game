@@ -4,10 +4,10 @@ extends Node2D
 
 const STAGE_W := 1000.0
 const ZOOM := 1.2
-## The world renders into a low-res buffer (KOF-98 style pixels), shown at an
-## exact integer scale. PIXEL = buffer size / logical 640x360 screen.
-const PIXEL := 0.5
-const BUFFER_SIZE := Vector2i(320, 180)
+## The world renders at full logical resolution (640x360) with no pixelation.
+## PIXEL = buffer size / logical screen size.
+const PIXEL := 1.0
+const BUFFER_SIZE := Vector2i(640, 360)
 const HALF_VIEW := 320.0 / ZOOM
 const BASE_CAM_Y := 342.0 - 180.0 / ZOOM  # ground sits near the bottom of the screen
 const WALL := 24.0

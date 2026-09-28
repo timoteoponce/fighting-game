@@ -190,6 +190,8 @@ func draw_hair_front(r: FighterRenderer) -> void:
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
+	if r.prop == "":
+		return
 	var hand: Vector2 = s["hand_f"]
 	var d: Vector2 = (hand - s["elb_f"]).normalized()
 	var tip := hand + d * 22.0
