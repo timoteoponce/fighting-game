@@ -58,6 +58,7 @@ var pose := {}
 var facing := 1
 var base_scale := 1.0
 var flash := 0
+var hit_flash := 0  # frames of white impact flash on the victim
 var t := 0.0
 var expr := "normal"
 var prop := ""
@@ -131,7 +132,14 @@ func update_pose(target: Dictionary, speed: float) -> void:
 	# Volume-conserving scale: squash wide and short, stretch tall and thin.
 	var sq := clampf(squash, -SQUASH_MAX, SQUASH_MAX)
 	scale = Vector2(base_scale * facing * (1.0 + sq), base_scale * (1.0 - sq))
-	modulate = Color(2.2, 2.2, 2.2) if flash > 0 else Color.WHITE
+	# Impact flash: the victim whites out for a couple of frames on a clean hit.
+	if hit_flash > 0:
+		hit_flash -= 1
+		modulate = Color(2.6, 2.6, 2.6)
+	elif flash > 0:
+		modulate = Color(2.2, 2.2, 2.2)
+	else:
+		modulate = Color.WHITE
 	if eye_pop > 0:
 		eye_pop -= 1
 	for e in emotes:

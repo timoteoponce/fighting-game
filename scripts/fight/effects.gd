@@ -165,9 +165,11 @@ func _draw_glow() -> void:
 		var p: Vector2 = e["p"]
 		var rng := RandomNumberGenerator.new()
 		rng.seed = e["d"]["seed"]
+		# Combo scale: hits land harder the longer the chain, so the burst grows.
+		var ck: float = float(e["d"].get("k", 1.0))
 		match kind:
 			"hit", "heavy", "super":
-				var big: float = {"hit": 1.0, "heavy": 1.6, "super": 2.1}[kind]
+				var big: float = {"hit": 1.0, "heavy": 1.6, "super": 2.1}[kind] * ck
 				var col: Color = {"hit": Color(1, 0.7, 0.25), "heavy": Color(1, 0.5, 0.15), "super": Color(1, 0.35, 0.8)}[kind]
 				# White-hot core.
 				glow.draw_circle(p, 16.0 * big * (1.0 - k * 0.7), Color(col, 0.35 * fade), true, -1.0, true)

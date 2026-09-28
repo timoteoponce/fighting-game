@@ -53,6 +53,6 @@ func _draw() -> void:
 	UI.text(self, Vector2(210, 64 + bob), "ULISES", 44, Color("5ab0ff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("0b1a4a"))
 	UI.text(self, Vector2(320, 70 - bob), "VS", 34, Color("ffd23f"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("7a1030"))
 	UI.text(self, Vector2(430, 64 + bob), "EMILIA", 44, Color("d19bff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("3a0d5a"))
-	UI.text(self, Vector2(320, 96), "ULTIMATE FRIENDS SHOWDOWN", 14, Color.WHITE)
+	UI.text(self, Vector2(320, 96), "PJ's CLASH", 14, Color.WHITE)
 	UI.menu(self, ITEMS, idx, Vector2(320, 150), 17, 28)
 	UI.text(self, Vector2(320, 350), "P1: WASD + F / G     P2: Arrows + K / L     Gamepads: D-pad + buttons     F11: fullscreen", 10, Color(1, 1, 1, 0.8))

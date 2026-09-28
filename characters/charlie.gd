@@ -101,7 +101,7 @@ func _init() -> void:
 		# allowed to win the long-range game, only to make you respect it.
 		"proj": MoveData.make({
 			"id": "chest pass", "display": "CHEST PASS", "level": 2, "startup": 15, "active": 1,
-			"recovery": 22, "prop": "ball", "sfx": "heavy",
+			"recovery": 22, "prop": "ball", "sfx": "heavy", "flash": 3, "shake": 1.0,
 			"projectile": {
 				"kind": "bball", "speed": 4.6, "size": Vector2(34, 44), "offset": Vector2(44, -40),
 				"life": 90, "damage": 78, "hitstun": 22, "kb": Vector2(3.5, -2.0), "hitstop": 7,
@@ -119,6 +119,7 @@ func _init() -> void:
 			"recovery": 17, "damage": 102, "hitbox": Rect2(2, -112, 58, 92), "dash_speed": 7.0,
 			"dash_from": 8, "dash_to": 26, "knockdown": true, "kb": Vector2(5.0, -5.5), "hitstun": 22,
 			"blockstun": 15, "chip": 0.18, "hitstop": 9, "meter": 8.0, "hit_sfx": "heavy",
+			"flash": 4, "shake": 2.0,
 			"keys": [
 				[0, {"lean": -14, "arm_f": 30, "elb_f": 110, "leg_f": 30, "knee_f": 70}, 0.4],
 				[8, {"lean": 34, "arm_f": 5, "elb_f": 30, "arm_b": -45, "elb_b": 50, "leg_f": 50, "knee_f": 60}, 0.9],
@@ -131,6 +132,7 @@ func _init() -> void:
 			"hitbox": Rect2(-6, -158, 74, 116), "rise_vel": Vector2(1.0, -10.2), "rise_frame": 4,
 			"invuln": 9, "launch": true, "kb": Vector2(1.2, -8.2), "hitstun": 30, "blockstun": 14,
 			"chip": 0.15, "hitstop": 7, "meter": 8.0, "hit_sfx": "heavy",
+			"flash": 3, "shake": 1.5,
 			"pose_s": {"arm_f": -20, "elb_f": 60, "leg_f": 40, "knee_f": 90, "lean": 10},
 			"pose_a": {"arm_f": 180, "elb_f": 0, "arm_b": -30, "lean": -14, "leg_f": 20, "leg_b": -40, "ground": 0, "hip": -40},
 		}),
@@ -138,6 +140,7 @@ func _init() -> void:
 		"hyper": MoveData.make({
 			"id": "crybaby flood", "display": "CRYBABY FLOOD!", "level": 3, "startup": 18,
 			"active": 1, "recovery": 48, "invuln": 44, "prop": "tears", "sfx": "hyper",
+			"flash": 5, "shake": 2.0,
 			"projectile": {
 				"kind": "tears", "anchored": true, "size": Vector2(300, 150), "offset": Vector2(60, -80),
 				"life": 60, "hits": 14, "interval": 4, "damage": 19, "hitstun": 16, "kb": Vector2(1.0, -1.0),

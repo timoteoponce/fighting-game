@@ -19,6 +19,8 @@ var knockdown := false
 var spike := false  # slams an airborne opponent down
 var chip := 0.0  # fraction of damage dealt through block
 var hitstop := 5
+var flash := 0  # full-screen white flash frames on hit (0 = none)
+var shake := 0.0  # extra screen shake on hit (added to the level-derived base)
 var meter := 5.0
 var hits := 1
 var hit_interval := 0

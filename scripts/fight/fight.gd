@@ -370,14 +370,18 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		return
 	var heavy := m.level >= 1
 	# Sparks spray the way the victim is flying, so a launcher bursts upward
-	# and a sweep skids along the floor.
+	# and a sweep skids along the floor. The burst grows with the combo, so a
+	# long chain builds to a bigger and bigger explosion.
 	var away := signf(d.position.x - a.position.x)
 	var kb := Vector2(m.kb.x * (away if away != 0.0 else 1.0), m.kb.y)
-	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point, {"kb": kb.angle()})
-	Sfx.play(m.hit_sfx)
+	var combo_k := 1.0 + 0.12 * float(d.combo)
+	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point, {"kb": kb.angle(), "k": combo_k})
+	Sfx.play(m.hit_sfx, 1.0 + 0.06 * float(d.combo))
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
-		shake = maxf(shake, 3.0 + m.level)
+		shake = maxf(shake, 3.0 + m.level + m.shake)
+	if m.flash > 0:
+		flash = maxi(flash, m.flash)
 	# Big hits shake your belongings loose. One item per hit, so a long combo
 	# leaves a little trail of dropped junk rather than a single explosion.
 	if m.level >= 2 or (m.launch or m.knockdown) and randf() < 0.7:

@@ -111,7 +111,7 @@ func _init() -> void:
 		# does the least damage of any fireball on the roster.
 		"proj": MoveData.make({
 			"id": "bark blast", "display": "BARK BLAST", "level": 2, "startup": 10, "active": 1,
-			"recovery": 18, "sfx": "whoosh",
+			"recovery": 18, "sfx": "whoosh", "flash": 3, "shake": 1.0,
 			"projectile": {
 				"kind": "spark", "speed": 7.8, "size": Vector2(20, 20), "offset": Vector2(36, -62),
 				"life": 80, "damage": 60, "hitstun": 18, "kb": Vector2(2.6, 0), "hitstop": 5,
@@ -131,6 +131,7 @@ func _init() -> void:
 			"hitbox": Rect2(-8, -76, 62, 66), "dash_speed": 8.6, "dash_from": 5, "dash_to": 26,
 			"knockdown": true, "kb": Vector2(3.2, -5), "hitstun": 20, "blockstun": 12, "chip": 0.15,
 			"hitstop": 5, "meter": 8.5, "hit_sfx": "light",
+			"flash": 4, "shake": 2.0,
 			"keys": [
 				[0, {"lean": -20, "leg_f": 40, "knee_f": 80, "arm_f": 30, "elb_f": 120}, 0.5],
 				[5, {"lean": 62, "hip": -22, "arm_f": 120, "elb_f": 30, "arm_b": 20, "elb_b": 30,
@@ -155,6 +156,7 @@ func _init() -> void:
 			"hitbox": Rect2(-10, -152, 74, 118), "rise_vel": Vector2(1.2, -11.8), "rise_frame": 3,
 			"invuln": 8, "launch": true, "kb": Vector2(1.0, -8.0), "hitstun": 30, "blockstun": 12,
 			"chip": 0.15, "hitstop": 5, "meter": 8.5, "hit_sfx": "light",
+			"flash": 3, "shake": 1.5,
 			"keys": [
 				[0, {"leg_f": 50, "knee_f": 110, "leg_b": 30, "knee_b": 110, "lean": 14, "head": -10}, 0.5],
 				[3, {"arm_f": 170, "elb_f": 0, "arm_b": 175, "elb_b": 0, "lean": -14, "head": 16,
@@ -167,6 +169,7 @@ func _init() -> void:
 		"hyper": MoveData.make({
 			"id": "moon howl", "display": "MOON HOWL!", "level": 3, "startup": 18, "active": 1,
 			"recovery": 46, "invuln": 44, "prop": "moon", "sfx": "hyper",
+			"flash": 5, "shake": 2.0,
 			"projectile": {
 				"kind": "wolf", "anchored": true, "size": Vector2(520, 96), "offset": Vector2(40, -66),
 				"life": 58, "hits": 13, "interval": 4, "damage": 18, "hitstun": 16, "kb": Vector2(1.1, -0.6),

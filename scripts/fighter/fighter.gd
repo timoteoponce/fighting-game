@@ -13,7 +13,7 @@ const MAX_HEALTH := 1000
 const MAX_METER := 300.0  # three hyper levels, like MvC
 const HYPER_COST := 100.0
 const JUGGLE_LIMIT := 7
-const BUFFER := 6
+const BUFFER := 8
 const SCALE := 1.25
 
 ## Forward dash doubles as a KOF-style roll: it passes through the opponent and
@@ -552,6 +552,8 @@ func _try_special() -> bool:
 
 ## Cancel rules: weaker attacks that connect can be cancelled into stronger
 ## ones (light > heavy > special > hyper). Lights chain into lights.
+## The cancel window opens the moment a hit connects and stays open well into
+## recovery, so a player who keeps pressing attack buttons chains automatically.
 func _can_start(m: MoveData) -> bool:
 	if state != S.ATTACK:
 		return true
@@ -559,11 +561,11 @@ func _can_start(m: MoveData) -> bool:
 	if not move_connected:
 		# Pressing L then H a few frames apart turns the light into a special.
 		return m.level >= 2 and cur.level < 2 and sf <= 3
-	if sf > cur.startup + cur.active + 10:
+	if sf > cur.startup + cur.active + 16:
 		return false
 	if m.level > cur.level:
 		return true
-	return m.level == 0 and cur.level == 0 and chain < 3
+	return m.level == 0 and cur.level == 0 and chain < 4
 
 
 func _start_move(m: MoveData) -> void:
@@ -809,6 +811,7 @@ func take_hit(m: MoveData, from_x: float) -> String:
 	# Cartoon impact: the body concertinas and the eyes bug out, scaled to how
 	# hard the hit was. A jab barely ripples; a hyper nearly folds you in half.
 	renderer.squish(0.13 + 0.10 * m.level)
+	renderer.hit_flash = 2 + m.level
 	if m.level >= 1:
 		renderer.eye_pop = 6 + m.level * 2
 	if m.level >= 2:

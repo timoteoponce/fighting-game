@@ -1,4 +1,4 @@
-# Ulises vs Emilia: Ultimate Friends Showdown
+# PJ's Clash
 
 A 2D fighting game in the style of Marvel vs Capcom. The stage and the
 fighters in a match are drawn in code, so the body can move every frame.
@@ -23,14 +23,14 @@ Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Norma
 ## Running on Linux (x86_64)
 
 ```sh
-tar xzf UlisesVsEmilia-linux-x86_64.tar.gz
-cd UlisesVsEmilia
-./UlisesVsEmilia.x86_64
+tar xzf PJsClash-linux-x86_64.tar.gz
+cd PJsClash
+./PJsClash.x86_64
 ```
 
 - Needs a graphics card or driver with **OpenGL 3.3** (almost any PC from the last 12+ years; Mesa drivers are fine).
 - The game starts in **fullscreen**. **F11** (or Alt+Enter) switches between fullscreen and a window.
-  To start windowed: `./UlisesVsEmilia.x86_64 --windowed`
+  To start windowed: `./PJsClash.x86_64 --windowed`
 - If the gamepad isn't detected, check that your user can read `/dev/input/event*`
   (`ls -l /dev/input/`). On most desktops this works out of the box; otherwise add
   your user to the `input` group: `sudo usermod -aG input $USER` and log in again.
@@ -64,7 +64,7 @@ firing the projectile. The victim can break it by pressing L + H back within
 
 Fighters shout on attacks, specials, hits, K.O. and wins. The voices are synthesized,
 but you can replace any of them with real recordings: make a `voices` folder next to
-`UlisesVsEmilia.x86_64` and add WAV (16-bit) or OGG files named like this:
+`PJsClash.x86_64` and add WAV (16-bit) or OGG files named like this:
 
 ```
 voices/ulises/light.wav    voices/emilia/light.wav     quick "Ha!"
@@ -87,7 +87,7 @@ To fix that, open **Controller Setup** from the title screen:
 2. Press each button it asks for: Up, Down, Left, Right, Light, Heavy, Start.
 3. Try the buttons on the test screen, then press Start.
 
-The mapping is saved per controller model (in `~/.local/share/godot/app_userdata/Ulises vs Emilia/controls.cfg`
+The mapping is saved per controller model (in `~/.local/share/godot/app_userdata/PJ's Clash/controls.cfg`
 on Linux), so you only do this once. Two identical adapters share the same mapping.
 Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it up again.
 
@@ -97,7 +97,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 - Run from source: `godot --path .`
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a 60-match CPU win/damage report)
-- Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/UlisesVsEmilia-linux-x86_64.tar.gz`
+- Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
 - F1 during a fight shows hitboxes and inputs.
 
 Code map:
