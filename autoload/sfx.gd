@@ -11,6 +11,9 @@ var _players: Array[AudioStreamPlayer] = []
 var _next := 0
 var _voices := {}  # "character/line" -> stream
 var _voice_player: Array[AudioStreamPlayer] = []
+var _music: AudioStreamPlayer
+var _music_files: PackedStringArray = PackedStringArray()
+var _music_i := 0
 
 const VOICE_LINES := ["light", "heavy", "special", "hyper", "hurt", "ko", "win"]
 ## Fallback voice pitch (Hz) when a character doesn't state one.
@@ -45,6 +48,7 @@ func _ready() -> void:
 		vp.volume_db = -3.0
 		add_child(vp)
 		_voice_player.append(vp)
+	_start_music()
 
 
 ## Plays a fighter shout. Each fighter uses its own channel so shouts cut each
@@ -73,10 +77,63 @@ func _load_recording(id: String, line: String) -> AudioStream:
 	for dir in [OS.get_executable_path().get_base_dir() + "/voices", ProjectSettings.globalize_path("res://voices")]:
 		var base := "%s/%s/%s" % [dir, id, line]
 		if FileAccess.file_exists(base + ".wav"):
-			return AudioStreamWAV.load_from_file(base + ".wav")
+			# afconvert writes WAVE_FORMAT_EXTENSIBLE, which Godot's loader rejects.
+			var parsed := _load_pcm_wav(base + ".wav")
+			if parsed != null:
+				return parsed
+			var loaded := AudioStreamWAV.load_from_file(base + ".wav")
+			if loaded != null:
+				return loaded
 		if FileAccess.file_exists(base + ".ogg"):
 			return AudioStreamOggVorbis.load_from_file(base + ".ogg")
 	return null
+
+
+## PCM WAV, including the extensible header macOS afconvert writes.
+func _load_pcm_wav(path: String) -> AudioStreamWAV:
+	var bytes := FileAccess.get_file_as_bytes(path)
+	if bytes.size() < 12 or _fourcc(bytes, 0) != "RIFF" or _fourcc(bytes, 8) != "WAVE":
+		return null
+	var channels := 1
+	var rate := 22050
+	var bits := 16
+	var pcm_format := 0
+	var data := PackedByteArray()
+	var i := 12
+	while i + 8 <= bytes.size():
+		var id := _fourcc(bytes, i)
+		var size := int(bytes.decode_u32(i + 4))
+		var body := i + 8
+		if size < 0 or body + size > bytes.size():
+			break
+		if id == "fmt " and size >= 16:
+			pcm_format = bytes.decode_u16(body)
+			channels = bytes.decode_u16(body + 2)
+			rate = int(bytes.decode_u32(body + 4))
+			bits = bytes.decode_u16(body + 14)
+			# Extensible: the real format is the first field of the subformat GUID.
+			if pcm_format == 0xFFFE and size >= 40:
+				pcm_format = bytes.decode_u16(body + 24)
+		elif id == "data":
+			data = bytes.slice(body, body + size)
+		i = body + size + (size & 1)
+	if pcm_format != 1 or data.is_empty() or (channels != 1 and channels != 2):
+		return null
+	var stream := AudioStreamWAV.new()
+	stream.mix_rate = rate
+	stream.stereo = channels == 2
+	if bits == 8:
+		stream.format = AudioStreamWAV.FORMAT_8_BITS
+	elif bits == 16:
+		stream.format = AudioStreamWAV.FORMAT_16_BITS
+	else:
+		return null
+	stream.data = data
+	return stream
+
+
+func _fourcc(bytes: PackedByteArray, at: int) -> String:
+	return bytes.slice(at, at + 4).get_string_from_ascii()
 
 
 ## Synthesizes a shout: a buzzy glottal pulse shaped by three formant filters
@@ -145,6 +202,66 @@ static func _bandpass(freq: float, q: float) -> Array:
 	var alpha := sin(w0) / (2.0 * q)
 	var a0 := 1.0 + alpha
 	return [alpha / a0, 0.0, -alpha / a0, -2.0 * cos(w0) / a0, (1.0 - alpha) / a0]
+
+
+## Tracks in music/ (ogg, wav, or mp3), next to the game or in the project.
+## They play in order, under the hits and the voices.
+func _start_music() -> void:
+	if "--test" in OS.get_cmdline_user_args():
+		return
+	for dir in [OS.get_executable_path().get_base_dir() + "/music", ProjectSettings.globalize_path("res://music")]:
+		var listing := DirAccess.open(dir)
+		if listing == null:
+			continue
+		for name in listing.get_files():
+			var ext := name.get_extension().to_lower()
+			if ext in ["ogg", "wav", "mp3"]:
+				_music_files.append(dir.path_join(name))
+	_music_files.sort()
+	if _music_files.is_empty():
+		return
+	_music = AudioStreamPlayer.new()
+	_music.volume_db = -16.0
+	_music.finished.connect(_advance_music)
+	add_child(_music)
+	_play_music(0)
+
+
+func _advance_music() -> void:
+	_play_music(_music_i + 1)
+
+
+func _play_music(i: int) -> void:
+	if _music == null or _music_files.is_empty():
+		return
+	var n := _music_files.size()
+	for step in n:
+		_music_i = (i + step) % n
+		var stream := _load_music(_music_files[_music_i])
+		if stream == null:
+			continue
+		_music.stream = stream
+		_music.play()
+		return
+
+
+func _load_music(path: String) -> AudioStream:
+	var ext := path.get_extension().to_lower()
+	if ext == "wav":
+		var wav := _load_pcm_wav(path)
+		if wav != null:
+			return wav
+		return AudioStreamWAV.load_from_file(path)
+	if ext == "ogg":
+		return AudioStreamOggVorbis.load_from_file(path)
+	if ext == "mp3":
+		var bytes := FileAccess.get_file_as_bytes(path)
+		if bytes.is_empty():
+			return null
+		var mp3 := AudioStreamMP3.new()
+		mp3.data = bytes
+		return mp3
+	return null
 
 
 func play(sound: String, pitch := 1.0) -> void:

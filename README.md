@@ -3,6 +3,8 @@
 A 2D fighting game in the style of Marvel vs Capcom. The stage and the
 fighters in a match are drawn in code, so the body can move every frame.
 The paintings in `art/portraits/` are the title and character-select portraits.
+Drop `.ogg`, `.wav`, or `.mp3` files in `music/` and they play in order,
+quietly, behind the menus and the match.
 
 - **Ulises**: soccer, running, reading and video games. Fast, with a soccer-ball shot and a pixel-beam hyper.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
