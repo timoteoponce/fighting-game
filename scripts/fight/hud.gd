@@ -14,6 +14,10 @@ var fight: Fight
 var shown_hp := [1000.0, 1000.0]
 var combo_show := [0, 0]
 var combo_timer := [0, 0]
+## Combo pop (1 -> 0) scales the counter up on each hit; chip flash does the
+## same for the leading edge of the lifebar damage trail.
+var combo_pop := [0.0, 0.0]
+var chip_flash := [0.0, 0.0]
 var frame := 0
 var portraits: Array[FighterRenderer] = []
 var cutin_portrait: FighterRenderer
@@ -67,16 +71,22 @@ func _process(_delta: float) -> void:
 		var fr := fight.fighters[i]
 		# The red "damage" part catches up once the combo ends.
 		var target := float(fr.health)
+		if shown_hp[i] > target:
+			chip_flash[i] = 1.0
 		if fr.combo == 0 or shown_hp[i] < target:
-			shown_hp[i] = move_toward(shown_hp[i], target, 8.0)
+			shown_hp[i] = move_toward(shown_hp[i], target, 5.0)
 		var d := fight.fighters[1 - i]
 		if d.combo >= 2 and d.state in [Fighter.S.HITSTUN, Fighter.S.LAUNCHED, Fighter.S.KO]:
+			if d.combo > combo_show[i]:
+				combo_pop[i] = 1.0
 			if combo_timer[i] <= 0:
 				combo_timer[i] = 60
 			combo_show[i] = d.combo
 			combo_timer[i] = maxi(combo_timer[i], 50)
 		elif combo_timer[i] > 0:
 			combo_timer[i] -= 1
+		combo_pop[i] = maxf(0.0, combo_pop[i] - 0.08)
+		chip_flash[i] = maxf(0.0, chip_flash[i] - 0.1)
 		var p := portraits[i]
 		p.t = frame
 		p.expr = fr.renderer.expr
@@ -151,6 +161,16 @@ func _bar_poly(x0: float, y: float, w: float, h: float, frac: float, right: bool
 	return PackedVector2Array([Vector2(x0 + SKEW, y), Vector2(maxf(xe, x0 + SKEW), y), Vector2(xe, y + h), Vector2(x0, y + h)])
 
 
+## The inner edge of a bar at `frac` — where the damage trail meets the real
+## health. Used to draw the bright leading-edge flash.
+func _bar_edge(x0: float, y: float, w: float, h: float, frac: float, right: bool) -> PackedVector2Array:
+	if right:
+		var xs := x0 + w * (1.0 - frac)
+		return PackedVector2Array([Vector2(xs, y), Vector2(maxf(xs - SKEW, x0), y + h)])
+	var xe := x0 + w * frac
+	return PackedVector2Array([Vector2(maxf(xe, x0 + SKEW), y), Vector2(xe, y + h)])
+
+
 func _lifebar(o: Node2D, i: int) -> void:
 	var fr := fight.fighters[i]
 	var right := i == 1
@@ -161,6 +181,10 @@ func _lifebar(o: Node2D, i: int) -> void:
 	o.draw_polyline(frame_pts + PackedVector2Array([frame_pts[0]]), Color("15102a"), 2.0, true)
 	o.draw_colored_polygon(_bar_poly(x0, y, BAR_W, BAR_H, 1.0, right), Color("1a0a18"))
 	o.draw_colored_polygon(_bar_poly(x0, y, BAR_W, BAR_H, shown_hp[i] / Fighter.MAX_HEALTH, right), Color("e8302a"))
+	# Bright leading edge on the damage trail, right after a hit.
+	if chip_flash[i] > 0.0:
+		o.draw_polyline(_bar_edge(x0, y, BAR_W, BAR_H, shown_hp[i] / Fighter.MAX_HEALTH, right),
+			Color(1, 1, 1, chip_flash[i] * 0.9), 3.0, true)
 	var frac := float(fr.health) / Fighter.MAX_HEALTH
 	var low := frac < 0.25
 	var top := Color("fff27a") if not low or frame % 20 < 10 else Color("ffb0a0")
@@ -238,15 +262,24 @@ func _gauge(o: Node2D, i: int) -> void:
 func _combo(o: Node2D, i: int) -> void:
 	var slide := clampf((60 - combo_timer[i]) / 6.0, 0.0, 1.0)
 	var fade := clampf(combo_timer[i] / 12.0, 0.0, 1.0)
+	# The counter pops on each hit, then settles back.
+	var pop: float = 1.0 + 0.45 * combo_pop[i]
 	var x := lerpf(-80.0, 40.0, slide) if i == 0 else lerpf(720.0, 600.0, slide)
 	var align := HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT
 	var n := str(combo_show[i])
-	var nw := UI.arcade_font().get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, 40).x
-	var hw := UI.arcade_font().get_string_size("HITS", HORIZONTAL_ALIGNMENT_LEFT, -1, 18).x
+	# Colour climbs with the count: yellow -> orange -> hot red.
+	var col := Color(1, 0.92, 0.3, fade)
+	if combo_show[i] >= 10:
+		col = Color(1, 0.45, 0.25, fade)
+	elif combo_show[i] >= 5:
+		col = Color(1, 0.7, 0.2, fade)
+	var size := int(40.0 * pop)
+	var nw := UI.arcade_font().get_string_size(n, HORIZONTAL_ALIGNMENT_LEFT, -1, size).x
+	var hw := UI.arcade_font().get_string_size("HITS", HORIZONTAL_ALIGNMENT_LEFT, -1, int(18.0 * pop)).x
 	# Always reads "12 HITS": number first, whichever side it sits on.
 	var nx := x if i == 0 else x - hw - 6 - nw
-	UI.text(o, Vector2(nx, 122), n, 40, Color(1, 0.92, 0.3, fade), HORIZONTAL_ALIGNMENT_LEFT, 7, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
-	UI.text(o, Vector2(nx + nw + 6, 122), "HITS", 18, Color(1, 1, 1, fade), HORIZONTAL_ALIGNMENT_LEFT, 5, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
+	UI.text(o, Vector2(nx, 122), n, size, col, HORIZONTAL_ALIGNMENT_LEFT, 7, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
+	UI.text(o, Vector2(nx + nw + 6, 122), "HITS", int(18.0 * pop), Color(1, 1, 1, fade), HORIZONTAL_ALIGNMENT_LEFT, 5, Color(0.7, 0.1, 0.1, fade), UI.arcade_font())
 	if combo_show[i] >= 5:
 		var word := "AWESOME!" if combo_show[i] < 10 else "INCREDIBLE!"
 		UI.text(o, Vector2(x, 144), word, 14, Color(0.6, 0.95, 1, fade), align, 4, Color(0.1, 0.1, 0.4, fade), UI.arcade_font())

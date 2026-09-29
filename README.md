@@ -181,3 +181,14 @@ Graphics uplift pass — making the game look and feel like a real release.
 - Per-stage occluders: near crowd (field), bookshelf + candle (library),
   railing + antenna (rooftop), pillar + lantern (dojo), palm frond + rock
   (beach), snowdrift + bare branch (snow).
+
+### Phase 4 — HUD polish
+
+- **Damage trail**: the red lifebar trail now catches up slower so recent damage
+  reads, and flashes a bright leading edge for a few frames after each hit.
+- **Combo counter**: pops (scales up) on every hit, then settles. Its colour
+  climbs with the count — yellow, then orange, then hot red at 10+.
+- Fixed a regression where the bloom threshold sat below the skin luminance,
+  so the bloom bled a haze into the dark eye lines and the faces read wrong.
+  Raised it to 0.90 so only genuinely bright things (white spark cores, the
+  hyper flash) bloom.
