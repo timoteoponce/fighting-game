@@ -19,6 +19,7 @@ var fighters: Array[Fighter] = []
 var projectiles: Array[Projectile] = []
 var stage: Stage
 var effects: Effects
+var foreground: Foreground
 var post_mat: ShaderMaterial
 var camera: Camera2D
 var hud: Hud
@@ -90,6 +91,14 @@ func _ready() -> void:
 		fighters.append(f)
 	fighters[0].opponent = fighters[1]
 	fighters[1].opponent = fighters[0]
+	# Foreground occluders: above the fighters, below the effects, so hit
+	# sparks still read on top. Parallax f > 1 makes them move faster than
+	# the fighters and read as close to the camera.
+	foreground = Foreground.new()
+	foreground.stage = stage
+	foreground.kind = stage.kind
+	foreground.z_index = 4
+	world.add_child(foreground)
 	effects = Effects.new()
 	effects.z_index = 5
 	world.add_child(effects)

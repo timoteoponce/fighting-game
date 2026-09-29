@@ -170,3 +170,14 @@ Graphics uplift pass — making the game look and feel like a real release.
   upscales nearest-neighbour, so the bloom stays smooth.
 - CanvasLayers now use explicit `.layer` values (post 10, comic 20, HUD 30)
   instead of relying on tree order at the default layer 1.
+
+### Phase 3 — Foreground occluders
+
+- Added `scripts/fight/foreground.gd`: dark, out-of-focus silhouettes drawn in
+  front of the fighters to sell depth. Sits at `z_index` 4 — above the
+  fighters, below the effects — so hit sparks still read on top.
+- Parallax `f > 1` makes them move faster than the fighters, so they read as
+  close to the camera.
+- Per-stage occluders: near crowd (field), bookshelf + candle (library),
+  railing + antenna (rooftop), pillar + lantern (dojo), palm frond + rock
+  (beach), snowdrift + bare branch (snow).
