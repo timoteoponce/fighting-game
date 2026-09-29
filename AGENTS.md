@@ -35,6 +35,33 @@ godot --path . -- --screen=select                               # jump straight 
   outline), hitbox (filled red) and a `STATE f<frame> <move id>` label. It does
   **not** show inputs or full frame data. Read-only; great for tuning frame data.
 
+## Where the character redesign stands
+
+The roster is being rebuilt so each fighter owns a mechanic, not just numbers.
+Full design in `design/characters_redesign.md`; this is the status.
+
+- **Done — phase A, Ulises (the pilot).** He has a contested ball. The pattern
+  to copy: the whole mechanic lives in `characters/<id>.gd` using the
+  `CharacterDef` behaviour hooks; only the generic support is in the engine.
+- **Next — phase B.** Emilia, Charlie and Silvan mechanics (sketched in the
+  design doc), then command normals, air specials and EX variants on top.
+- **Then — phase C.** A character-aware `CpuInput`, then real balance tuning.
+
+To read the phase-A code in the order it runs:
+
+1. `UlisesDef.on_round_start` → `_spawn_ball` → `Fight.spawn_projectile` — the
+   ball is created, resting, and opts out of the projectile slot.
+2. `Projectile.setup` / `_roll` / `rest` / `launch` — the persistent lifecycle.
+3. `Fight._resolve_hits` → `_kicks` — who is allowed to boot it.
+4. `UlisesDef.tick` — dribbling and re-possession (possession is *derived*).
+5. `UlisesDef.choose_move` / `on_move_frame` — the kit swap and the kick.
+6. `tests/sim_test.gd:_test_ulises_ball` — the spec, written as assertions.
+
+Things that were true of the *old* roster and are now the point of the work:
+all four fighters shared one archetype (jab / launcher / low jab / sweep / air
+light / air spike / fireball / dash / DP / hyper) with only numbers changed.
+Phase B is where that actually gets broken up.
+
 ## Architecture (the parts filenames don't tell you)
 
 - **One scene file only**: `scenes/main.tscn`. Every screen is built in code and swapped by
@@ -204,6 +231,13 @@ Double-tap detection lives in `InputBuffer.double_tapped()` / `consume_tap()`. `
 - `cpu_level` is an index into `GameState.CPU_LEVELS` = `VERY EASY, EASY, NORMAL, HARD`
   (0-3). `CpuInput`'s `THINK` / `BLOCK_P` / `ANTI_AIR_P` / `COMBO_DROP_P` / `MOBILITY_P`
   tables must all stay the same length as that list.
+- **`--balance` is noisy and must not be tuned against on a single run.**
+  `per_pair` is 10 matches with a four-fighter roster and `CpuInput` calls
+  `rng.randomize()`, so a pairing can legitimately report anywhere from 4-6 to
+  8-2 for the same code. Run it twice before believing a number, and raise
+  `per_pair` in `_balance_report` when you actually need signal. It is also
+  *character-blind*: it measures the neutral game, so a mechanic the CPU does not
+  think to use barely shows up in the numbers.
 - Helpers worth reusing: `_new_fight(p1, p2)`, `_start(f)` (runs the 101-frame round intro),
   `_script(fighter, [[mask, frames], ...])`, `_watch_move(f, fighter, frames)`, `check(cond, what)`.
 - The `WARNING: N ObjectDB instances were leaked at exit` line at the end of every run is

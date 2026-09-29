@@ -176,6 +176,48 @@ Same shape as Ulises, to be specified in the same detail when he lands.
   momentum widens his hitboxes and lengthens his dash. He is a character you
   have to keep moving, which is exactly the character the others are not.
 
+## Phase B, concretely
+
+The order below is deliberate: do the cheap, high-information work before the
+expensive one.
+
+1. **Asymmetric kits first, mechanics second.** Before adding a new system to
+   Emilia, take away something the others have. Concretely: give Charlie no fast
+   fireball and no reliable anti-air, and let Silvan trade all of his range for
+   speed. This needs no engine work at all, only `choose_move` swapping in worse
+   alternatives, and it is the single biggest lever on how different the roster
+   feels. Do it first because it is cheap and it tells you whether the mechanics
+   are even needed.
+2. **Then Emilia**, as the second mechanic. She is the closest to Ulises in that
+   her thing is a resource, so her hooks are already proven. The interesting
+   question is whether "spend to empower" is *decision-making* or just a bigger
+   number; aim for a number of charges that forces a choice (one or two), not a
+   bar that fills on its own.
+3. **Then Charlie and Silvan**, which are the two that need genuinely new
+   support: Charlie needs a damage-taken counter, and Silvan needs a movement
+   counter. Both fit in `tick` with no new engine surface, but both interact with
+   the state machine, so expect to add a hook if you find yourself reaching
+   around `Fighter`.
+4. **Command normals, air specials and EX** last, on top of four working
+   mechanics. These are expression, not identity, and they are much easier to
+   balance once each fighter is already distinct.
+
+### Open questions to decide, not inherit
+
+- **Does an EX variant need a third input?** With two buttons, EX has to be
+  something like `L+H` while holding away, or `L+H` tapped twice. Both are
+  discoverable by kids, but the first collides with `choose_move` variants
+  (Ulises' `BACK + L + H` is a hyper, so `BACK + L + H` in EX form is ambiguous).
+  Pick one rule and apply it to all four, or drop EX entirely.
+- **How does `CpuInput` learn a kit?** Options: a per-character table on
+  `CharacterDef`, or a few new `CpuInput` branches that ask the character what
+  it prefers. The table is less code and easier to balance; the branches are more
+  expressive. Phase C should not start until phase B has settled what a kit even
+  *is* in data.
+- **Is one mechanic per character enough, or does each need a resource too?**
+  Ulises has an object and a derived state, not a bar. A bar is a second thing to
+  read on screen, and the roster may not need it.
+
 ## Phasing
 
 - **A — prove the pattern.** *(done)* The hooks above, Ulises' mechanic, and the
