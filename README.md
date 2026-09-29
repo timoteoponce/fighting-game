@@ -143,3 +143,14 @@ Graphics uplift pass — making the game look and feel like a real release.
   limb, stage polygon, spark and the F1 debug overlay is now anti-aliased
   instead of hard-jagged. Texture filtering stays nearest-neighbour, so the
   640x360 buffer still upscales crisply to 1080p.
+
+### Phase 1 — Ground shadows
+
+- Fighters had no contact shadow, so they read as floating. Added a soft
+  elliptical shadow under each fighter (`FighterRenderer._draw_shadow()`),
+  drawn first so it sits behind every limb.
+- The shadow shrinks and fades as the fighter rises, so a jump arc visibly
+  lifts it off the floor. It is compensated for the renderer's `base_scale`
+  so it stays a true world-space ellipse.
+- Wired from `Fighter._update_visual()`: `renderer.ground_y = GROUND_Y - position.y`.
+- Afterimage ghosts (`copy_from`) and head-only portraits skip the shadow.

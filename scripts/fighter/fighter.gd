@@ -853,6 +853,7 @@ func _update_visual() -> void:
 	renderer.facing = facing
 	renderer.flash = flash
 	renderer.t = buf.frame
+	renderer.ground_y = GROUND_Y - position.y
 	# Visual-only impact jitter. Never touch `position` here: that is simulation.
 	renderer.position = Vector2(randf_range(-1.6, 1.6), randf_range(-1.2, 1.2)) if shook > 0 else Vector2.ZERO
 	var tgt := _pose_target()

@@ -59,6 +59,10 @@ var facing := 1
 var base_scale := 1.0
 var flash := 0
 var hit_flash := 0  # frames of white impact flash on the victim
+## Ground shadow: height above the floor in world units, and whether the
+## fighter is standing on it. Drawn first so it sits behind every limb.
+var ground_y := 0.0
+var casts_shadow := true
 var t := 0.0
 var expr := "normal"
 var prop := ""
@@ -178,6 +182,7 @@ func copy_from(src: FighterRenderer) -> void:
 	eye_pop = src.eye_pop
 	chains = src.chains.duplicate(true)
 	scale = src.scale
+	casts_shadow = false  # afterimages are ghosts; they don't touch the floor
 	global_position = src.global_position
 	sk = src.sk.duplicate()
 	prev_sk = src.prev_sk.duplicate()
@@ -257,6 +262,7 @@ func _draw() -> void:
 		def.draw_torso(self, s)
 		_draw_head(s)
 		return
+	_draw_shadow()
 	var b := def.build  # limb thickness: skinny < 1 < chunky
 	var open := expr == "happy" or expr == "smug"
 	def.draw_behind(self, s)
@@ -291,6 +297,22 @@ func _draw() -> void:
 	else:
 		fist(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
 	_draw_emotes(s)
+
+
+## A soft contact shadow on the floor. Drawn first so it sits behind every
+## limb. It shrinks and fades as the fighter rises, so a jump arc reads.
+func _draw_shadow() -> void:
+	if not casts_shadow or ground_y < 0.0:
+		return
+	var h := clampf(ground_y / 120.0, 0.0, 1.0)
+	var a := lerpf(0.40, 0.08, h)
+	var rx := lerpf(30.0, 18.0, h)
+	# The node is scaled by base_scale, so divide to keep the shadow a true
+	# world-space ellipse resting on the floor.
+	var gy := ground_y / base_scale
+	draw_set_transform(Vector2(0, gy), 0.0, Vector2(rx / 30.0, 8.0 / 30.0))
+	draw_circle(Vector2.ZERO, 30.0, Color(0, 0, 0, a))
+	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
 ## Cartoon symbols floating over the head. This is the vocabulary every kid
