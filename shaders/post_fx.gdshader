@@ -8,7 +8,10 @@ shader_type canvas_item;
 uniform sampler2D screen_tex : hint_screen_texture, filter_linear;
 uniform vec2 screen_size = vec2(640.0, 360.0);
 uniform float bloom_intensity = 0.55;
-uniform float bloom_threshold = 0.72;
+// Skin tones sit at 0.80-0.88 luminance, so the threshold has to clear them or
+// the bloom bleeds a haze into the dark eye lines and the faces read wrong.
+// White spark cores and the hyper flash are 1.0, so they still bloom.
+uniform float bloom_threshold = 0.90;
 uniform float impact = 0.0;   // 1-2 frame white punch on heavy/special connects
 uniform float shake = 0.0;    // drives chromatic aberration
 uniform float flash = 0.0;    // white flash (hyper, special connects)
