@@ -859,6 +859,12 @@ func _update_visual() -> void:
 	var tgt := _pose_target()
 	renderer.update_pose(tgt[0], tgt[1])
 	renderer.expr = _expression()
+	if opponent != null:
+		var look := opponent.position - position
+		# +x in head space is the nose, which points at the opponent when facing them.
+		renderer.gaze = Vector2(clampf(look.x * facing / 80.0, -1.0, 1.0), clampf(look.y / 100.0, -1.0, 1.0))
+	else:
+		renderer.gaze = Vector2(0.45, 0.0)
 	match state:
 		S.ATTACK:
 			renderer.prop = move.prop

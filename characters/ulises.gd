@@ -124,14 +124,14 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	r.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if not r.head_only:
 		# Back leg of the shorts (the front one is drawn over the front leg).
-		r.part(s["hip_b"], s["hip_b"].lerp(s["knee_b"], 0.6), 13.0, 12.0, FighterRenderer.dk(r.colors["shorts"]))
+		r.limb(s["hip_b"], s["hip_b"].lerp(s["knee_b"], 0.62), 14.0, 13.0, FighterRenderer.dk(r.colors["shorts"]))
 
 
 func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
-	r.part(s["hip_f"], s["hip_f"].lerp(s["knee_f"], 0.6), 13.0, 12.0, r.colors["shorts"])
+	r.limb(s["hip_f"], s["hip_f"].lerp(s["knee_f"], 0.62), 14.0, 13.0, r.colors["shorts"])
 	var up: Vector2 = s["up"]
 	var perp: Vector2 = s["perp"]
-	r.part(s["hip"] - perp * 7.0 + up * 2.0, s["hip"] + perp * 7.0 + up * 2.0, 5.0, 5.0, r.colors["shorts"])
+	r.limb(s["hip"] - perp * 7.0 + up * 2.0, s["hip"] + perp * 7.0 + up * 2.0, 5.5, 5.5, r.colors["shorts"])
 	# Sock stripes.
 	for leg in [["knee_f", "foot_f"], ["knee_b", "foot_b"]]:
 		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.18)

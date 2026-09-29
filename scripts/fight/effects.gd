@@ -146,13 +146,15 @@ func step() -> void:
 
 func _draw() -> void:
 	for e in parts:
-		if e["k"] != "dust":
-			continue
-		var k := float(e["t"]) / float(e["life"])
-		var p: Vector2 = e["p"]
-		for i in 4:
-			var off := Vector2((i - 1.5) * 12.0 * (0.5 + k), -5.0 - 8.0 * k - (i % 2) * 4.0)
-			draw_circle(p + off, 6.0 + 8.0 * k, Color(0.9, 0.85, 0.8, 0.55 * (1.0 - k)), true, -1.0, true)
+		match String(e["k"]):
+			"dust":
+				_draw_dust(e)
+			"hit", "heavy", "super":
+				_draw_impact(e)
+			"block":
+				_draw_block(e)
+			"slash":
+				_draw_slash(e)
 
 
 func _draw_glow() -> void:
@@ -163,62 +165,19 @@ func _draw_glow() -> void:
 		var k := float(e["t"]) / float(e["life"])
 		var fade := 1.0 - k
 		var p: Vector2 = e["p"]
-		var rng := RandomNumberGenerator.new()
-		rng.seed = e["d"]["seed"]
 		# Combo scale: hits land harder the longer the chain, so the burst grows.
 		var ck: float = float(e["d"].get("k", 1.0))
 		match kind:
 			"hit", "heavy", "super":
-				var big: float = {"hit": 1.0, "heavy": 1.6, "super": 2.1}[kind] * ck
-				var col: Color = {"hit": Color(1, 0.7, 0.25), "heavy": Color(1, 0.5, 0.15), "super": Color(1, 0.35, 0.8)}[kind]
-				# White-hot core.
-				glow.draw_circle(p, 16.0 * big * (1.0 - k * 0.7), Color(col, 0.35 * fade), true, -1.0, true)
-				glow.draw_circle(p, 9.0 * big * fade, Color(1, 1, 1, 0.9 * fade), true, -1.0, true)
-				# Tapered rays.
-				# Most rays spray along the knockback angle when the hit supplies
-				# one; a few stay random so it still reads as a burst.
-				var kb = e["d"].get("kb")
-				for i in 12:
-					var a := rng.randf() * TAU
-					if kb != null and i < 8:
-						a = float(kb) + rng.randf_range(-0.8, 0.8)
-					var len := (14.0 + rng.randf() * 34.0) * big * (0.4 + k)
-					var w := (2.0 + rng.randf() * 3.0) * big * fade
-					var d := Vector2.from_angle(a)
-					var n := Vector2(-d.y, d.x)
-					var b := p + d * (5.0 * big)
-					glow.draw_colored_polygon(PackedVector2Array([b + n * w, p + d * len, b - n * w]), Color(col.lightened(0.3), 0.9 * fade))
-				glow.draw_arc(p, (8.0 + 36.0 * k) * big, 0, TAU, 32, Color(col, 0.8 * fade), 3.0 * big * fade + 0.5, true)
-				if kind != "hit":
-					# Long flare streaks.
-					var a2 := rng.randf() * PI
-					for sgn in [-1.0, 1.0]:
-						var d2: Vector2 = Vector2.from_angle(a2) * sgn
-						glow.draw_line(p, p + d2 * 70.0 * big * (0.3 + k), Color(1, 1, 1, 0.6 * fade), 2.0 * fade + 0.5, true)
+				# A small halo only. The spikes themselves are ink, in `_draw_impact`,
+				# so bloom catches the core and does not fog the eyes.
+				var big: float = {"hit": 0.65, "heavy": 1.0, "super": 1.35}[kind] * ck
+				var col: Color = {"hit": Color(1, 0.85, 0.45), "heavy": Color(1, 0.7, 0.3), "super": Color(1, 0.55, 0.85)}[kind]
+				glow.draw_circle(p, 8.0 * big * fade, Color(col, 0.45 * fade), true, -1.0, true)
 			"block":
-				var dir := float(e["d"].get("dir", 1))
-				var hex := PackedVector2Array()
-				for i in 7:
-					hex.append(p + Vector2.from_angle(TAU * i / 6.0 + 0.5) * Vector2(0.55, 1.0) * (14.0 + 16.0 * k))
-				glow.draw_polyline(hex, Color(0.3, 0.7, 1.0, 0.9 * fade), 3.0, true)
-				glow.draw_circle(p, 10.0 * fade, Color(0.5, 0.8, 1.0, 0.6 * fade), true, -1.0, true)
-				for i in 6:
-					var a := PI * (0.0 if dir < 0 else 1.0) + rng.randf_range(-1.2, 1.2)
-					glow.draw_line(p, p + Vector2.from_angle(a) * (10.0 + 26.0 * k), Color(0.7, 0.9, 1.0, fade), 2.0, true)
+				glow.draw_circle(p, 9.0 * fade, Color(0.55, 0.8, 1.0, 0.35 * fade), true, -1.0, true)
 			"slash":
-				# Crescent swoosh along the attack, opening in the facing direction.
-				var dir := float(e["d"].get("dir", 1))
-				var r := float(e["d"].get("r", 30.0)) * (0.8 + 0.4 * k)
-				var a0 := -1.3 if dir > 0 else PI - 1.3
-				var outer := PackedVector2Array()
-				var inner := PackedVector2Array()
-				for i in 13:
-					var a := a0 + 2.6 * i / 12.0
-					outer.append(p + Vector2.from_angle(a) * Vector2(r, r * 0.8))
-					inner.append(p + Vector2.from_angle(a) * Vector2(r * 0.72, r * 0.5) + Vector2(-dir * 4.0, 0))
-				inner.reverse()
-				outer.append_array(inner)
-				glow.draw_colored_polygon(FighterRenderer.safe(outer), Color(0.75, 0.9, 1.0, 0.55 * fade))
+				glow.draw_colored_polygon(FighterRenderer.safe(_slash_pts(e)), Color(0.8, 0.92, 1.0, 0.22 * fade))
 			"ring":
 				glow.draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(p, 20.0 + 70.0 * k, 5.0 + 12.0 * k, 0.0, 32)), Color(1, 0.9, 0.7, 0.7 * fade), 3.0 * fade + 0.5, true)
 			"sparkle":
@@ -226,6 +185,112 @@ func _draw_glow() -> void:
 					var a := TAU * i / 6.0 + float(e["t"]) * 0.1
 					var q := p + Vector2(cos(a), sin(a)) * (8.0 + 28.0 * k)
 					glow.draw_colored_polygon(FighterRenderer.star_pts(q, 5.0 * fade + 1.0, 1.8, 4, a), Color(1, 0.6, 0.9, fade))
+
+
+## Soft clumps with an edge, sitting on the floor. Growing circles read as fog.
+func _draw_dust(e: Dictionary) -> void:
+	var k := float(e["t"]) / float(e["life"])
+	var fade := 1.0 - k
+	var p: Vector2 = e["p"]
+	for i in 3:
+		var off := Vector2((i - 1) * 11.0 * (0.45 + k), -3.0 - 7.0 * k - (i % 2) * 2.0)
+		var c := p + off
+		var rx := 6.0 + 6.0 * k
+		var ry := 3.2 + 1.6 * k
+		var blob := FighterRenderer.ellipse_pts(c, rx, ry, 0.0, 12)
+		draw_colored_polygon(blob, Color(0.45, 0.4, 0.38, 0.28 * fade))
+		draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(0, -0.6), rx * 0.72, ry * 0.65, 0.0, 10), Color(0.93, 0.9, 0.86, 0.72 * fade))
+		draw_polyline(Stage._closed(blob), Color(0.22, 0.16, 0.14, 0.55 * fade), 1.2, true)
+
+
+## Inked punch burst. Spikes point along the knockback, with speed lines behind
+## the attacker for as long as the hit is still bright. The additive halo lives
+## on the glow layer and stays small on purpose.
+func _draw_impact(e: Dictionary) -> void:
+	var kind: String = e["k"]
+	var k := float(e["t"]) / float(e["life"])
+	var fade := 1.0 - k
+	var p: Vector2 = e["p"]
+	var ck: float = float(e["d"].get("k", 1.0))
+	var big: float = {"hit": 0.72, "heavy": 1.15, "super": 1.65}[kind] * ck
+	var kb := float(e["d"].get("kb", 0.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(e["d"]["seed"])
+	var back := Vector2.from_angle(kb + PI)
+	# A few speed lines, stuck to the burst. Long ones used to stripe the stage.
+	if k < 0.6:
+		var lines := 3 if kind == "hit" else (4 if kind == "heavy" else 5)
+		var reach := 14.0 if kind == "hit" else (22.0 if kind == "heavy" else 40.0)
+		for i in lines:
+			var dir := back.rotated(rng.randf_range(-0.4, 0.4))
+			var n := Vector2(-dir.y, dir.x)
+			var start := p + n * rng.randf_range(-6.0, 6.0)
+			draw_line(start, start + dir * reach, Color(0.08, 0.05, 0.1, 0.9 * fade), 1.7, true)
+	var spikes := 5 if kind == "hit" else 6
+	for i in spikes:
+		var a := kb + rng.randf_range(-0.55, 0.55)
+		var d := Vector2.from_angle(a)
+		var n := Vector2(-d.y, d.x)
+		var len := (12.0 + rng.randf() * 8.0) * minf(big, 1.6)
+		var w := (4.0 + rng.randf() * 1.4) * fade
+		var root := p + d * 2.5
+		var tip := p + d * len
+		var poly := PackedVector2Array([root + n * w, tip, root - n * w])
+		draw_colored_polygon(poly, Color(1, 0.97, 0.9, fade))
+		draw_polyline(Stage._closed(poly), Color(0.07, 0.04, 0.08), 1.6, true)
+	var cr := minf(7.5, (4.0 if kind == "hit" else 5.5) * minf(big, 1.5))
+	draw_circle(p, cr + 1.6, Color(0.07, 0.04, 0.08, fade), true, -1.0, true)
+	draw_circle(p, cr, Color(1, 1, 1, fade), true, -1.0, true)
+
+
+## A blocked hit is a thick blue shard, outlined, not a glow hexagon.
+func _draw_block(e: Dictionary) -> void:
+	var k := float(e["t"]) / float(e["life"])
+	var fade := 1.0 - k
+	var p: Vector2 = e["p"]
+	var rad := 14.0 + 18.0 * k
+	var hex := PackedVector2Array()
+	for i in 6:
+		hex.append(p + Vector2.from_angle(TAU * float(i) / 6.0 + 0.5) * Vector2(0.62, 1.0) * rad)
+	draw_colored_polygon(hex, Color(0.72, 0.88, 1.0, 0.94 * fade))
+	draw_polyline(Stage._closed(hex), Color(0.05, 0.12, 0.22), 2.2, true)
+	var dir := float(e["d"].get("dir", 1.0))
+	var rng := RandomNumberGenerator.new()
+	rng.seed = int(e["d"]["seed"])
+	for i in 3:
+		var a := (0.0 if dir > 0.0 else PI) + rng.randf_range(-0.7, 0.7)
+		var d := Vector2.from_angle(a)
+		var n := Vector2(-d.y, d.x)
+		var tip := p + d * (18.0 + 16.0 * k)
+		var w := 3.2 * fade
+		var poly := PackedVector2Array([p + n * w, tip, p - n * w])
+		draw_colored_polygon(poly, Color(0.85, 0.94, 1.0, fade))
+		draw_polyline(Stage._closed(poly), Color(0.05, 0.12, 0.22), 1.5, true)
+
+
+func _slash_pts(e: Dictionary) -> PackedVector2Array:
+	var k := float(e["t"]) / float(e["life"])
+	var p: Vector2 = e["p"]
+	var dir := float(e["d"].get("dir", 1))
+	var r := float(e["d"].get("r", 30.0)) * (0.8 + 0.4 * k)
+	var a0 := -1.3 if dir > 0.0 else PI - 1.3
+	var outer := PackedVector2Array()
+	var inner := PackedVector2Array()
+	for i in 13:
+		var a := a0 + 2.6 * float(i) / 12.0
+		outer.append(p + Vector2.from_angle(a) * Vector2(r, r * 0.8))
+		inner.append(p + Vector2.from_angle(a) * Vector2(r * 0.72, r * 0.5) + Vector2(-dir * 4.0, 0))
+	inner.reverse()
+	outer.append_array(inner)
+	return outer
+
+
+## The attack swoosh, same ink as the kids: a pale crescent with a dark edge.
+func _draw_slash(e: Dictionary) -> void:
+	var fade := 1.0 - float(e["t"]) / float(e["life"])
+	var pts := _slash_pts(e)
+	draw_colored_polygon(FighterRenderer.safe(pts), Color(0.9, 0.96, 1.0, 0.9 * fade))
+	draw_polyline(Stage._closed(pts), Color(0.08, 0.1, 0.16, fade), 1.8, true)
 
 
 func _draw_top() -> void:

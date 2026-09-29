@@ -13,12 +13,12 @@ func _init() -> void:
 	hurt_lines = ["EEK!", "MY PENCIL!", "RUDE!"]
 	colors = {
 		"skin": Color("f5cfb0"), "hair": Color("2e1a2a"), "shirt": Color("7b3fd1"), "sleeve": Color("7b3fd1"),
-		"forearm": Color("7b3fd1"), "hands": Color("f5cfb0"), "pants": Color("4b2a8a"), "legs": Color("4b2a8a"),
-		"shoes": Color("5a2a6e"), "eyes": Color("8a4fff"), "accent": Color("ff7eb6"), "skirt": Color("4b2a8a"),
+		"forearm": Color("f5cfb0"), "hands": Color("f5cfb0"), "pants": Color("4b2a8a"), "legs": Color("4b2a8a"),
+		"shoes": Color("5a2a6e"), "eyes": Color("4a2a22"), "accent": Color("ff7eb6"), "skirt": Color("4b2a8a"),
 		"trim": Color("ffd24a"), "cape": Color("3b1f6e"), "blouse": Color("fff4fa"), "boots": Color("5a2a6e"),
 	}
 	alt_colors = colors.duplicate()
-	alt_colors.merge({"shirt": Color("1fa3a3"), "sleeve": Color("1fa3a3"), "forearm": Color("1fa3a3"), "accent": Color("ffd24a"),
+	alt_colors.merge({"shirt": Color("1fa3a3"), "sleeve": Color("1fa3a3"), "accent": Color("ffd24a"),
 		"skirt": Color("12706f"), "pants": Color("12706f"), "legs": Color("12706f"),
 		"shoes": Color("3a2a10"), "boots": Color("3a2a10"), "eyes": Color("1f9e6a"), "cape": Color("0d4a4a")}, true)
 	walk_speed = 3.3
@@ -131,11 +131,11 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	r.draw_line(top - perp * 1.0 - up * 1.0, hip + perp * 3.0 + up * 12.0, trim, 1.4, true)
 	r.draw_colored_polygon(PackedVector2Array([top + perp * 4.5 - up * 1.5, top - perp * 0.5 - up * 1.5, hip + perp * 5.0 + up * 13.0]), r.colors["blouse"])
 	# Belt.
-	r.part(hip - perp * 7.5 + up * 4.0, hip + perp * 7.5 + up * 4.0, 3.5, 3.5, r.colors["cape"])
+	r.limb(hip - perp * 7.5 + up * 4.0, hip + perp * 7.5 + up * 4.0, 4.2, 4.2, r.colors["cape"])
 	r.draw_colored_polygon(FighterRenderer.star_pts(hip + perp * 4.0 + up * 4.0, 3.0, 1.3), trim)
 	# Scarf wrapped around the neck.
 	var n: Vector2 = top - up * 1.5
-	r.part(n - perp * 6.0, n + perp * 6.0, 5.0, 5.0, r.colors["accent"])
+	r.limb(n - perp * 6.0, n + perp * 6.0, 5.4, 5.4, r.colors["accent"])
 	r.draw_line(n - up * 1.0, n + up * 1.5, Color.WHITE, 1.4, true)
 
 
@@ -163,7 +163,7 @@ func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
 		var d: Vector2 = (s[leg[1]] - s[leg[0]]).normalized()
 		var boot: Color = r.colors["boots"].darkened(0.2 * (1.0 - leg[2]))
 		var n := Vector2(-d.y, d.x)
-		r.part(a, s[leg[1]], 8.8, 7.2, boot)
+		r.limb(a, s[leg[1]], 9.0, 7.4, boot)
 		r.draw_line(a - n * 4.8, a + n * 4.8, boot.lightened(0.35), 2.2, true)
 
 

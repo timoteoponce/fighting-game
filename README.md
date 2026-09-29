@@ -93,9 +93,10 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 
 ## For developers
 
-- Engine: **Godot 4.7** (GDScript). Everything is drawn in code, so there are no image or sound files.
-- Run from source: `godot --path .`
+- Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code, so a body can move every frame. `art/portraits/` is only the title and character-select paintings. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
+- Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
+- Jump to one screen: `godot --path . -- --screen=select` (`title`, `select`, `fight`, `setup`, `howto`). `--full-meter` starts the hyper bar full.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a 60-match CPU win/damage report)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
 - F1 during a fight shows hitboxes and inputs.
@@ -104,14 +105,15 @@ Code map:
 
 - `autoload/controls.gd`: per-device input reading, joypad remapping and axis calibration.
 - `autoload/game_state.gd`: match setup, screen switching, and the roster scanned from `characters/`.
-- `scripts/fighter/fighter.gd`: fighter state machine, cancels, hits and blocking.
-- `scripts/fighter/fighter_renderer.gd`: the posable, code-drawn chibi.
+- `scripts/fighter/fighter.gd`: fighter state machine, cancels, hits and blocking. It also aims the pupils at the opponent.
+- `scripts/fighter/fighter_renderer.gd`: flat clothing on the posable skeleton, and a different face for each kid.
 - `scripts/fighter/move_data.gd`: frame data, animation clips and the per-frame FX event track.
-- `characters/*.gd`: each character's stats, frame data, poses and drawing details.
+- `characters/*.gd`: each character's stats, frame data, poses, colours and the bits drawn on top of the body.
 - `characters/_template.gd`: a complete, commented starting point for a new fighter.
-- `scripts/fight/`: the match (rounds, collisions, camera), projectiles, stages, HUD and effects.
+- `scripts/fight/`: the match (rounds, collisions, camera), projectiles, stages and the HUD.
+- `scripts/fight/effects.gd`: inked hits, blocks and dust, plus a small additive halo.
 - `scripts/input/cpu_input.gd`: the CPU opponent (it sends the same button presses a player would).
-- `scripts/ui/`: title, character select, how to play and controller setup screens.
+- `scripts/ui/`: title, character select, how to play and controller setup screens. Portraits come from `scripts/ui/portrait.gd`.
 
 ## Adding a character
 
@@ -192,3 +194,22 @@ Graphics uplift pass — making the game look and feel like a real release.
   so the bloom bled a haze into the dark eye lines and the faces read wrong.
   Raised it to 0.90 so only genuinely bright things (white spark cores, the
   hyper flash) bloom.
+
+### Phase 5 — Faces, clothes, ink hits
+
+- Each kid has their own eyes in `FighterRenderer.face()`, chosen by character
+  id. Ulises has dark almond eyes and one catchlight, Emilia a larger brown eye
+  and a scowl, Charlie small green eyes under one heavy brow, Silvan big round
+  dots. Pupils shift toward the opponent. A blink is a few frames of the
+  existing timer, and only while the face is calm.
+- Limbs are one outlined ribbon of clothing (`cloth()`, `_arm()`, `_leg()`) on
+  the same pose skeleton. A same-coloured thigh and shin is a single shape. A
+  sleeve over a bare forearm, or a sock under shorts, is two pieces overlapping
+  at the joint, so the colour break is a hem. Emilia's forearms are skin and
+  her irises are brown, matching her portrait. Charlie's arms are bare. Hair,
+  cape, ears and tail stay on their chains. Pose springs are unchanged.
+- Hits are a white core, a thick black outline and a few spikes along the
+  knockback (`Effects._draw_impact`). Lights are small, heavies bigger, hypers
+  a short burst. Blocks are an outlined blue shard. Dust is a few soft clumps
+  with an edge. The additive glow is only a small halo, and the bloom threshold
+  stays at 0.90 so it does not fog the eyes.

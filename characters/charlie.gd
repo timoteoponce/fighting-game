@@ -196,12 +196,11 @@ func draw_hair_back(r: FighterRenderer) -> void:
 func draw_face(r: FighterRenderer) -> void:
 	var skin: Color = r.colors["skin"]
 	var ink := FighterRenderer.OUT
-	# Eye bags first, so the eyes sit in them.
-	for e in [Vector2(4.8, 3.6), Vector2(10.7, 3.2)]:
-		r.draw_arc(e, 2.6, 0.2, PI - 0.2, 8, FighterRenderer.shade(skin), 1.2, true)
+	# Eye bags first, so the eyes sit in them. The brow itself is drawn with the eyes.
+	for spot in r.eye_spots():
+		var e: Vector2 = spot
+		r.draw_arc(e + Vector2(0, 1.6), 2.4, 0.15, PI - 0.15, 8, FighterRenderer.shade(skin), 1.25, true)
 	r.face(r.colors["eyes"])
-	# One thick unibrow over both eyes, scowling.
-	r.draw_polyline(PackedVector2Array([Vector2(2.0, -5.6), Vector2(5.5, -4.4), Vector2(8.0, -4.9), Vector2(12.6, -6.2)]), ink, 1.3, true)
 	# A big lumpy nose, drooping over the mouth.
 	var nose := FighterRenderer.ellipse_pts(Vector2(11.6, 4.2), 2.6, 2.1, 0.3, 12)
 	r.draw_colored_polygon(nose, FighterRenderer.shade(skin).lerp(Color(0.9, 0.45, 0.35), 0.3))
@@ -217,7 +216,8 @@ func draw_face(r: FighterRenderer) -> void:
 		r.draw_circle(pp, 0.8, Color(0.95, 0.4, 0.35), true, -1.0, true)
 	# He likes crying. When it goes badly, the taps open.
 	if r.expr in ["hurt", "ko", "shock", "dizzy"] or r.prop == "tears":
-		for e in [Vector2(4.8, 3.2), Vector2(10.7, 2.8)]:
+		for spot in r.eye_spots():
+			var e: Vector2 = spot
 			var k := fmod(r.t * 0.12 + e.x, 1.0)
 			r.draw_line(e, e + Vector2(-0.6, 6.0), Color(0.55, 0.8, 1.0, 0.85), 1.4, true)
 			r.draw_colored_polygon(FighterRenderer.ellipse_pts(e + Vector2(-0.6, 3.0 + k * 5.0), 0.9, 1.3), Color(0.6, 0.85, 1.0))

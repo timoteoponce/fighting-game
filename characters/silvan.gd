@@ -241,7 +241,7 @@ func draw_hair_front(r: FighterRenderer) -> void:
 func draw_face(r: FighterRenderer) -> void:
 	r.face(r.colors["eyes"])
 	# Puppy nose and two dots of blush: this is the whole character in 3 shapes.
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(9.0, 3.0), 2.2, 1.7), r.colors["nose"])
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(7.0, 5.0), 1.6, 1.15), r.colors["nose"])
 	for cx in [-2.0, 11.0]:
 		r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(cx, 5.5), 2.6, 1.6), Color(1, 0.55, 0.6, 0.45))
 	var ear := r.chain_local("ear_f")

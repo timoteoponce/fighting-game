@@ -1,7 +1,8 @@
 # AGENTS.md
 
 Godot **4.7** / GDScript 2D fighting game. `README.md` covers players, controls and
-distribution — this file covers working on the code.
+distribution — this file covers working on the code. Both are living notes: when
+the code and a sentence here disagree, rewrite the sentence.
 
 ## First: a fresh clone cannot run
 
@@ -27,8 +28,8 @@ godot --path . -- --screen=select                               # jump straight 
 - **Args after `--` are read by the game** (`OS.get_cmdline_user_args()`, `scripts/main.gd:12`).
   Engine flags like `--windowed` / `--fullscreen` must go **before** the `--` or they are ignored.
 - Full flag set: `--demo --test --balance --chars=a,b --stage=library --screen=NAME
-  --full-meter`. Screens: `title select fight setup howto`. (`--screen` and `--full-meter`
-  are not in the README.)
+  --full-meter`. Screens: `title select fight setup howto`. The player-facing
+  list is the README's "For developers" section.
 - **No linter, formatter, typecheck or CI exists.** The test run *is* the verification step.
 - `F1` toggles hitbox / frame-data / input overlay during a fight. Read-only; great for
   tuning frame data.
@@ -42,11 +43,24 @@ godot --path . -- --screen=select                               # jump straight 
 - **No script preloads anywhere.** Types resolve via `class_name` globals
   (`Fight`, `Fighter`, `MoveData`, `CharacterDef`, `FighterRenderer`, `UI`, ...) plus 3
   autoloads: `Controls` (input polling + joypad remap), `GameState` (match setup, screen
-  switching, `make_character`), `Sfx` (all audio, synthesized). Adding a `preload` would be
-  off-style.
-- **Zero image/audio assets** — fighters, stages, HUD, sound effects and voices are all
-  generated in code. Optional recorded voice overrides are read from
-  `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd:66`).
+  switching, `make_character`), `Sfx` (synthesized audio, plus optional files in
+  `voices/` and `music/`). Adding a `preload` would be off-style.
+- **The match is drawn in code; a few pictures and recordings are files.** Fighters,
+  stages, the HUD and synthesized SFX are generated in code. Title and select portraits
+  are `art/portraits/<id>.png` (`scripts/ui/portrait.gd`). Sheets in `design/` stay out
+  of the import via `design/.gdignore` and are not game art. Optional voice clips load
+  from `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd`).
+  Optional music is the same idea for `music/` (`.ogg`, `.wav`, `.mp3`). Leave other
+  people's tracks out of the build.
+- **The body is clothing on the pose skeleton.** `FighterRenderer.cloth()`, `_arm()` and
+  `_leg()` draw one outlined ribbon when a limb is a single colour, and two overlapping
+  pieces when it changes colour at the elbow or knee (a hem). Pose springs, squash and
+  hitstop stay in `Fighter`. Each kid's eyes are `face()`, keyed by `def.id`; pupils
+  follow `renderer.gaze`, which `Fighter._update_visual` points at the opponent. Hits,
+  blocks and dust are ink in `Effects._draw`. The additive `glow` child is only a small
+  halo, because `shaders/post_fx.gdshader` blooms anything above luminance 0.90, and a
+  hyper is a short burst. Menu portraits, and the unused `scripts/fight/painted_fighter.gd`
+  slideshow, are not the in-match body.
 - **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
   `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
   `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and
@@ -169,6 +183,8 @@ Double-tap detection lives in `InputBuffer.double_tapped()` / `consume_tap()`. `
    `--test --balance` run; no pairing should be worse than roughly 7-3.
 4. New mechanics have a test in `tests/sim_test.gd`; new characters need none
    (the roster-wide checks cover them).
-5. `README.md` is updated when a player-visible move, mode or control changes.
+5. `README.md` records every player-visible change: a move, a mode, a control, or
+   how a fight looks and sounds (bodies, faces, hits, stages, the HUD, music).
+   A rule in this file that no longer matches the game is updated in the same change.
 6. GDScript type inference gotcha: `var x := <untyped array element>` fails to compile.
    Use a typed loop (`for bit: int in [...]`) or an explicit type.
