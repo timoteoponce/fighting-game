@@ -132,3 +132,14 @@ match statement to edit.
 `roster_order` controls where the fighter sits on the select screen (lower comes
 first), and `voice_pitch` is the only thing the synthesized shouts need — around
 250 Hz reads as a boy, 330 Hz as a girl, 430 Hz as a toddler.
+
+## Changelog
+
+Graphics uplift pass — making the game look and feel like a real release.
+
+### Phase 0 — Anti-aliasing
+
+- Enabled 4x MSAA on the arena `SubViewport` (`scripts/fight/fight.gd`). Every
+  limb, stage polygon, spark and the F1 debug overlay is now anti-aliased
+  instead of hard-jagged. Texture filtering stays nearest-neighbour, so the
+  640x360 buffer still upscales crisply to 1080p.

@@ -61,7 +61,7 @@ func _ready() -> void:
 	world = SubViewport.new()
 	world.size = BUFFER_SIZE
 	world.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	world.msaa_2d = Viewport.MSAA_DISABLED
+	world.msaa_2d = Viewport.MSAA_4X
 	add_child(world)
 	var screen := TextureRect.new()
 	screen.texture = world.get_texture()
