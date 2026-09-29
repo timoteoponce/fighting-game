@@ -154,3 +154,19 @@ Graphics uplift pass — making the game look and feel like a real release.
   so it stays a true world-space ellipse.
 - Wired from `Fighter._update_visual()`: `renderer.ground_y = GROUND_Y - position.y`.
 - Afterimage ghosts (`copy_from`) and head-only portraits skip the shadow.
+
+### Phase 2 — Post-processing
+
+- Added a full-screen post-FX pass (`shaders/post_fx.gdshader`) on a `CanvasLayer`
+  between the world and the comic/HUD layers, so it never touches the lettering.
+- **Bloom**: bright-pass + 16-tap golden-angle spiral blur. This is what makes
+  the already-additive hit sparks, projectiles and hyper glow actually glow
+  instead of reading flat.
+- **Impact frame**: a 1-2 frame white push on heavy/special connects, driven by
+  a new `impact` value set in `_apply_hit` and decayed each frame.
+- **Chromatic aberration**: radial, scaled by screen shake.
+- **Vignette**: unified, replacing the per-stage hand-drawn one.
+- The shader samples the screen with linear filtering even though the world
+  upscales nearest-neighbour, so the bloom stays smooth.
+- CanvasLayers now use explicit `.layer` values (post 10, comic 20, HUD 30)
+  instead of relying on tree order at the default layer 1.

@@ -19,6 +19,7 @@ var fighters: Array[Fighter] = []
 var projectiles: Array[Projectile] = []
 var stage: Stage
 var effects: Effects
+var post_mat: ShaderMaterial
 var camera: Camera2D
 var hud: Hud
 var debug_draw: Node2D
@@ -39,6 +40,9 @@ const KO_CAM_FRAMES := 80
 var slowmo := 0
 var shake := 0.0
 var flash := 0  # full-screen white flash frames
+## Impact-frame strength for the post-FX shader. Set hard on a heavy/special
+## connect and decays over a few frames, giving that 1-2 frame white punch.
+var impact := 0.0
 
 var round_num := 1
 var wins := [0, 0]
@@ -99,12 +103,27 @@ func _ready() -> void:
 	world.add_child(camera)
 	camera.make_current()
 	effects.cam = camera
+	# Post-FX: bloom, impact frame, chromatic aberration, vignette. Above the
+	# world, below the comic/HUD layers so it never touches the lettering.
+	var post := CanvasLayer.new()
+	post.layer = 10
+	add_child(post)
+	post_mat = ShaderMaterial.new()
+	post_mat.shader = load("res://shaders/post_fx.gdshader")
+	var post_rect := ColorRect.new()
+	post_rect.color = Color(1, 1, 1, 1)
+	post_rect.anchor_right = 1.0
+	post_rect.anchor_bottom = 1.0
+	post_rect.material = post_mat
+	post.add_child(post_rect)
 	# Comic words and speech bubbles: above the arena, below the HUD, and at
 	# screen resolution so the lettering stays crisp.
 	var comic := CanvasLayer.new()
+	comic.layer = 20
 	add_child(comic)
 	comic.add_child(effects.ink)
 	var layer := CanvasLayer.new()
+	layer.layer = 30
 	add_child(layer)
 	hud = Hud.new()
 	hud.fight = self
@@ -168,8 +187,14 @@ func _physics_process(_delta: float) -> void:
 	effects.step()
 	banner_t += 1
 	shake = maxf(0.0, shake - 0.5)
+	impact = maxf(0.0, impact - 0.2)
 	if flash > 0:
 		flash -= 1
+	# Feed the post-FX shader. `flash` is a frame count, so normalise it.
+	if post_mat != null:
+		post_mat.set_shader_parameter("shake", shake)
+		post_mat.set_shader_parameter("impact", impact)
+		post_mat.set_shader_parameter("flash", clampf(float(flash) / 8.0, 0.0, 1.0))
 	camera.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake))
 	debug_draw.queue_redraw()
 	if freeze > 0:
@@ -380,6 +405,7 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
 		shake = maxf(shake, 3.0 + m.level + m.shake)
+		impact = maxf(impact, 0.35 + 0.25 * m.level)
 	if m.flash > 0:
 		flash = maxi(flash, m.flash)
 	# Big hits shake your belongings loose. One item per hit, so a long combo
