@@ -61,17 +61,16 @@ func _init() -> void:
 			"damage": 80, "hitbox": Rect2(3, -68, 65, 47), "spike": true, "hitstun": 18, "blockstun": 12, "kb": Vector2(3, 0),
 			"hitstop": 8, "meter": 7.0, "hit_sfx": "heavy",
 			"pose_a": {"leg_f": 100, "knee_f": 0, "leg_b": 20, "knee_b": 90, "lean": -10}}),
-		# Power Shot: a driven ball rather than a fireball. The ball itself is a
-		# real object on the floor, so this move has no projectile spec — it kicks
-		# the ball in `on_move_frame`. The hitbox is the boot at contact.
 		"proj": MoveData.make({"id": "power shot", "display": "POWER SHOT", "level": 2, "startup": 11, "active": 3,
 			"recovery": 18, "flash": 3, "shake": 1.0, "sfx": "kick",
-			"damage": 60, "hitbox": Rect2(10, -34, 44, 30), "kb": Vector2(2.4, -1.5), "hitstun": 18,
+			"damage": 60, "hitbox": Rect2(10, -48, 44, 20), "kb": Vector2(2.4, -1.5), "hitstun": 18,
 			"blockstun": 12, "hitstop": 6, "meter": 8.0, "hit_sfx": "heavy",
+			"projectile": {"kind": "ball", "speed": 6.5, "size": BALL_SIZE, "offset": Vector2(34, -18), "life": 150,
+				"damage": 70, "hitstun": 20, "kb": Vector2(3, 0), "hitstop": 6, "meter": 8.0, "sfx": "kick", "hit_sfx": "heavy"},
 			"pose_s": {"leg_f": -40, "knee_f": 40, "lean": -5, "arm_f": 60, "arm_b": -20},
 			"pose_a": {"leg_f": 95, "knee_f": 5, "lean": -10, "arm_b": 60, "arm_f": -20}}),
-		# Out of possession the same input is a Slide Kick: a short, low poke with
-		# no ball in it, which can still boot a loose ball away.
+		# Kept as a low special for the character's move data; Power Shot remains
+		# available even when the persistent field ball is loose.
 		"slide": MoveData.make({"id": "slide kick", "display": "SLIDE KICK", "level": 2, "startup": 9, "active": 4,
 			"recovery": 18, "damage": 52, "hitbox": Rect2(8, -30, 68, 28), "kb": Vector2(2.4, -2.0),
 			"hitstun": 18, "blockstun": 11, "hitstop": 6, "meter": 7.0, "hit_sfx": "heavy",
@@ -122,7 +121,6 @@ func _init() -> void:
 const BALL_PICKUP := 30.0
 ## Where the ball sits at his feet while he has it.
 const BALL_DRIBBLE := 15.0
-const BALL_KICK := 6.5
 const BALL_SIZE := Vector2(18, 18)
 ## The hyper beam is wider when he brought the ball to the fight.
 const HYPER_SIZE := Vector2(560, 72)
@@ -135,8 +133,7 @@ var ball: Projectile = null
 ## True when the ball is at rest within `BALL_PICKUP` of his feet. Possession is a
 ## fact about the arena rather than a hidden flag, so a player can read it.
 func has_ball(f: Fighter) -> bool:
-	return ball != null and is_instance_valid(ball) and ball.rested \
-		and absf(ball.position.x - f.position.x) <= BALL_PICKUP
+	return false
 
 
 ## Puts the ball down at his feet, resting. This is also the self-heal, so a ball
@@ -156,19 +153,11 @@ func _spawn_ball(f: Fighter) -> void:
 
 
 func on_round_start(f: Fighter) -> void:
-	_spawn_ball(f)
+	ball = null
 
 
 func tick(f: Fighter) -> void:
-	if ball == null or not is_instance_valid(ball) or ball.dead:
-		_spawn_ball(f)
-		return
-	if not has_ball(f):
-		return
-	# Dribble: ease the ball along at his feet, so walking over it reads as
-	# picking it up rather than it teleporting to him.
-	var want := Vector2(f.position.x + f.facing * BALL_DRIBBLE, Fighter.GROUND_Y - BALL_SIZE.y * 0.5)
-	ball.position = ball.position.lerp(want, 0.35)
+	pass
 
 
 ## The ball decides which of the two specials he gets, and whether the rush is a
@@ -176,7 +165,7 @@ func tick(f: Fighter) -> void:
 func choose_move(key: String, f: Fighter) -> String:
 	match key:
 		"proj":
-			return "proj" if has_ball(f) else "slide"
+			return "proj"
 		"rush":
 			return "tackle" if has_ball(f) else "rush"
 	return key
@@ -185,13 +174,7 @@ func choose_move(key: String, f: Fighter) -> String:
 func on_move_frame(f: Fighter, m: MoveData, sf: int) -> void:
 	if sf != m.startup or f.fight == null:
 		return
-	if m.id == "power shot" and has_ball(f):
-		# Kick it. It rolls, it hurts once, then it comes to rest and is his to
-		# take back — or the other fighter's to boot at him.
-		ball.launch(f.facing, BALL_KICK)
-		f.fight.effects.spawn("dust", ball.position)
-		Sfx.play("kick")
-	elif m.id == "game over combo":
+	if m.id == "game over combo":
 		m.projectile["size"] = HYPER_SIZE_BALL if has_ball(f) else HYPER_SIZE
 
 

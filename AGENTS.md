@@ -54,7 +54,7 @@ To read the phase-A code in the order it runs:
 2. `Projectile.setup` / `_roll` / `rest` / `launch` — the persistent lifecycle.
 3. `Fight._resolve_hits` → `_kicks` — who is allowed to boot it.
 4. `UlisesDef.tick` — dribbling and re-possession (possession is *derived*).
-5. `UlisesDef.choose_move` / `on_move_frame` — the kit swap and the kick.
+5. `UlisesDef.choose_move` / `on_move_frame` — the kit swap and hyper sizing.
 6. `tests/sim_test.gd:_test_ulises_ball` — the spec, written as assertions.
 
 Things that were true of the *old* roster and are now the point of the work:
@@ -133,7 +133,8 @@ Phase B is where that actually gets broken up.
   `Fighter.reset_for_round`), `on_move_frame(f, m, sf)` (every attack frame, *just
   before the move's projectile spawns*, so a move can be re-scaled on the way out),
   `choose_move(key, f)` (swap in a variant of an input — this is how Ulises gets a
-  Slide Kick with no ball), and `throw_data()`. The ten-key contract still holds:
+  carrying tackle only while he has the ball), and `throw_data()`. The ten-key
+  contract still holds:
   `choose_move` may only return keys the character actually defines. Design doc:
   `design/characters_redesign.md`.
 - **Ulises' ball is the reference mechanic.** It is a `Projectile` with the

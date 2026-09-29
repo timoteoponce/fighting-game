@@ -81,13 +81,14 @@ if it works on him, it works anywhere.
 
 Ulises plays with a **loose ball on the arena floor** that both players fight
 over. It is the same object the game's art already implies: he dribbles it in
-his intro pose, kicks it with Power Shot, and holds it up on his win screen.
+his intro pose, plays with it on the floor, and holds it up on his win screen.
 
 - At the start of a round the ball rests at Ulises' feet, and he is in
   **possession** — which is *derived* (`ball.rested` and it is within
   `BALL_PICKUP` of him), never a hidden flag, so a player can read it.
-- Kicking it sends it away as a projectile that **rolls to a stop** on the floor
-  instead of vanishing. It can hit once while it is moving.
+- Power Shot throws a separate ball projectile and leaves the field ball in place.
+- The field ball can still be booted by a low attack and rolls to a stop on the
+  floor instead of vanishing. It can hit once while it is moving.
 - **Walking over a resting ball re-possesses it**, with no extra button, and the
   ball eases along at his feet so it reads as dribbling.
 - **A boot takes it off him.** A move boots the ball if it says `"kicks": true`
@@ -106,7 +107,7 @@ his intro pose, kicks it with Power Shot, and holds it up on his win screen.
 
 | Input | In possession | Out of possession |
 |---|---|---|
-| `L + H` (proj) | **Power Shot** — a fast, low, straight drive | **Slide Kick** — a short, low, projectile-free poke that boots a loose ball away |
+| `L + H` (proj) | **Power Shot** — a fast, low, straight drive | **Power Shot** — can be thrown again while the field ball is loose |
 | `FWD + L + H` (rush) | **Driving Tackle** — carries the ball, and the ball pops loose on the first active frame | **Sprint Dash** — as today, no ball interaction |
 | `DOWN + L + H` (anti) | **Bicycle Kick** — as today | as today |
 | `BACK + L + H` (hyper) | **GAME OVER COMBO** — the beam is wider | the beam at its normal size |
@@ -136,7 +137,7 @@ All generic, none Ulises-specific, all additive:
    nothing else changes.
 4. **`CharacterDef.on_move_frame(f, m, sf) -> void`** — called on every attack
    frame, just before the move's projectile spawns. This is what launches the
-   ball on Power Shot's first active frame and re-scales the hyper beam.
+   hyper beam before it spawns.
 5. **A `Projectile` hazard lifecycle** — new spec fields `persistent`,
    `recoverable` and `slot`, plus `rest()` and `launch()`. A persistent
    projectile is not removed when its life runs out, sheds speed in `_roll()`
@@ -151,9 +152,9 @@ All generic, none Ulises-specific, all additive:
 ### The test
 
 `tests/sim_test.gd` gains `[ulises ball]` and `[ulises ball: hyper]`, covering:
-he starts in possession; `proj` is Power Shot and `rush` is the tackle; the kick
-sends the ball rolling and out of possession; the input then gives a Slide Kick
-and a plain dash; it comes to rest; a resting ball does no damage; the
+he starts in possession; `proj` is Power Shot and `rush` is the tackle; Power Shot
+leaves the field ball in place and can be used again; the forward special gives
+a plain dash; the field ball can still be booted and comes to rest; a resting ball does no damage; the
 opponent's sweep boots it; walking back over it re-possesses it; a light punch
 keeps the ball while his own sweep loses it; and the hyper beam is wider with the
 ball than without. Two supporting changes were needed: `_test_specials` now

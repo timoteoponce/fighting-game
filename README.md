@@ -52,26 +52,17 @@ cd PJsClash
 
 | Input | Ulises | Emilia | Charlie | Silvan |
 |---|---|---|---|---|
-| L + H | Power Shot, or **Slide Kick** with no ball | Wand Spark | Chest Pass | Bark Blast |
+| L + H | Power Shot (even with the field ball loose) | Wand Spark | Chest Pass | Bark Blast |
 | Forward + L + H | Driving Tackle, or **Sprint Dash** with no ball | Cartwheel Rush | Fast Break | Puppy Dash |
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
 | Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | CRYBABY FLOOD | MOON HOWL |
 
 ### The ball (Ulises)
 
-Ulises starts every round with a ball at his feet, and he is only at his best
-while he has it:
+Ulises' Power Shot throws a soccer ball projectile whenever it is used:
 
-- **With the ball**: `L + H` is a driven Power Shot, `Forward + L + H` is a
-  carrying tackle, and his hyper beam is wider.
-- **Without it**: the same inputs give a short Slide Kick and a plain dash, and
-  the beam is back to normal — but the ball can come back to him.
-- Power Shot does not fire the ball into thin air and leave. It rolls along the
-  ground, can hit once, and then comes to a stop, where **anyone** can boot it
-  away. A crouching heavy (the sweep) is a boot, so a sweep is how you take the
-  ball off him; a standing punch leaves it where it is.
-- **Walking over a resting ball picks it up again** — no extra button. It is his
-  ball, so it never hurts him.
+- `Forward + L + H` is his sprint dash.
+- He can throw Power Shot repeatedly without retrieving anything.
 
 **Throw:** L + H while *touching* a grounded opponent grabs them instead of
 firing the projectile. The victim can break it by pressing L + H back within

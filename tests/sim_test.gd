@@ -38,8 +38,6 @@ func _ready() -> void:
 		_test_combo(id)
 	_test_movement("ulises")
 	_test_throw("ulises")
-	_test_ulises_ball()
-	_test_ulises_ball_hyper()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -104,8 +102,7 @@ func _test_character_def(id: String) -> void:
 	var behind: Array[String] = []
 	var no_offence: Array[String] = []
 	# Every move the character defines, not just the required ten: a character is
-	# allowed extra moves (Ulises' out-of-possession Slide Kick) and those still
-	# have to be real moves.
+	# allowed extra moves and those still have to be real moves.
 	for key: String in d.moves:
 		var m: MoveData = d.moves[key]
 		if m.startup < 1 or m.active < 1 or m.recovery < 1 or m.startup > 60 or m.recovery > 90:
@@ -156,8 +153,8 @@ func _script(fr: Fighter, steps: Array) -> void:
 
 
 ## The move id `fr` would actually get for `key` right now. A character can swap
-## in a variant of an input depending on its own state (Ulises' L+H is a Slide
-## Kick with no ball at his feet), so the expectation is resolved, not assumed.
+## in a variant of an input depending on its own state, so the expectation is
+## resolved, not assumed.
 func _expected(fr: Fighter, key: String) -> String:
 	return fr.def.moves[fr.def.choose_move(key, fr)].id
 
@@ -436,18 +433,22 @@ func _test_ulises_ball() -> void:
 	check(d.choose_move("proj", p1) == "proj", "in possession L+H is Power Shot")
 	check(d.choose_move("rush", p1) == "tackle", "in possession FWD+L+H is a tackle")
 
-	# Power Shot kicks the ball into play instead of firing a fireball.
+	# Power Shot fires the regular projectile and leaves the field ball alone.
 	var kick_x := ball.position.x
 	_script(p1, [[LI | HE, 2], [0, 60]])
 	var seen := _watch_move(f, p1, 40)
 	check(seen.has("power shot"), "L+H with the ball does Power Shot (%s)" % str(seen))
-	check(not ball.rested, "Power Shot sets the ball rolling")
-	check(absf(ball.position.x - kick_x) > 20.0, "the ball travels away from him")
-	check(not d.has_ball(p1), "he is out of possession once it is rolling")
+	check(ball.rested, "Power Shot leaves the field ball resting")
+	check(is_equal_approx(ball.position.x, kick_x), "Power Shot does not move the field ball")
+	check(d.has_ball(p1), "he keeps possession after Power Shot")
 
-	# Out of possession the same input is a worse move, and the rush is not a tackle.
-	check(d.choose_move("proj", p1) == "slide", "out of possession L+H is a Slide Kick")
-	check(d.choose_move("rush", p1) == "rush", "out of possession FWD+L+H is a plain dash")
+	# Power Shot remains available without changing the field ball; only the
+	# carrying tackle changes with possession.
+	check(d.choose_move("proj", p1) == "proj", "out of possession L+H remains Power Shot")
+	check(d.choose_move("rush", p1) == "tackle", "keeping the ball preserves the carrying tackle")
+	_script(p1, [[LI | HE, 2], [0, 60]])
+	seen = _watch_move(f, p1, 40)
+	check(seen.has("power shot"), "L+H can be used without picking up the ball")
 
 	# It rolls to a stop rather than vanishing, and a stopped ball does not hurt.
 	_run(f, 140)

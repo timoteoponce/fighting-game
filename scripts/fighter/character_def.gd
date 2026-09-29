@@ -104,7 +104,7 @@ func on_round_start(_f: Fighter) -> void:
 
 ## Called from `Fighter._attack_step()` on every frame of an attack, just
 ## before a projectile of that move would spawn. Lets a character do timed
-## things: Ulises kicks the ball on the first active frame.
+## things such as resizing a projectile before it is created.
 func on_move_frame(_f: Fighter, _m: MoveData, _sf: int) -> void:
 	pass
 
@@ -157,4 +157,3 @@ func draw_hair_front(_r: FighterRenderer) -> void:
 
 func draw_props(_r: FighterRenderer, _s: Dictionary) -> void:
 	pass
-
