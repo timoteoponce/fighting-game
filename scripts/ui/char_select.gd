@@ -14,7 +14,8 @@ var defs: Array[CharacterDef] = [null, null]
 
 
 func _ready() -> void:
-	# The paintings are smooth illustration. The fight viewport stays pixelated.
+	# The paintings are smooth illustration; the arena is drawn separately at
+	# full resolution, so linear filtering here only affects the portraits.
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	_refresh()
 

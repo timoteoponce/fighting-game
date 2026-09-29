@@ -47,6 +47,9 @@ var keys := []
 ## Kinds: "slash", "fx", "sfx", "voice", "shake", "dust". See Fighter._fire_event.
 var events := {}
 var spin := 0.0  # body rotation in degrees across the move
+## This move boots a ball lying on the floor (Ulises' mechanic). Moves whose
+## hitbox reaches the ground get that for free — see `Fight._kicks`.
+var kicks := false
 var sfx := "whoosh"
 var hit_sfx := "light"
 var prop := ""

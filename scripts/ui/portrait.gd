@@ -1,7 +1,8 @@
 class_name Portrait
 extends RefCounted
-## The painted stance of a fighter, cropped from design/characters.
-## Menus draw these. The fight still uses FighterRenderer, which can move.
+## The painted stance of a fighter, cropped from design/characters into
+## art/portraits/<id>.png by hand. Menus draw these. The fight still uses
+## FighterRenderer, which can move.
 
 
 static var _cache: Dictionary = {}

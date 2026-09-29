@@ -61,18 +61,39 @@ func _init() -> void:
 			"damage": 80, "hitbox": Rect2(3, -68, 65, 47), "spike": true, "hitstun": 18, "blockstun": 12, "kb": Vector2(3, 0),
 			"hitstop": 8, "meter": 7.0, "hit_sfx": "heavy",
 			"pose_a": {"leg_f": 100, "knee_f": 0, "leg_b": 20, "knee_b": 90, "lean": -10}}),
-		"proj": MoveData.make({"id": "power shot", "display": "POWER SHOT", "level": 2, "startup": 12, "active": 1,
-			"recovery": 20, "prop": "ball", "sfx": "whoosh", "flash": 3, "shake": 1.0,
-			"projectile": {"kind": "ball", "speed": 6.5, "size": Vector2(18, 18), "offset": Vector2(34, -18), "life": 150,
-				"damage": 70, "hitstun": 20, "kb": Vector2(3, 0), "hitstop": 6, "meter": 8.0, "sfx": "kick", "hit_sfx": "heavy"},
+		# Power Shot: a driven ball rather than a fireball. The ball itself is a
+		# real object on the floor, so this move has no projectile spec — it kicks
+		# the ball in `on_move_frame`. The hitbox is the boot at contact.
+		"proj": MoveData.make({"id": "power shot", "display": "POWER SHOT", "level": 2, "startup": 11, "active": 3,
+			"recovery": 18, "flash": 3, "shake": 1.0, "sfx": "kick",
+			"damage": 60, "hitbox": Rect2(10, -34, 44, 30), "kb": Vector2(2.4, -1.5), "hitstun": 18,
+			"blockstun": 12, "hitstop": 6, "meter": 8.0, "hit_sfx": "heavy",
 			"pose_s": {"leg_f": -40, "knee_f": 40, "lean": -5, "arm_f": 60, "arm_b": -20},
 			"pose_a": {"leg_f": 95, "knee_f": 5, "lean": -10, "arm_b": 60, "arm_f": -20}}),
+		# Out of possession the same input is a Slide Kick: a short, low poke with
+		# no ball in it, which can still boot a loose ball away.
+		"slide": MoveData.make({"id": "slide kick", "display": "SLIDE KICK", "level": 2, "startup": 9, "active": 4,
+			"recovery": 18, "damage": 52, "hitbox": Rect2(8, -30, 68, 28), "kb": Vector2(2.4, -2.0),
+			"hitstun": 18, "blockstun": 11, "hitstop": 6, "meter": 7.0, "hit_sfx": "heavy",
+			"flash": 2, "shake": 1.0, "kicks": true,
+			"pose_s": {"leg_f": 20, "knee_f": 90, "lean": 26, "arm_b": -30},
+			"pose_a": {"leg_f": 120, "knee_f": 10, "lean": 34, "arm_b": -40, "arm_f": 40, "elb_f": 90}}),
 		"rush": MoveData.make({"id": "sprint dash", "display": "SPRINT DASH", "level": 2, "startup": 6, "active": 16,
 			"recovery": 14, "damage": 100, "hitbox": Rect2(5, -109, 52, 86), "dash_speed": 8.0, "dash_from": 6, "dash_to": 22,
 			"knockdown": true, "kb": Vector2(4, -5), "hitstun": 20, "blockstun": 14, "chip": 0.15, "hitstop": 8,
 			"meter": 8.0, "hit_sfx": "heavy", "flash": 4, "shake": 2.0,
 			"pose_s": {"lean": 20, "leg_f": 40, "knee_f": 60},
 			"pose_a": {"lean": 38, "arm_f": 20, "elb_f": 70, "arm_b": -40, "elb_b": 60, "leg_f": 55, "knee_f": 70, "leg_b": -35, "knee_b": 40}}),
+		# In possession the dash carries the ball: the tackle's hitbox reaches the
+		# ball at his feet, so the ball is knocked loose down the pitch on the
+		# first active frame — whiffed or not, which is a fair price for carrying
+		# it in.
+		"tackle": MoveData.make({"id": "driving tackle", "display": "DRIVING TACKLE", "level": 2, "startup": 6, "active": 16,
+			"recovery": 14, "damage": 105, "hitbox": Rect2(5, -104, 58, 82), "dash_speed": 8.2, "dash_from": 6, "dash_to": 22,
+			"knockdown": true, "kb": Vector2(4.2, -5), "hitstun": 22, "blockstun": 14, "chip": 0.15, "hitstop": 8,
+			"meter": 8.0, "hit_sfx": "heavy", "flash": 4, "shake": 2.0, "kicks": true,
+			"pose_s": {"lean": 22, "leg_f": 45, "knee_f": 70},
+			"pose_a": {"lean": 40, "arm_f": 18, "elb_f": 65, "arm_b": -42, "elb_b": 55, "leg_f": 58, "knee_f": 74, "leg_b": -38, "knee_b": 44}}),
 		"anti": MoveData.make({"id": "bicycle kick", "display": "BICYCLE KICK", "level": 2, "startup": 4, "active": 12,
 			"recovery": 16, "damage": 55, "hits": 2, "hit_interval": 6, "hitbox": Rect2(-8, -156, 68, 104),
 			"rise_vel": Vector2(1.5, -10.0), "rise_frame": 3, "invuln": 8, "launch": true, "kb": Vector2(1.5, -8.0),
@@ -90,6 +111,88 @@ func _init() -> void:
 	}
 	size = 0.9  # Ulises is about 10% shorter than Emilia
 	scale_moves()
+
+
+# --- The ball -------------------------------------------------------------------
+# Ulises' signature mechanic: a real ball on the floor that both players fight
+# over. See design/characters_redesign.md. It is a Projectile with the `persistent`
+# lifecycle, so it reuses the existing hit resolution and drawing.
+
+## How close the ball has to be for him to be dribbling it.
+const BALL_PICKUP := 30.0
+## Where the ball sits at his feet while he has it.
+const BALL_DRIBBLE := 15.0
+const BALL_KICK := 6.5
+const BALL_SIZE := Vector2(18, 18)
+## The hyper beam is wider when he brought the ball to the fight.
+const HYPER_SIZE := Vector2(560, 72)
+const HYPER_SIZE_BALL := Vector2(660, 104)
+
+## The one ball this fighter owns. It is his, so it never hits him.
+var ball: Projectile = null
+
+
+## True when the ball is at rest within `BALL_PICKUP` of his feet. Possession is a
+## fact about the arena rather than a hidden flag, so a player can read it.
+func has_ball(f: Fighter) -> bool:
+	return ball != null and is_instance_valid(ball) and ball.rested \
+		and absf(ball.position.x - f.position.x) <= BALL_PICKUP
+
+
+## Puts the ball down at his feet, resting. This is also the self-heal, so a ball
+## that somehow left play comes back rather than leaving him without one.
+func _spawn_ball(f: Fighter) -> void:
+	if f == null or f.fight == null or not is_instance_valid(f.fight):
+		return
+	ball = f.fight.spawn_projectile(f, {
+		"kind": "ball", "size": BALL_SIZE, "speed": 0.0, "life": 99999,
+		"damage": 45, "hitstun": 14, "blockstun": 8, "kb": Vector2(2, 0),
+		"hitstop": 5, "meter": 4.0, "level": 0, "hit_sfx": "kick",
+		"persistent": true, "recoverable": true, "slot": false, "z": 0, "sfx": "",
+	})
+	if ball != null:
+		ball.position = Vector2(f.position.x + f.facing * BALL_DRIBBLE, Fighter.GROUND_Y - BALL_SIZE.y * 0.5)
+		ball.rest()
+
+
+func on_round_start(f: Fighter) -> void:
+	_spawn_ball(f)
+
+
+func tick(f: Fighter) -> void:
+	if ball == null or not is_instance_valid(ball) or ball.dead:
+		_spawn_ball(f)
+		return
+	if not has_ball(f):
+		return
+	# Dribble: ease the ball along at his feet, so walking over it reads as
+	# picking it up rather than it teleporting to him.
+	var want := Vector2(f.position.x + f.facing * BALL_DRIBBLE, Fighter.GROUND_Y - BALL_SIZE.y * 0.5)
+	ball.position = ball.position.lerp(want, 0.35)
+
+
+## The ball decides which of the two specials he gets, and whether the rush is a
+## carrying tackle. Everything else about him is unchanged.
+func choose_move(key: String, f: Fighter) -> String:
+	match key:
+		"proj":
+			return "proj" if has_ball(f) else "slide"
+		"rush":
+			return "tackle" if has_ball(f) else "rush"
+	return key
+
+
+func on_move_frame(f: Fighter, m: MoveData, sf: int) -> void:
+	if sf != m.startup or f.fight == null:
+		return
+	if m.id == "power shot" and has_ball(f):
+		# Kick it. It rolls, it hurts once, then it comes to rest and is his to
+		# take back — or the other fighter's to boot at him.
+		ball.launch(f.facing, BALL_KICK)
+		f.fight.effects.spawn("dust", ball.position)
+		Sfx.play("kick")
+	elif m.id == "game over combo":
+		m.projectile["size"] = HYPER_SIZE_BALL if has_ball(f) else HYPER_SIZE
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:
@@ -172,9 +275,6 @@ func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 	if r.prop != "":
 		r.part(s["elb_f"].lerp(s["hand_f"], 0.55), s["elb_f"].lerp(s["hand_f"], 0.7), 7.5, 7.0, r.colors["accent"])
 	match r.prop:
-		"ball":
-			if r.prop_t < 12:
-				Projectile.draw_soccer_ball(r, s["foot_f"] + Vector2(12, -5), 8.0, 0.0)
 		"ball_intro":
 			var bounce := absf(sin(r.t * 0.12)) * 16.0
 			Projectile.draw_soccer_ball(r, s["hand_f"] + Vector2(0, -12 - bounce), 8.0, r.t * 0.1)

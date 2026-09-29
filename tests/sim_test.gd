@@ -38,6 +38,8 @@ func _ready() -> void:
 		_test_combo(id)
 	_test_movement("ulises")
 	_test_throw("ulises")
+	_test_ulises_ball()
+	_test_ulises_ball_hyper()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -101,7 +103,10 @@ func _test_character_def(id: String) -> void:
 	var bad_frames: Array[String] = []
 	var behind: Array[String] = []
 	var no_offence: Array[String] = []
-	for key: String in CharacterDef.REQUIRED_MOVES:
+	# Every move the character defines, not just the required ten: a character is
+	# allowed extra moves (Ulises' out-of-possession Slide Kick) and those still
+	# have to be real moves.
+	for key: String in d.moves:
 		var m: MoveData = d.moves[key]
 		if m.startup < 1 or m.active < 1 or m.recovery < 1 or m.startup > 60 or m.recovery > 90:
 			bad_frames.append(key)
@@ -150,6 +155,13 @@ func _script(fr: Fighter, steps: Array) -> void:
 	(fr.input_source as Scripted).steps = steps.duplicate(true)
 
 
+## The move id `fr` would actually get for `key` right now. A character can swap
+## in a variant of an input depending on its own state (Ulises' L+H is a Slide
+## Kick with no ball at his feet), so the expectation is resolved, not assumed.
+func _expected(fr: Fighter, key: String) -> String:
+	return fr.def.moves[fr.def.choose_move(key, fr)].id
+
+
 func _watch_move(f: Fight, fr: Fighter, frames: int) -> Array:
 	var seen := []
 	for i in frames:
@@ -164,30 +176,34 @@ func _test_specials(id: String) -> void:
 	var f := _new_fight(id, "emilia")
 	_start(f)
 	var p1 := f.fighters[0]
-	var moves: Dictionary = p1.def.moves
 	_script(p1, [[LI | HE, 2], [0, 60]])
+	var want := _expected(p1, "proj")
 	var seen := _watch_move(f, p1, 40)
-	check(seen.has(moves["proj"].id), "L+H does projectile (%s)" % str(seen))
-	check(f.projectiles.size() > 0 or seen.has(moves["proj"].id), "projectile spawned")
+	check(seen.has(want), "L+H does projectile (%s)" % str(seen))
+	check(f.projectiles.size() > 0 or seen.has(want), "projectile spawned")
 	_run(f, 80)
 	# L then H two frames later should still become the special.
 	_script(p1, [[LI, 2], [LI | HE, 2], [0, 60]])
+	want = _expected(p1, "proj")
 	seen = _watch_move(f, p1, 40)
-	check(seen.has(moves["proj"].id), "L, then H 2 frames later, still does projectile (%s)" % str(seen))
+	check(seen.has(want), "L, then H 2 frames later, still does projectile (%s)" % str(seen))
 	_run(f, 120)
 	_script(p1, [[R, 3], [R | LI | HE, 2], [0, 60]])
+	want = _expected(p1, "rush")
 	seen = _watch_move(f, p1, 50)
-	check(seen.has(moves["rush"].id), "FWD+L+H does rush (%s)" % str(seen))
+	check(seen.has(want), "FWD+L+H does rush (%s)" % str(seen))
 	_run(f, 120)
 	_script(p1, [[D, 3], [D | LI | HE, 2], [0, 60]])
+	want = _expected(p1, "anti")
 	seen = _watch_move(f, p1, 50)
-	check(seen.has(moves["anti"].id), "DOWN+L+H does anti-air (%s)" % str(seen))
+	check(seen.has(want), "DOWN+L+H does anti-air (%s)" % str(seen))
 	_run(f, 120)
 	p1.meter = 100.0
 	var back := Lf if p1.facing > 0 else R
 	_script(p1, [[back, 3], [back | LI | HE, 2], [0, 60]])
+	want = _expected(p1, "hyper")
 	seen = _watch_move(f, p1, 60)
-	check(seen.has(moves["hyper"].id), "BACK+L+H with full meter does hyper (%s)" % str(seen))
+	check(seen.has(want), "BACK+L+H with full meter does hyper (%s)" % str(seen))
 	check(p1.meter < 1.0, "hyper spends the meter")
 	var hp := f.fighters[1].health
 	_run(f, 200)
@@ -278,7 +294,9 @@ func _test_throw(id: String) -> void:
 		threw = threw or p1.state == Fighter.S.THROW
 	check(threw, "L+H point-blank throws instead of firing the special")
 	check(p2.health < hp, "the throw damages the opponent (%d -> %d)" % [hp, p2.health])
-	check(f.projectiles.is_empty(), "no projectile came out of the throw")
+	# Ulises has a ball lying in the arena, so this means "nothing was *fired*".
+	var fired := f.projectiles.filter(func(p: Projectile) -> bool: return not p.persistent)
+	check(fired.is_empty(), "no projectile came out of the throw")
 
 	# Far away, the very same input is still the projectile special.
 	_run(f, 120)
@@ -396,6 +414,104 @@ func _test_combo(id: String) -> void:
 	check(jumped, "UP after launcher does a super jump")
 	check(max_combo >= 3, "ground chain combos (max combo %d)" % max_combo)
 	print("       air combo reached %d hits, health left %d" % [max_combo, p2.health])
+	f.free()
+
+
+## Ulises' signature mechanic: a real ball on the floor, and the fact that it
+## decides which special he gets. This is the pilot for per-character mechanics,
+## so it also proves the hooks in `CharacterDef` actually fire.
+func _test_ulises_ball() -> void:
+	print("[ulises ball]")
+	var f := _new_fight("ulises", "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	var d: UlisesDef = p1.def as UlisesDef
+	check(d != null and d.ball != null, "Ulises brings a ball to the round")
+	var ball: Projectile = d.ball
+	check(ball != null and ball.persistent and ball.recoverable, "the ball is a persistent, kickable object")
+
+	# He starts on the ball, so L+H is the drive and FWD+L+H is the tackle.
+	check(d.has_ball(p1), "he starts in possession")
+	check(d.choose_move("proj", p1) == "proj", "in possession L+H is Power Shot")
+	check(d.choose_move("rush", p1) == "tackle", "in possession FWD+L+H is a tackle")
+
+	# Power Shot kicks the ball into play instead of firing a fireball.
+	var kick_x := ball.position.x
+	_script(p1, [[LI | HE, 2], [0, 60]])
+	var seen := _watch_move(f, p1, 40)
+	check(seen.has("power shot"), "L+H with the ball does Power Shot (%s)" % str(seen))
+	check(not ball.rested, "Power Shot sets the ball rolling")
+	check(absf(ball.position.x - kick_x) > 20.0, "the ball travels away from him")
+	check(not d.has_ball(p1), "he is out of possession once it is rolling")
+
+	# Out of possession the same input is a worse move, and the rush is not a tackle.
+	check(d.choose_move("proj", p1) == "slide", "out of possession L+H is a Slide Kick")
+	check(d.choose_move("rush", p1) == "rush", "out of possession FWD+L+H is a plain dash")
+
+	# It rolls to a stop rather than vanishing, and a stopped ball does not hurt.
+	_run(f, 140)
+	check(ball.rested, "the ball comes to rest on the floor")
+	check(ball.can_hit() == false, "a ball at rest is not a hitbox (no static damage trap)")
+	var hp := p2.health
+	p2.position = Vector2(ball.position.x, Fighter.GROUND_Y)
+	_run(f, 30)
+	check(p2.health == hp, "standing on a resting ball does no damage")
+
+	# The opponent's own moveset is untouched by any of this, and their sweep is
+	# the universal answer: a boot takes the ball off him.
+	check(p2.def.choose_move("proj", p2) == "proj", "the opponent's L+H is unaffected by the ball")
+	_script(p2, [[D, 2], [D | HE, 2], [0, 60]])
+	_run(f, 14)
+	check(not ball.rested, "the opponent's sweep kicks the loose ball")
+	# Walk Ulises back onto the ball: he re-possesses it with no extra input.
+	_run(f, 90)
+	p1.position = Vector2(ball.position.x - p1.facing * 8.0, Fighter.GROUND_Y)
+	_run(f, 20)
+	check(d.has_ball(p1), "walking over the ball re-possesses it")
+	check(d.choose_move("proj", p1) == "proj", "and L+H is Power Shot again")
+
+	# A punch at chest height leaves the ball alone, so combos are never broken
+	# by losing it. Only a boot takes it.
+	_script(p1, [[LI, 2], [0, 40]])
+	_run(f, 20)
+	check(d.has_ball(p1), "a light punch does not cost him the ball")
+	_script(p1, [[D, 2], [D | HE, 2], [0, 40]])
+	_run(f, 20)
+	check(not d.has_ball(p1), "his own sweep does boot it away")
+	f.free()
+
+
+## The hyper beam is a wider hitbox when he brought the ball to the fight.
+func _test_ulises_ball_hyper() -> void:
+	print("[ulises ball: hyper]")
+	var f := _new_fight("ulises", "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var d: UlisesDef = p1.def as UlisesDef
+	var back := Lf if p1.facing > 0 else R
+	# Out of possession first.
+	p1.meter = 100.0
+	var ball := d.ball
+	if ball != null:
+		ball.launch(-p1.facing, 6.5)
+		_run(f, 140)
+	# A hyper freezes the world for Fight.HYPER_FREEZE frames before `sf` moves
+	# on, so watching for less than that never reaches the startup frame.
+	_script(p1, [[back, 3], [back | LI | HE, 2], [0, 90]])
+	_watch_move(f, p1, 140)
+	var plain := p1.def.moves["hyper"].projectile["size"] as Vector2
+	check(plain == UlisesDef.HYPER_SIZE, "the hyper beam is its normal size with no ball")
+	# Now with the ball back at his feet.
+	_run(f, 200)
+	p1.position = Vector2(ball.position.x - p1.facing * 8.0, Fighter.GROUND_Y)
+	_run(f, 20)
+	check(d.has_ball(p1), "he is back on the ball")
+	p1.meter = 100.0
+	_script(p1, [[back, 3], [back | LI | HE, 2], [0, 90]])
+	_watch_move(f, p1, 140)
+	var big := p1.def.moves["hyper"].projectile["size"] as Vector2
+	check(big == UlisesDef.HYPER_SIZE_BALL, "the hyper beam is wider with the ball")
 	f.free()
 
 

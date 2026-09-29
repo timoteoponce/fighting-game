@@ -83,6 +83,39 @@ func throw_data() -> MoveData:
 	return _throw
 
 
+# --- Behaviour hooks -------------------------------------------------------------
+# These are what let a character own a *rule* instead of a number. They are all
+# no-ops here, so a fighter that does not use them behaves exactly as before and
+# `characters/<id>.gd` still holds the whole mechanic — see
+# design/characters_redesign.md.
+
+## Called from `Fighter.step()` once per physics frame, after the state machine
+## has run. This is where a character keeps its own state: Ulises' ball is
+## dribbled, re-possessed and launched from here.
+func tick(_f: Fighter) -> void:
+	pass
+
+
+## Called from `Fighter.reset_for_round()`, before the round intro. A character
+## that owns objects in the arena (Ulises' ball) puts them in the world here.
+func on_round_start(_f: Fighter) -> void:
+	pass
+
+
+## Called from `Fighter._attack_step()` on every frame of an attack, just
+## before a projectile of that move would spawn. Lets a character do timed
+## things: Ulises kicks the ball on the first active frame.
+func on_move_frame(_f: Fighter, _m: MoveData, _sf: int) -> void:
+	pass
+
+
+## Which move actually comes out of `key` for this fighter *right now*. The
+## default returns `key` unchanged, so nobody else is affected. Characters
+## override it to swap in a worse alternative when they are not set up.
+func choose_move(key: String, _f: Fighter) -> String:
+	return key
+
+
 # Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points.
 
 ## Called once per animation step to advance hair / cape chains (see FighterRenderer.chain).

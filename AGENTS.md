@@ -31,8 +31,9 @@ godot --path . -- --screen=select                               # jump straight 
   --full-meter`. Screens: `title select fight setup howto`. The player-facing
   list is the README's "For developers" section.
 - **No linter, formatter, typecheck or CI exists.** The test run *is* the verification step.
-- `F1` toggles hitbox / frame-data / input overlay during a fight. Read-only; great for
-  tuning frame data.
+- `F1` toggles the debug overlay during a fight: each fighter's hurtbox (green
+  outline), hitbox (filled red) and a `STATE f<frame> <move id>` label. It does
+  **not** show inputs or full frame data. Read-only; great for tuning frame data.
 
 ## Architecture (the parts filenames don't tell you)
 
@@ -59,8 +60,8 @@ godot --path . -- --screen=select                               # jump straight 
   follow `renderer.gaze`, which `Fighter._update_visual` points at the opponent. Hits,
   blocks and dust are ink in `Effects._draw`. The additive `glow` child is only a small
   halo, because `shaders/post_fx.gdshader` blooms anything above luminance 0.90, and a
-  hyper is a short burst. Menu portraits, and the unused `scripts/fight/painted_fighter.gd`
-  slideshow, are not the in-match body.
+  hyper is a short burst. Menu portraits come from `art/portraits/<id>.png`
+  (`scripts/ui/portrait.gd`); they are painted, and they are not the in-match body.
 - **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
   `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
   `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and
@@ -90,7 +91,8 @@ godot --path . -- --screen=select                               # jump straight 
   (body scale) does *not* rescale hitboxes automatically: the character must call
   `scale_moves()` at the end of `_init()` whenever `size != 1.0`.
 - `MoveData.level` (0 light / 1 heavy / 2 special / 3 hyper) drives cancels in
-  `Fighter._can_start`, the SFX and the voice line. Higher cancels lower; lights chain up to 3.
+  `Fighter._can_start`, the SFX and the voice line. Higher cancels lower; a chain of
+  lights reaches four in a row (`chain < 4`).
 - **Adding a character is one file.** Copy `characters/_template.gd`, rename the
   `class_name`, set `id`, drop the leading `_` from the filename. `GameState._scan_characters`
   finds it; there is **no list, no match statement and no audio table to edit**. Files
@@ -98,6 +100,28 @@ godot --path . -- --screen=select                               # jump straight 
   `roster_order` sets select-screen position, `voice_pitch` (Hz, on `CharacterDef`) is all
   the synthesized shouts need. `tests/sim_test.gd:_test_character_def` validates every
   registered fighter, so a half-finished one fails with a clear message.
+- **A character can own a rule, not just a number.** `CharacterDef` has five
+  behaviour hooks besides the drawing ones, all no-ops so nobody else is affected:
+  `tick(f)` (once per step, after the state machine), `on_round_start(f)` (from
+  `Fighter.reset_for_round`), `on_move_frame(f, m, sf)` (every attack frame, *just
+  before the move's projectile spawns*, so a move can be re-scaled on the way out),
+  `choose_move(key, f)` (swap in a variant of an input — this is how Ulises gets a
+  Slide Kick with no ball), and `throw_data()`. The ten-key contract still holds:
+  `choose_move` may only return keys the character actually defines. Design doc:
+  `design/characters_redesign.md`.
+- **Ulises' ball is the reference mechanic.** It is a `Projectile` with the
+  `persistent` lifecycle: it outlives its `life`, sheds speed in `_roll()`, and
+  `rest()` leaves it on the floor. It opts out of the "one projectile in flight"
+  slot with `"slot": false`, and of every other character's clash rules. Possession
+  is *derived* (`absf(ball.x - f.x) <= BALL_PICKUP` while `rested`), never a flag.
+  The ball is kept inside `Fight.view_bounds()` so it can never rest somewhere
+  the camera has left behind and be unreachable for the rest of the round.
+- **A ball is booted, not punched.** `Fight._kicks(m)` decides: either the move
+  sets `"kicks": true`, or its hitbox reaches within 22px of the ground — which
+  gives every character's crouching heavy for free. So combos are never broken by
+  losing the ball, and a sweep is the universal way to steal it. A resting ball
+  has `can_hit() == false` on purpose: a static damage box on the floor is a trap,
+  not a toy.
 - **Adding a stage is one `match` branch.** `Stage.KINDS` (`scripts/fight/stage.gd`) is the
   registry — add the name there and a `_draw_<name>()` method, then add a branch in
   `Stage._draw`. `Fight._ready` picks from `Stage.KINDS` when `--stage` is empty. Every
@@ -159,6 +183,16 @@ Double-tap detection lives in `InputBuffer.double_tapped()` / `consume_tap()`. `
 
 - No framework, no test discovery, no name filter: `tests/sim_test.gd` runs every check from
   `_ready()`. To focus on one area, comment out the other calls there.
+- A hyper freezes the world for `Fight.HYPER_FREEZE` frames before the move's `sf` advances,
+  so a test that watches a hyper must run **more than ~75 frames** or it never reaches the
+  startup frame. A test that asserts on a hyper's spec can pass vacuously this way.
+- `_test_specials` resolves what a move *should* be through `def.choose_move(key, f)`
+  (`_expected`), because a character may swap in a variant of an input. A hard-coded
+  `moves["proj"].id` is wrong the moment a character has two answers for one button.
+- A fighter that owns an object in the arena puts it in `fight.projectiles`, so assertions
+  like "no projectile came out of the throw" must filter `not p.persistent`.
+- `_test_character_def` checks **every** move a character defines, not just the required ten,
+  so extra moves (Ulises' Slide Kick) are held to the same bar.
 - The harness builds a `Fight`, calls `set_physics_process(false)` / `set_process(false)` and
   steps it by hand with `f._physics_process(1.0 / 60.0)`. **Logic placed only in `_process`
   never runs under test** — put testable per-frame work in `_physics_process`.

@@ -19,6 +19,16 @@ var strength := 1
 var dir := 1
 var t := 0
 var dead := false
+## A ball instead of a shot: it keeps travelling after its life is up, slows
+## down, and comes to rest on the floor where anyone can kick or pick it up.
+var persistent := false
+## A resting persistent projectile can be booted away by any attack that touches
+## it. See `Fight._resolve_hits`.
+var recoverable := false
+var rested := false
+## How much horizontal speed a rolling projectile sheds per frame. Friction is
+## what stops it, so there is no frame cap to tune.
+const BALL_FRICTION := 0.08
 
 
 func setup(owner: Fighter, spec: Dictionary) -> void:
@@ -31,6 +41,8 @@ func setup(owner: Fighter, spec: Dictionary) -> void:
 	hits_left = spec.get("hits", 1)
 	anchored = spec.get("anchored", false)
 	strength = spec.get("strength", 1)
+	persistent = spec.get("persistent", false)
+	recoverable = spec.get("recoverable", false)
 	vel = Vector2(float(spec.get("speed", 6.0)) * dir, 0.0)
 	var hit := {
 		"damage": spec.get("damage", 60), "hitstun": spec.get("hitstun", 18), "blockstun": spec.get("blockstun", 14),
@@ -72,17 +84,68 @@ func step() -> void:
 	life -= 1
 	if anchored:
 		_follow()
+	elif persistent:
+		_roll()
 	else:
 		position += vel
 	if hit_timer > 0:
 		hit_timer -= 1
-	if life <= 0 or position.x < -150 or position.x > Fight.STAGE_W + 150:
+	if not persistent and (life <= 0 or position.x < -150 or position.x > Fight.STAGE_W + 150):
 		dead = true
 	queue_redraw()
 
 
+## A persistent projectile skims along the ground, shedding speed until it
+## stops, then sits there. It is a hazard only while it is actually moving.
+func _roll() -> void:
+	if rested:
+		return
+	position.x = clampf(position.x + vel.x, _bounds().x, _bounds().y)
+	# Resting height: a ball on the floor, not sunk into it. Plus a little bob
+	# so a rolling ball reads as bouncing rather than sliding.
+	position.y = Fighter.GROUND_Y - size.y * 0.5 - absf(sin(t * 0.4)) * 3.0
+	vel.x = move_toward(vel.x, 0.0, BALL_FRICTION)
+	if absf(vel.x) < 0.01:
+		rest()
+
+
+## A ball is played with, not scenery: it must never come to rest somewhere the
+## camera has left behind, or it would be unreachable for the rest of the round.
+func _bounds() -> Vector2:
+	if owner_f != null and is_instance_valid(owner_f) and owner_f.fight != null:
+		return owner_f.fight.view_bounds()
+	return Vector2(Fight.WALL, Fight.STAGE_W - Fight.WALL)
+
+
+## Stops the ball dead. It stays on the floor as a thing to kick or pick up, and
+## it stops being dangerous: a static damage box on the ground is a trap, not a
+## toy.
+func rest() -> void:
+	rested = true
+	vel = Vector2.ZERO
+	hits_left = 0
+	hit_timer = 0
+	position.x = clampf(position.x, _bounds().x, _bounds().y)
+	position.y = Fighter.GROUND_Y - size.y * 0.5
+
+
+## Puts a resting ball back into play. Either fighter can do this, which is what
+## makes it contested: boot it at your opponent or take it back yourself.
+func launch(new_dir: int, speed := 6.5) -> void:
+	dir = new_dir
+	scale.x = dir
+	vel = Vector2(float(speed) * dir, 0.0)
+	rested = false
+	hits_left = 1
+	hit_timer = 0
+	t = 0
+	position.y = Fighter.GROUND_Y - size.y * 0.5
+
+
 func can_hit() -> bool:
-	return not dead and hit_timer == 0 and hits_left > 0
+	if dead or rested or hit_timer != 0:
+		return false
+	return hits_left > 0
 
 
 func current_hit() -> MoveData:
@@ -92,7 +155,7 @@ func current_hit() -> MoveData:
 func register_hit() -> void:
 	hits_left -= 1
 	hit_timer = m.hit_interval
-	if hits_left <= 0 and not anchored:
+	if hits_left <= 0 and not anchored and not persistent:
 		dead = true
 
 
@@ -100,6 +163,9 @@ func register_hit() -> void:
 
 ## Additive glow behind the projectile.
 func _draw_halo(h: Node2D) -> void:
+	if rested:
+		# A ball lying on the grass is not a light source.
+		return
 	var col: Color = {"ball": Color(1, 0.8, 0.4), "spark": Color(1, 0.4, 0.85), "beam": Color(0.5, 0.8, 1.0),
 		"dragon": Color(1, 0.5, 0.9), "tears": Color(0.4, 0.7, 1.0), "bball": Color(1, 0.55, 0.2), "wolf": Color(0.55, 0.75, 1.0)}.get(kind, Color.WHITE)
 	var pulse := 1.0 + 0.15 * sin(t * 0.5)
@@ -124,9 +190,16 @@ func _draw() -> void:
 	get_child(0).queue_redraw()
 	match kind:
 		"ball":
-			for i in 4:
-				draw_circle(Vector2(-10.0 - i * 7.0, 0), 7.0 - i * 1.5, Color(1, 1, 1, 0.25 - i * 0.05))
-			draw_soccer_ball(self, Vector2.ZERO, 9.0, t * 0.35)
+			if not rested:
+				for i in 4:
+					draw_circle(Vector2(-10.0 - i * 7.0, 0), 7.0 - i * 1.5, Color(1, 1, 1, 0.25 - i * 0.05))
+			else:
+				# Contact shadow first, so the ball sits on the ground rather than
+				# on top of its own shadow.
+				draw_set_transform(Vector2(0, size.y * 0.5), 0.0, Vector2(1.0, 0.3))
+				draw_circle(Vector2.ZERO, 9.0, Color(0, 0, 0, 0.28), true, -1.0, true)
+				draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+			draw_soccer_ball(self, Vector2.ZERO, 9.0, t * 0.35 if not rested else 0.0)
 		"spark":
 			_draw_spark()
 		"beam":

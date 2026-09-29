@@ -4,7 +4,8 @@ extends Node2D
 
 const STAGE_W := 1000.0
 const ZOOM := 1.2
-## The world renders at full logical resolution (640x360) with no pixelation.
+## The world draws at full logical resolution (640x360) into a SubViewport that
+## is then upscaled to the window, so nothing is pixelated at source.
 ## PIXEL = buffer size / logical screen size.
 const PIXEL := 1.0
 const BUFFER_SIZE := Vector2i(640, 360)
@@ -12,6 +13,11 @@ const HALF_VIEW := 320.0 / ZOOM
 const BASE_CAM_Y := 342.0 - 180.0 / ZOOM  # ground sits near the bottom of the screen
 const WALL := 24.0
 const PUSH_W := 42.0
+## How hard a loose ball is booted away when an attack touches it.
+const BALL_KICK_SPEED := 6.0
+## How close a fighter has to be to a resting ball for a boot to reach it. A ball
+## on the floor is below almost every hitbox, so proximity is the real rule.
+const BALL_TOUCH := 40.0
 const ROUNDS_TO_WIN := 2
 const ROUND_FRAMES := 99 * 60
 
@@ -340,15 +346,30 @@ func on_throw(a: Fighter, d: Fighter, m: MoveData, res: String) -> void:
 		flash = 8
 
 
-func spawn_projectile(f: Fighter, spec: Dictionary) -> void:
+## Does this move boot a ball lying on the floor? Either it says so, or its
+## hitbox reaches down to the ground. A punch at chest height leaves the ball
+## where it is, so combos are never interrupted by losing it.
+func _kicks(m: MoveData) -> bool:
+	if m.kicks:
+		return true
+	return m.hitbox.size.y > 0.0 and m.hitbox.end.y >= -22.0
+
+
+func spawn_projectile(f: Fighter, spec: Dictionary) -> Projectile:
 	var p := Projectile.new()
 	p.setup(f, spec)
-	p.z_index = 2
+	p.z_index = int(spec.get("z", 2))
 	world.add_child(p)
 	projectiles.append(p)
-	if int(spec.get("level", 2)) < 3:
+	# `slot` is the "one projectile at a time" reference, so L+H cannot be spammed.
+	# An object that lives in the arena opts out.
+	if spec.get("slot", true) and int(spec.get("level", 2)) < 3:
 		f.projectile = p
-	Sfx.play(spec.get("sfx", "special"))
+	# An explicit "" opts out, for objects that are placed rather than fired.
+	var s := String(spec.get("sfx", "special"))
+	if s != "":
+		Sfx.play(s)
+	return p
 
 
 # --- Collisions ----------------------------------------------------------------
@@ -362,6 +383,22 @@ func _resolve_hits() -> void:
 		var hu := d.hurtbox_world()
 		if hb.has_area() and hu.has_area() and hb.intersects(hu):
 			events.append([a, d, a.move, hb.intersection(hu).get_center(), null])
+	# A loose ball is not a hitbox, it is a thing on the floor, and it is booted
+	# by a boot rather than punched. A move qualifies if it says so, or if its
+	# hitbox reaches the ground — which makes every character's sweep the natural
+	# way to take the ball off them. Whoever owns it, so it stays contested.
+	for p in projectiles:
+		if not p.rested or not p.recoverable:
+			continue
+		for i in 2:
+			var a := fighters[i]
+			if a.state != Fighter.S.ATTACK or a.move == null or not _kicks(a.move):
+				continue
+			if absf(a.position.x - p.position.x) > BALL_TOUCH and not a.hitbox_world().intersects(p.rect()):
+				continue
+			p.launch(a.facing, BALL_KICK_SPEED)
+			effects.spawn("dust", p.position)
+			Sfx.play("kick", 1.15)
 	for p in projectiles:
 		if not p.can_hit():
 			continue
@@ -370,12 +407,14 @@ func _resolve_hits() -> void:
 		var r := p.rect()
 		if hu.has_area() and r.has_area() and r.intersects(hu):
 			events.append([p.owner_f, d, p.current_hit(), r.intersection(hu).get_center(), p])
-	# Projectiles from different players cancel each other; hypers win.
+	# Projectiles from different players cancel each other; hypers win. A
+	# resting ball is scenery here, so it never cancels a fireball.
 	for i in projectiles.size():
 		for j in range(i + 1, projectiles.size()):
 			var a := projectiles[i]
 			var b := projectiles[j]
-			if a.dead or b.dead or a.owner_f == b.owner_f or not a.rect().intersects(b.rect()):
+			if a.dead or b.dead or a.owner_f == b.owner_f or a.persistent or b.persistent \
+					or not a.rect().intersects(b.rect()):
 				continue
 			if a.strength <= b.strength:
 				a.dead = true
@@ -460,6 +499,14 @@ func _taunt(f: Fighter) -> void:
 	f.renderer.emote("note", 50)
 
 
+## The horizontal window the camera keeps the fighters in. Anything that has to
+## stay reachable and on screen — including a ball lying on the floor — is kept
+## inside it.
+func view_bounds() -> Vector2:
+	var cam := clampf((fighters[0].position.x + fighters[1].position.x) * 0.5, HALF_VIEW, STAGE_W - HALF_VIEW)
+	return Vector2(maxf(WALL, cam - HALF_VIEW + WALL), minf(STAGE_W - WALL, cam + HALF_VIEW - WALL))
+
+
 func _resolve_bounds() -> void:
 	var a := fighters[0]
 	var b := fighters[1]
@@ -480,9 +527,10 @@ func _resolve_bounds() -> void:
 				# Someone is cornered: move whoever is further from the wall.
 				var mover := b if absf(b.position.x - STAGE_W * 0.5) < absf(a.position.x - STAGE_W * 0.5) else a
 				mover.position.x += push * (s if mover == b else -s)
-		var cam := clampf((a.position.x + b.position.x) * 0.5, HALF_VIEW, STAGE_W - HALF_VIEW)
+		# Recomputed each pass, because a push can change where the camera sits.
+		var vb := view_bounds()
 		for f in fighters:
-			f.position.x = clampf(f.position.x, maxf(WALL, cam - HALF_VIEW + WALL), minf(STAGE_W - WALL, cam + HALF_VIEW - WALL))
+			f.position.x = clampf(f.position.x, vb.x, vb.y)
 
 
 func _cleanup_projectiles() -> void:

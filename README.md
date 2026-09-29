@@ -13,7 +13,10 @@ Six stages, picked at random each match: a soccer stadium at dusk, a magic
 library hall, a rooftop at night, a dojo at sunset, a beach at sunset and a
 snowy park.
 
-- **Ulises**: soccer, running, reading and video games. Fast, with a soccer-ball shot and a pixel-beam hyper.
+- **Ulises**: soccer, running, reading and video games. Fast, and he plays with a
+  real ball that rolls around the stage — with it at his feet he is quicker and
+  hits harder, without it he is a much poorer fighter. His hyper is a game-over
+  beam, and he throws the controller into it.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
 - **Charlie**: basketball and crying. A skinny kid with a huge bald head and a nasty grin — slow, long reach, and the hardest single hits on the roster.
 - **Silvan**: two years old, in pants and little boots, and somehow part puppy. Fastest walk and highest jump, weakest hits.
@@ -49,10 +52,26 @@ cd PJsClash
 
 | Input | Ulises | Emilia | Charlie | Silvan |
 |---|---|---|---|---|
-| L + H | Power Shot (soccer ball) | Wand Spark | Chest Pass | Bark Blast |
-| Forward + L + H | Sprint Dash | Cartwheel Rush | Fast Break | Puppy Dash |
+| L + H | Power Shot, or **Slide Kick** with no ball | Wand Spark | Chest Pass | Bark Blast |
+| Forward + L + H | Driving Tackle, or **Sprint Dash** with no ball | Cartwheel Rush | Fast Break | Puppy Dash |
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
 | Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | CRYBABY FLOOD | MOON HOWL |
+
+### The ball (Ulises)
+
+Ulises starts every round with a ball at his feet, and he is only at his best
+while he has it:
+
+- **With the ball**: `L + H` is a driven Power Shot, `Forward + L + H` is a
+  carrying tackle, and his hyper beam is wider.
+- **Without it**: the same inputs give a short Slide Kick and a plain dash, and
+  the beam is back to normal — but the ball can come back to him.
+- Power Shot does not fire the ball into thin air and leave. It rolls along the
+  ground, can hit once, and then comes to a stop, where **anyone** can boot it
+  away. A crouching heavy (the sweep) is a boot, so a sweep is how you take the
+  ball off him; a standing punch leaves it where it is.
+- **Walking over a resting ball picks it up again** — no extra button. It is his
+  ball, so it never hurts him.
 
 **Throw:** L + H while *touching* a grounded opponent grabs them instead of
 firing the projectile. The victim can break it by pressing L + H back within
@@ -97,9 +116,9 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 - Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
 - Jump to one screen: `godot --path . -- --screen=select` (`title`, `select`, `fight`, `setup`, `howto`). `--full-meter` starts the hyper bar full.
-- Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a 60-match CPU win/damage report)
+- Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
-- F1 during a fight shows hitboxes and inputs.
+- F1 during a fight shows the hitboxes, the hurtboxes and a readout of each fighter's state and frame count.
 
 Code map:
 
@@ -213,3 +232,33 @@ Graphics uplift pass — making the game look and feel like a real release.
   a short burst. Blocks are an outlined blue shard. Dust is a few soft clumps
   with an edge. The additive glow is only a small halo, and the bloom threshold
   stays at 0.90 so it does not fog the eyes.
+
+### After the graphics pass
+
+- **Renamed to PJ's Clash.** The game was *Ulises vs Emilia: Ultimate Friends
+  Showdown*; it is now *PJ's Clash*, which is also the build name, the window
+  title, the windowed/fullscreen toggle and the `user://` save folder
+  (`PJ's Clash/controls.cfg`). The old `build/UlisesVsEmilia*` tarball is
+  obsolete — rebuild with `./build_linux.sh`.
+- **Auto-chaining combos.** You no longer have to cancel by hand: a connecting
+  light chains into another light (up to four in a row), and a connecting heavy
+  or special chains into anything stronger. The super combo is
+  **L, L, H → hold Up to super jump → L, L, H in the air**, and you can cancel
+  a normal straight into a special with **L** then **L + H**.
+- **Hit-effects overhaul.** Inked white-core hits with knockback-directed
+  spikes, a combo counter on the HUD that pops and heats up with the count, a
+  full-screen impact frame and shake on heavy connects, and the dropped-junk gag
+  items that fly out of whoever you land a big hit on.
+- **Victory celebration.** The winner gets their own win pose, expression and
+  breathing animation, a burst of confetti in their colours, their `win_quote`
+  in a speech bubble, a line they shout, and the camera pushes in on them while
+  the loser stays down. The KO camera punches in on the loser first.
+- **Four new stages**, bringing the roster of arenas to six: rooftop, dojo,
+  beach and snow (alongside the original field and library).
+- **Full-resolution graphics and no sprites.** Fighters, stages and the HUD are
+  all drawn in code at 640x360 and upscaled to the window, so a body can move
+  every frame; the painted portraits in `art/portraits/` are the only images in
+  a match's menus.
+- **Synthesized music.** A mellow track for the menus, a driving one for the
+  fight and a short win fanfare, all generated in code — or drop your own files
+  in `music/`.

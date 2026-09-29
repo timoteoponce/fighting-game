@@ -113,6 +113,9 @@ func reset_for_round(x: float, face: int) -> void:
 	for g in ghosts:
 		g.visible = false
 	buf.clear()
+	# The character's own hook, so anything it owns in the arena exists before
+	# the round intro runs (Ulises puts his ball down here).
+	def.on_round_start(self)
 	_update_visual()
 
 
@@ -192,6 +195,9 @@ func step() -> void:
 			_ko_step()
 		S.INTRO, S.WIN:
 			_idle_physics()
+	# The character's own per-frame logic, after the state machine has run so it
+	# sees the state it is reacting to. No-op unless the character overrides it.
+	def.tick(self)
 	_update_visual()
 
 
@@ -521,7 +527,7 @@ func _try_normal() -> bool:
 		key = "jL" if air else ("cL" if crouching else "L")
 	else:
 		return false
-	var m: MoveData = def.moves[key]
+	var m: MoveData = def.moves[def.choose_move(key, self)]
 	if not _can_start(m):
 		return false
 	buf.consume(bit)
@@ -540,6 +546,9 @@ func _try_special() -> bool:
 		key = "rush"
 	elif h & _back() and meter >= HYPER_COST:
 		key = "hyper"
+	# The character gets to swap in a worse alternative of the same input when
+	# it is not set up: Ulises' L+H is a Slide Kick with no ball to his feet.
+	key = def.choose_move(key, self)
 	if key == "proj" and is_instance_valid(projectile) and not projectile.dead:
 		return false
 	var m: MoveData = def.moves[key]
@@ -609,6 +618,9 @@ func _attack_step() -> void:
 	if dashing:
 		vel.x = m.dash_speed * facing
 	_fire_events(sf)
+	# The character gets a look at this frame before its projectile is built, so
+	# a move can be re-scaled on the way out (Ulises' hyper grows with the ball).
+	def.on_move_frame(self, m, sf)
 	if not m.projectile.is_empty() and sf == m.startup:
 		fight.spawn_projectile(self, m.projectile)
 	var airborne := position.y < GROUND_Y - 0.01 or vel.y < 0.0
