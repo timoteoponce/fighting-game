@@ -250,16 +250,25 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	var top: Vector2 = hip + up * FighterRenderer.TORSO
 	var acc: Color = r.colors["accent"]
 	var white: Color = r.colors["white"]
+	# Chest shading down the back half, so the jersey is not one flat blue mass.
+	r.draw_colored_polygon(PackedVector2Array([
+		hip - perp * 5.2 + up * 2.0, hip - perp * 6.0 + up * 14.0,
+		hip - perp * 4.6 + up * 24.0, top - perp * 3.2 - up * 1.0,
+	]), r.colors["shirt"].darkened(0.13))
+	# Shoulder yoke: a seam across the top of the chest, the detail that makes
+	# the kit read as a made garment rather than a painted tube.
+	r.draw_line(top + perp * 5.2 - up * 1.2, top - perp * 4.2 - up * 1.2, r.colors["shirt"].darkened(0.22), 1.3, true)
 	# White V-neck: skin inside, white trim on the two edges. The painting has a
 	# V, not a collar band, and no side stripe down the body.
 	var v := top + perp * 0.8 - up * 5.0
-	r.draw_colored_polygon(PackedVector2Array([top + perp * 4.2 - up * 0.5, top - perp * 3.2 - up * 0.5, v]), r.colors["skin"])
-	r.draw_line(top + perp * 4.2 - up * 0.2, v, white, 1.4, true)
-	r.draw_line(top - perp * 3.2 - up * 0.2, v, white, 1.4, true)
-	r.draw_line(hip + perp * 7.0 + up * 1.5, hip - perp * 7.0 + up * 1.5, acc.darkened(0.2), 1.4, true)
+	r.draw_colored_polygon(PackedVector2Array([top + perp * 4.6 - up * 0.5, top - perp * 3.4 - up * 0.5, v]), r.colors["skin"])
+	r.draw_line(top + perp * 4.6 - up * 0.2, v, white, 1.4, true)
+	r.draw_line(top - perp * 3.4 - up * 0.2, v, white, 1.4, true)
+	# Hem, hanging a little loose below the waist.
+	r.draw_line(hip + perp * 5.6 + up * 1.5, hip - perp * 5.2 + up * 1.5, r.colors["shirt"].darkened(0.28), 1.5, true)
 	# Slight belly curve, not a balloon. The painting has a round stomach.
-	var belly := hip + up * 9.0 + perp * 4.5
-	r.poly(FighterRenderer.ellipse_pts(belly, 6.0, 4.0, atan2(perp.y, perp.x)), r.colors["shirt"], 1.2)
+	var belly := hip + up * 8.0 + perp * 4.8
+	r.poly(FighterRenderer.ellipse_pts(belly, 5.6, 3.8, atan2(perp.y, perp.x)), r.colors["shirt"], 1.2)
 	# Number 10, clean and readable.
 	var num: Vector2 = hip + up * 17.0 + perp * 1.0
 	r.draw_set_transform(num, atan2(up.x, -up.y), Vector2(signf(r.scale.x) * 0.5, 0.5))
@@ -270,6 +279,22 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 		var sb: Vector2 = s["hip_b"].lerp(s["knee_b"], 0.62)
 		_short(r, s["hip_b"], sb, true)
 		_shoulder(r, s["sh_b"], s["elb_b"])
+		_cuff(r, s["sh_b"], s["elb_b"])
+
+
+## His own jersey, in torso space: `up` is shoulder-ward, `perp` is forward
+## (the belly side, since the fighter faces +x). Shoulders wider than the waist,
+## chest fuller than the back, and a hem that hangs slightly loose.
+func torso_outline(_r: FighterRenderer, s: Dictionary) -> PackedVector2Array:
+	var up: Vector2 = s["up"]
+	var perp: Vector2 = s["perp"]
+	var hip: Vector2 = s["hip"]
+	var b := build
+	var pts := PackedVector2Array()
+	for f in [[0.0, 5.8], [0.30, 6.4], [0.62, 7.6], [0.85, 9.2], [1.0, 6.4],
+			[1.0, -6.0], [0.86, -8.4], [0.58, -6.6], [0.0, -5.4]]:
+		pts.append(hip + up * FighterRenderer.TORSO * float(f[0]) + perp * float(f[1]) * b)
+	return pts
 
 
 ## Green shoulder flash, the band the painting has over each shoulder. Drawn as
@@ -282,6 +307,20 @@ func _shoulder(r: FighterRenderer, sh: Vector2, elb: Vector2) -> void:
 	var n := Vector2(-u.y, u.x)
 	var p := sh + u * 3.4
 	r.draw_line(p - n * 3.2, p + n * 3.2, r.colors["accent"], 2.2, true)
+
+
+## White sleeve cuff at the end of the short sleeve. The shared `_sleeve` is
+## drawn by the renderer before `draw_props`, so this sits on top of it.
+func _cuff(r: FighterRenderer, sh: Vector2, elb: Vector2) -> void:
+	var d := elb - sh
+	if d.length() < 2.0:
+		return
+	var u := d.normalized()
+	var n := Vector2(-u.y, u.x)
+	var w := 7.2 * build
+	var p := sh + u * (w * 0.42)
+	var white: Color = r.colors["white"]
+	r.draw_line(p - n * (w * 0.48), p + n * (w * 0.48), white, 1.8, true)
 
 
 ## One short: a fitted tube over the hip with the green side stripe the painting
@@ -317,59 +356,129 @@ func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
 	var perp: Vector2 = s["perp"]
 	# Waistband, sitting on the hip rather than a second pair of thighs.
 	r.limb(s["hip"] - perp * 6.0 + up * 2.0, s["hip"] + perp * 6.0 + up * 2.0, 4.5, 4.5, r.colors["shorts"].darkened(0.08))
-	# Socks are solid blue in the painting, with bare knee between short and
-	# sock, so there is no cuff to draw here.
+	# Socks are solid blue in the painting, with a bare knee between short and
+	# sock, so there is no white cuff. A darker turnover at the top of each sock
+	# is the one detail that stops them reading as painted tubes.
+	for leg in [["knee_f", "foot_f"], ["knee_b", "foot_b"]]:
+		var knee: Vector2 = s[leg[0]]
+		var foot: Vector2 = s[leg[1]]
+		var d: Vector2 = foot - knee
+		if d.length() < 1.0:
+			continue
+		var n := Vector2(-d.y, d.x).normalized()
+		var a: Vector2 = knee + d.normalized() * 4.5
+		r.draw_line(a - n * 3.4, a + n * 3.4, r.colors["legs"].darkened(0.22), 1.6, true)
 	_cleat(r, s["foot_f"], s["foot_dir_f"])
 	_cleat(r, s["foot_b"], s["foot_dir_b"])
 
 
 func draw_face(r: FighterRenderer) -> void:
-	draw_ear(r)
-	_stylized_eyes(r)
-	_stylized_brows(r)
-	_stylized_mouth(r)
+	_ear(r)
+	_jaw(r)
+	_eyes(r)
+	_brows(r)
+	_nose(r)
+	_mouth(r)
 
 
+## A warm shadow tone. `FighterRenderer.shade` lerps toward a purple, which on
+## warm skin reads as grey and looks like a scar at this size. This is the same
+## value, just on the skin's own hue.
+func _warm_shade(col: Color, amount := 0.22) -> Color:
+	return col.darkened(amount).lerp(Color(0.42, 0.22, 0.26), 0.10)
+
+
+## Cheekbone and the shadow under the jaw, as two soft warm shapes. Anything
+## stronger than this on a head 20 units wide reads as a hollow rather than
+## as form.
+func _jaw(r: FighterRenderer) -> void:
+	var skin: Color = r.colors["skin"]
+	r.draw_colored_polygon(PackedVector2Array([
+		Vector2(-3.4, 3.2), Vector2(-1.2, 7.4), Vector2(1.0, 8.2), Vector2(-0.6, 6.0), Vector2(-2.2, 3.6),
+	]), _warm_shade(skin, 0.13))
+
+
+## The ear on the back edge of the cheek, below the hairline and in front of the
+## hair mass, so it reads as an ear rather than a patch on the temple. Drawn
+## first, so the head fill and the hair tidy its front edge.
+func _ear(r: FighterRenderer) -> void:
+	var skin: Color = r.colors["skin"]
+	var c := Vector2(-7.6, 1.8)
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(c, 1.5, 2.4, -0.2, 12), skin)
+	r.draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(c, 1.5, 2.4, -0.2, 12)), FighterRenderer.OUT, 0.85, true)
+	r.draw_arc(c + Vector2(0.5, 0.0), 0.95, 0.3, PI - 0.35, 8, _warm_shade(skin, 0.2), 0.6, true)
+
+
+## His own head, in head space, nose to the right. The shared head is a circle
+## with a chin blob stuck on; this is a real skull: brow, cheekbone, jaw angle
+## and a chin that comes to a soft point. Keep it convex-ish and smooth — a
+## self-intersecting outline gets replaced by its convex hull in `safe()`.
+## Vertical layout: hairline -11, brow -4.6, eye 0.4, nose 3.6, mouth 6.4.
+func head_outline() -> PackedVector2Array:
+	return PackedVector2Array([
+		Vector2(-3.2, -12.6), Vector2(2.6, -12.0), Vector2(7.2, -9.2), Vector2(10.0, -4.8),
+		Vector2(10.6, 0.4), Vector2(9.2, 4.6), Vector2(6.6, 7.6), Vector2(2.8, 9.6),
+		Vector2(-0.6, 10.0), Vector2(-4.0, 8.6), Vector2(-6.8, 5.6), Vector2(-9.2, 1.2),
+		Vector2(-10.2, -3.6), Vector2(-8.6, -8.6), Vector2(-6.0, -11.8),
+	])
+
+
+## The back of the skull, drawn before the head fill. A separate mass so the
+## face outline stays clean where the two meet.
 func draw_hair_back(r: FighterRenderer) -> void:
-	r.shaded_poly(PackedVector2Array([Vector2(-10, 5), Vector2(-14, 0), Vector2(-12, -8), Vector2(-4, -14), Vector2(0, -4)]), r.colors["hair"], 1.8, 0.7)
+	r.shaded_poly(PackedVector2Array([
+		Vector2(-9.4, 2.0), Vector2(-12.4, -2.4), Vector2(-11.6, -8.0), Vector2(-6.0, -11.4),
+		Vector2(-1.0, -6.0), Vector2(-3.0, 1.0),
+	]), r.colors["hair"], 1.8, 0.7)
 
 
 func draw_hair_front(r: FighterRenderer) -> void:
 	var hc: Color = r.colors["hair"]
-	# A cap that follows the skull, kept flat so a self-intersecting polygon
+	# A cap that follows his new skull, kept flat so a self-intersecting polygon
 	# cannot be replaced by its convex hull and turn the whole hair into a blob.
+	# It stops at the hairline so it never sits on the brows.
 	r.shaded_poly(PackedVector2Array([
-		Vector2(-9, 5), Vector2(-13, 1), Vector2(-10, -3), Vector2(-14, -8), Vector2(-8, -12),
-		Vector2(-3, -14), Vector2(2, -13), Vector2(7, -10), Vector2(10, -6), Vector2(11, -2),
-		Vector2(8, -1), Vector2(3, -3), Vector2(-2, -4), Vector2(-6, -2), Vector2(-8, 2),
+		Vector2(-8.2, -1.4), Vector2(-10.4, -5.4), Vector2(-8.8, -9.4), Vector2(-4.6, -12.4),
+		Vector2(0.6, -13.0), Vector2(5.6, -11.2), Vector2(9.0, -7.4), Vector2(10.0, -3.0),
+		Vector2(7.0, -3.6), Vector2(3.0, -6.4), Vector2(-2.0, -6.8), Vector2(-6.0, -4.6),
 	]), hc, 1.8, 0.8)
 	# The painting's spikes, each its own triangle so one spike cannot collapse
-	# the rest of the hair.
+	# the rest of the hair. Bigger and more layered than a plain cap.
 	for tuft in [
-		[Vector2(-5, -9), Vector2(-2.5, -16), Vector2(0, -9)],
-		[Vector2(0.5, -9), Vector2(3.5, -17), Vector2(6, -8.5)],
-		[Vector2(-8, -6), Vector2(-11, -12), Vector2(-5, -8)],
-		[Vector2(5, -7), Vector2(9, -13), Vector2(8, -5)],
+		[Vector2(-5.4, -9.6), Vector2(-3.0, -17.0), Vector2(0.2, -10.0)],
+		[Vector2(0.4, -10.2), Vector2(3.8, -18.4), Vector2(6.6, -9.4)],
+		[Vector2(-8.6, -6.6), Vector2(-12.6, -13.0), Vector2(-5.4, -8.6)],
+		[Vector2(5.4, -7.6), Vector2(10.2, -13.6), Vector2(9.0, -5.2)],
+		[Vector2(-1.8, -11.2), Vector2(0.6, -20.0), Vector2(3.0, -11.6)],
 	]:
 		r.shaded_poly(PackedVector2Array(tuft), hc, 1.0, 0.8)
-	for st in [[Vector2(-5, -10), Vector2(-1, -13)], [Vector2(1, -11), Vector2(5, -12)], [Vector2(-9, -6), Vector2(-4, -8)]]:
-		r.draw_line(st[0], st[1], FighterRenderer.hl(hc), 1.0, true)
+	# One highlight band across the front of the cap, which is what makes hair
+	# look like hair and not a black helmet.
+	for st in [[Vector2(-5.6, -8.4), Vector2(-0.6, -10.2)], [Vector2(0.8, -10.0), Vector2(5.0, -8.6)]]:
+		r.draw_line(st[0], st[1], FighterRenderer.hl(hc), 1.1, true)
 	# Headband. The knot stays at the chain anchor, or the tails detach.
 	var band: Color = r.colors["band"]
-	r.shaded_poly(PackedVector2Array([Vector2(-10, -7.5), Vector2(-2, -9), Vector2(10, -8), Vector2(10, -5.5),
-		Vector2(-1.5, -6.5), Vector2(-9.5, -4.5)]), band, 1.4, 0.75)
+	r.shaded_poly(PackedVector2Array([Vector2(-10.4, -7.0), Vector2(-2, -8.6), Vector2(9.8, -7.6), Vector2(9.8, -5.0),
+		Vector2(-1.5, -6.0), Vector2(-9.8, -4.4)]), band, 1.4, 0.75)
 	r.ball(Vector2(-10.5, -6.5), 2.0, band)
 
 
-func _stylized_eyes(r: FighterRenderer) -> void:
-	var spots: Array[Vector2] = [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
+## Eye centres in head space, nose to the right. The nose-side eye sits further
+## right and slightly smaller, so the face has a 3/4 turn rather than staring
+## straight out. `eye_spots` is the shared lookup; the HUD cut-in reads it.
+func eye_spots() -> Array:
+	return [Vector2(3.6, 0.4), Vector2(8.6, 0.1)]
+
+
+func _eyes(r: FighterRenderer) -> void:
+	var spots: Array[Vector2] = [Vector2(3.6, 0.4), Vector2(8.6, 0.1)]
 	var g := r.gaze.limit_length(1.0)
 	var sclera: Color = r.colors["white"]
 	for i in 2:
 		var e: Vector2 = spots[i]
-		var near := 0.85 if i == 1 else 1.0
+		var near := 0.82 if i == 1 else 1.0
 		# Almond shape: wider than tall, with a slight upward tilt at the outer corner.
-		var white := FighterRenderer.ellipse_pts(e, 3.2 * near, 2.6 * near, 0.0, 12)
+		var white := FighterRenderer.ellipse_pts(e, 3.0 * near, 2.5 * near, 0.0, 12)
 		r.draw_colored_polygon(white, sclera)
 		r.draw_polyline(Stage._closed(white), FighterRenderer.OUT, 1.0, true)
 		# A soft shade under the lid. Without it the sclera is one flat pale
@@ -379,33 +488,40 @@ func _stylized_eyes(r: FighterRenderer) -> void:
 		var lid := PackedVector2Array()
 		for k in 5:
 			var t := float(k) / 4.0
-			lid.append(e + Vector2(lerpf(-3.2 * near, 3.2 * near, t), -2.6 * near * sin(t * PI)))
-		r.draw_colored_polygon(lid, FighterRenderer.shade(sclera).lerp(sclera, 0.55))
-		# Iris and pupil.
+			lid.append(e + Vector2(lerpf(-3.0 * near, 3.0 * near, t), -2.5 * near * sin(t * PI)))
+		r.draw_colored_polygon(lid, _warm_shade(sclera, 0.16))
+		# Iris, then a darker cap under the lid, then the pupil. The cap is what
+		# makes an eye look set into a socket instead of stuck on the surface.
 		var ic := e + g * 0.5
-		r.draw_circle(ic, 1.6 * near, r.colors["eyes"])
-		r.draw_circle(ic + g * 0.3, 0.8 * near, FighterRenderer.OUT)
+		var ir := 1.5 * near
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(ic, ir * 0.95, ir * 0.9, 0.0, 10), r.colors["eyes"])
+		var cap := PackedVector2Array()
+		for k in 5:
+			var t := float(k) / 4.0
+			cap.append(ic + Vector2(lerpf(-ir * 0.95, ir * 0.95, t), -ir * 0.9 * sin(t * PI)))
+		r.draw_colored_polygon(cap, r.colors["eyes"].darkened(0.3))
+		r.draw_circle(ic + g * 0.28, maxf(0.42, ir * 0.42), FighterRenderer.OUT)
 		# Single catchlight. This one is meant to be bright: it is a specular
 		# dot, and a highlight that sparkles is the point.
-		r.draw_circle(ic + Vector2(-0.4, -0.4), 0.35, Color.WHITE)
-		# Upper lid line.
-		r.draw_arc(e + Vector2(0, -0.5), 3.0 * near, PI + 0.3, TAU - 0.3, 8, FighterRenderer.OUT, 0.8, true)
+		r.draw_circle(ic + Vector2(-0.4, -0.35), 0.32, Color.WHITE)
+		# Upper lid line, sitting on the shaded edge.
+		r.draw_arc(e + Vector2(0, -0.45), 2.8 * near, PI + 0.3, TAU - 0.3, 8, FighterRenderer.OUT, 0.8, true)
 
 
-func _stylized_brows(r: FighterRenderer) -> void:
-	var spots: Array[Vector2] = [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
+func _brows(r: FighterRenderer) -> void:
+	var spots: Array[Vector2] = [Vector2(3.6, 0.4), Vector2(8.6, 0.1)]
 	for i in 2:
 		var e: Vector2 = spots[i]
 		# Determined, like the painting: the inner end sits lower, so the two
 		# brows angle in toward the nose.
-		var y := -3.8
-		var inner := 1.4
+		var y := -4.0
+		var inner := 1.3
 		if r.expr == "attack" or r.expr == "smug":
 			inner += 0.8
 		elif r.expr == "hurt" or r.expr == "shock" or r.expr == "ko" or r.expr == "dizzy":
-			y -= 1.4
+			y -= 1.3
 			inner = -0.4
-		var rx := 2.5
+		var rx := 2.4
 		var a := e + Vector2(-rx, y)
 		var b := e + Vector2(rx * 0.85, y - inner)
 		if i == 1:
@@ -414,24 +530,37 @@ func _stylized_brows(r: FighterRenderer) -> void:
 		r.draw_line(a, b, FighterRenderer.OUT, 1.6, true)
 
 
-## The painting's open grin with one tooth, and the two blush strokes on the
-## cheek. `ko` and `hurt` swap the grin for a taller open mouth, `win` keeps it.
-func _stylized_mouth(r: FighterRenderer) -> void:
-	var m := Vector2(8.4, 6.8)
+## A small nose, drawn as a warm shadow on the bridge with one nostril. It sits
+## between the eyes and the mouth, well inside the cheek at x 10.6 so it cannot
+## spike out past the outline.
+func _nose(r: FighterRenderer) -> void:
+	var sh: Color = _warm_shade(r.colors["skin"], 0.2)
+	r.draw_colored_polygon(PackedVector2Array([
+		Vector2(5.8, 0.8), Vector2(7.0, 2.7), Vector2(5.4, 3.2),
+	]), sh)
+	r.draw_circle(Vector2(5.5, 3.1), 0.32, sh.darkened(0.18))
+
+
+## The painting's open grin with one tooth, and two blush strokes on the cheek.
+## `ko` and `hurt` swap the grin for a taller open mouth; the others keep it.
+## Sits under the nose, not out at the jaw line.
+func _mouth(r: FighterRenderer) -> void:
+	var m := Vector2(4.9, 6.2)
 	var ink := Color(0.45, 0.12, 0.12)
-	var blush := Color(0.85, 0.32, 0.32, 0.55)
+	var blush := Color(0.85, 0.32, 0.32, 0.5)
 	var tall := r.expr == "hurt" or r.expr == "ko"
 	r.draw_colored_polygon(PackedVector2Array([
-		m + Vector2(-2.2, -0.6), m + Vector2(2.2, -0.7),
-		m + Vector2(1.6, 2.6 if tall else 1.6), m + Vector2(-1.6, 2.5 if tall else 1.5),
+		m + Vector2(-1.7, -0.5), m + Vector2(1.7, -0.6),
+		m + Vector2(1.2, 2.0 if tall else 1.2), m + Vector2(-1.2, 1.9 if tall else 1.1),
 	]), ink)
 	if not tall:
 		# The one tooth, on the off-white so it does not bloom.
 		r.draw_colored_polygon(PackedVector2Array([
-			m + Vector2(-0.7, -0.5), m + Vector2(0.6, -0.55), m + Vector2(0.35, 0.45), m + Vector2(-0.45, 0.4),
+			m + Vector2(-0.6, -0.45), m + Vector2(0.5, -0.5), m + Vector2(0.3, 0.35), m + Vector2(-0.4, 0.3),
 		]), r.colors["white"])
-	r.draw_line(Vector2(1.4, 5.2), Vector2(3.2, 6.0), blush, 1.0, true)
-	r.draw_line(Vector2(2.0, 6.3), Vector2(3.6, 7.0), blush, 1.0, true)
+	# Blush on the cheek, clear of the jaw shadow and below the eye.
+	r.draw_line(Vector2(1.6, 3.4), Vector2(3.0, 4.1), blush, 0.95, true)
+	r.draw_line(Vector2(2.1, 4.4), Vector2(3.4, 5.0), blush, 0.95, true)
 
 
 ## The victory sign, on the front hand only. The win pose raises the front arm,
@@ -443,7 +572,31 @@ func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, front: bo
 	if open:
 		r.open_hand(p, col, d)
 	else:
-		r.fist(p, col, d)
+		_fist(r, p, col, d)
+
+
+## A closed fist with real knuckles: a block, four finger creases, a thumb over
+## the top and a wrist shadow. The shared fist is a mitten, and at this size the
+## creases are what make it read as a hand.
+func _fist(r: FighterRenderer, p: Vector2, col: Color, d: Vector2) -> void:
+	if d.length_squared() < 0.001:
+		d = Vector2.DOWN
+	d = d.normalized()
+	var n := Vector2(-d.y, d.x)
+	var shade := FighterRenderer.shade(col)
+	r.shaded_poly(PackedVector2Array([
+		p - n * 2.9 - d * 0.8, p + n * 2.9 - d * 0.8, p + n * 2.7 + d * 1.6,
+		p + n * 1.8 + d * 3.6, p - n * 1.8 + d * 3.6, p - n * 2.7 + d * 1.6,
+	]), col, 1.0, 0.82)
+	# Finger creases across the front of the block.
+	for k: float in [-1.7, -0.6, 0.5, 1.6]:
+		var fw := 1.0 - absf(k) * 0.1
+		r.draw_line(p + n * k * fw + d * 1.7, p + n * k * fw + d * 3.4, shade, 0.55, true)
+	# Thumb laid across the top, and a shadow under it.
+	r.part(p + n * 2.3 - d * 0.2, p + n * 0.5 + d * 2.6, 1.7, 1.4, col)
+	r.draw_line(p + n * 0.2 + d * 1.5, p + n * 0.2 + d * 3.5, shade, 0.5, true)
+	# Knuckle highlight along the top edge.
+	r.draw_line(p - n * 2.4 + d * 1.7, p + n * 2.4 + d * 1.7, FighterRenderer.hl(col), 0.55, true)
 
 
 ## Two fingers up. `d` is the forearm direction, so the hand is drawn along it
@@ -468,8 +621,9 @@ func _v_sign(r: FighterRenderer, p: Vector2, col: Color, d: Vector2) -> void:
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
-	# The front shoulder flash, over the arm that is already drawn.
+	# Front shoulder flash and sleeve cuff, over the arm already drawn.
 	_shoulder(r, s["sh_f"], s["elb_f"])
+	_cuff(r, s["sh_f"], s["elb_f"])
 	if r.prop != "" and r.prop != "v_sign":
 		r.part(s["elb_f"].lerp(s["hand_f"], 0.55), s["elb_f"].lerp(s["hand_f"], 0.7), 7.5, 7.0, r.colors["accent"])
 	match r.prop:

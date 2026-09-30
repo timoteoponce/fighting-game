@@ -39,6 +39,7 @@ func _ready() -> void:
 	_test_movement("ulises")
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
+	_test_ulises_outlines()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -454,6 +455,21 @@ func _test_ulises_chain_pose() -> void:
 	var spec: Dictionary = d.adjust_attack_pose(p1, anti, anti.pose_a)
 	check(float(spec["leg_f"]) == float(anti.pose_a["leg_f"]), "specials keep their own pose")
 	f.free()
+
+
+## Ulises' in-match art owns the head and the torso, so both outlines must
+## survive the geometry helpers. `FighterRenderer.safe` silently replaces a
+## self-intersecting polygon with its convex hull, which is how a bad outline
+## quietly turns into a blob instead of failing.
+func _test_ulises_outlines() -> void:
+	print("[ulises outlines]")
+	var d := UlisesDef.new()
+	var head := d.head_outline()
+	check(head.size() >= 8, "his head outline is a real shape (%d points)" % head.size())
+	check(not Geometry2D.triangulate_polygon(head).is_empty(), "his head outline triangulates, so it is not a self-intersecting blob")
+	var chest := d.torso_outline(null, {"up": Vector2.UP, "perp": Vector2.RIGHT, "hip": Vector2.ZERO})
+	check(chest.size() >= 6, "his torso outline is a real shape (%d points)" % chest.size())
+	check(not Geometry2D.triangulate_polygon(chest).is_empty(), "his torso outline triangulates")
 
 
 ## Ulises' signature mechanic: a real ball on the floor, and the fact that it

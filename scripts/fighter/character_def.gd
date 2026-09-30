@@ -127,6 +127,10 @@ func adjust_attack_pose(_f: Fighter, _m: MoveData, p: Dictionary) -> Dictionary:
 
 
 # Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points.
+# Optional, detected with has_method so a character that does not define them
+# is unchanged: head_outline(), torso_outline(r, s), draw_hand. Those replace
+# the shared circle-head, wedge torso and mittens. A character that owns its
+# head also owns the jaw shading, so it should draw that in draw_face.
 
 ## Called once per animation step to advance hair / cape chains (see FighterRenderer.chain).
 func update_chains(_r: FighterRenderer, _s: Dictionary) -> void:

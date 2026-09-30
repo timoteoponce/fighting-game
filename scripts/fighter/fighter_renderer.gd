@@ -426,13 +426,18 @@ func _smears(s: Dictionary) -> void:
 
 func _draw_head(s: Dictionary) -> void:
 	var c := colors
-	var up: Vector2 = s["up"]
+	# A character that owns its head also owns the jaw shading, so the shared
+	# blob below is only for the shared circle head.
+	var own := def.has_method("head_outline")
 	cloth(PackedVector2Array([s["neck"], s["head"]]), 6.0 * def.build, 4.4 * def.build, c["skin"])
 	draw_set_transform(s["head"], s["head_ang"], Vector2.ONE * hs)
 	def.draw_hair_back(self)
-	poly(head_shape(), c["skin"], 2.0)
-	# Shadow under the jaw and at the back of the face.
-	draw_colored_polygon(PackedVector2Array([Vector2(-8, 2), Vector2(-3, 7.5), Vector2(3, 10.2), Vector2(0, 5), Vector2(-5, 1)]), shade(c["skin"]))
+	if own:
+		poly(def.head_outline(), c["skin"], 2.0)
+	else:
+		poly(head_shape(), c["skin"], 2.0)
+		# Shadow under the jaw and at the back of the face.
+		draw_colored_polygon(PackedVector2Array([Vector2(-8, 2), Vector2(-3, 7.5), Vector2(3, 10.2), Vector2(0, 5), Vector2(-5, 1)]), shade(c["skin"]))
 	def.draw_face(self)
 	def.draw_hair_front(self)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
@@ -731,13 +736,18 @@ func _shoe(foot: Vector2, fwd: Vector2, col: Color) -> void:
 
 
 func torso(s: Dictionary) -> void:
-	var up: Vector2 = s["up"]
-	var perp: Vector2 = s["perp"]
-	var hip: Vector2 = s["hip"]
-	var pts := PackedVector2Array()
-	for f in [[0.0, 8.0], [0.45, 6.5], [0.78, 9.5], [1.0, 7.0], [1.0, -9.0], [0.78, -8.5], [0.45, -6.5], [0.0, -8.0]]:
-		pts.append(hip + up * TORSO * f[0] + perp * f[1] * def.build)
-	shaded_poly(pts, colors["shirt"], 2.2, 0.8)
+	var pts: PackedVector2Array
+	if def.has_method("torso_outline"):
+		pts = def.torso_outline(self, s)
+	else:
+		pts = PackedVector2Array()
+		var up: Vector2 = s["up"]
+		var perp: Vector2 = s["perp"]
+		var hip: Vector2 = s["hip"]
+		for f in [[0.0, 8.0], [0.45, 6.5], [0.78, 9.5], [1.0, 7.0], [1.0, -9.0], [0.78, -8.5], [0.45, -6.5], [0.0, -8.0]]:
+			pts.append(hip + up * TORSO * f[0] + perp * f[1] * def.build)
+	# The outline width multiplies by 1.35 inside poly().
+	shaded_poly(pts, colors["shirt"], 1.7 if def.has_method("torso_outline") else 2.2, 0.86)
 
 
 # --- Chains: simple verlet ropes for hair, capes and tails ---------------------

@@ -89,6 +89,15 @@ Phase B is where that actually gets broken up.
   halo, because `shaders/post_fx.gdshader` blooms anything above luminance 0.90, and a
   hyper is a short burst. Menu portraits come from `art/portraits/<id>.png`
   (`scripts/ui/portrait.gd`); they are painted, and they are not the in-match body.
+- **A character can replace the shared shapes.** Three optional hooks, detected with
+  `has_method` so an absent one changes nothing: `head_outline()` (a head in head space,
+  replacing the circle-plus-chin), `torso_outline(r, s)` (a torso in torso space,
+  replacing the straight wedge) and `draw_hand(r, p, col, d, front, open)`. Ulises is the
+  only user today. **Owning the head also means owning its shading**: `_draw_head` only
+  draws the shared jaw blob on the shared head, so a character with its own outline must
+  shade the face in `draw_face` instead. `draw_hand`'s default *is* the shared fist, so
+  unlike the other two it is a normal override rather than a `has_method` branch, and
+  `front` is false for the back hand.
 - **Never fill with `Color.WHITE` on a fighter.** The bloom threshold means a true
   white fill glows, and the ink edge around it dissolves, so the shape reads as a
   pale smear instead of white fabric or a sclera. A character that needs white
@@ -96,6 +105,11 @@ Phase B is where that actually gets broken up.
   (luminance 0.879) for the shirt number, the sock and shoe ticks, the V-neck and
   his tooth. Tiny specular dots are the exception — a catchlight *should* sparkle,
   so `FighterRenderer._almond` still uses `Color.WHITE` for that.
+- **Shading skin: do not use the shared `shade()`.** `FighterRenderer.shade` lerps toward
+  a purple, which on warm skin at this size reads as a grey scar rather than as form. A
+  character that owns a face wants a shadow on the skin's own hue (`darkened`, then a
+  touch of red-brown) and wants it *light*: on a head 20 units wide anything stronger
+  than ~0.2 reads as a hollow. Ulises has a `_warm_shade(col, amount)` helper.
 - **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
   `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
   `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and

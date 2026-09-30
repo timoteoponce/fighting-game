@@ -231,11 +231,15 @@ Graphics uplift pass — making the game look and feel like a real release.
   lime cleats. The menus still use `art/portraits/ulises.png`. Every white on
   him is the off-white `"white"` colour key, never `Color.WHITE`, so it stays
   under the bloom threshold and keeps its ink edge.
+- **Ulises owns his head, torso and hands.** The shared body is a circle head
+  with a chin blob, a straight wedge torso and mitten hands. He replaces all
+  three: a real skull with a jaw angle, a jersey with shoulders and a waist
+  taper plus a yoke seam and sleeve cuffs, and a fist with knuckles. The hooks
+  are `head_outline()`, `torso_outline(r, s)` and `draw_hand(...)`, all
+  detected with `has_method`, so the other three fighters are bit-identical.
 - **Ulises celebrates with a V.** He raises the front arm and flashes a
   two-finger victory sign instead of holding a book, and says
-  **"Reading is for winners!"** on the win screen. A character owns its own hand
-  through `CharacterDef.draw_hand(r, p, col, d, front, open)`, whose default is
-  the shared fist, so the other three fighters are untouched.
+  **"Reading is for winners!"** on the win screen.
 - **A connected string alternates limbs.** Ulises' one-two reads like a KOF
   close-range combo: the first hit leads with the front limb, a cancel out of
   it leads with the back one while the first comes back to guard, and the third
