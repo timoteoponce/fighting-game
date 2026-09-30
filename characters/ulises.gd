@@ -195,41 +195,7 @@ func on_move_frame(f: Fighter, m: MoveData, sf: int) -> void:
 func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
 	if m.level > 1 or f.chain % 2 == 1:
 		return p
-	return _cross_pose(p)
-
-
-## Trades the front limb for the back one. Only the joints the move actually
-## authored are touched, so a jab with one arm and a kick with one leg each get
-## the other limb instead of a whole-body mirror, and the idle limb goes to a
-## guard or a plant rather than standing still.
-func _cross_pose(p: Dictionary) -> Dictionary:
-	var out := p.duplicate()
-	if p.has("arm_f"):
-		var strike_arm: float = p["arm_f"]
-		var strike_elb: float = float(p.get("elb_f", 10.0))
-		if p.has("arm_b"):
-			out["arm_f"] = p["arm_b"]
-			out["elb_f"] = float(p.get("elb_b", 90.0))
-		else:
-			out["arm_f"] = 25.0
-			out["elb_f"] = 80.0
-		out["arm_b"] = strike_arm
-		out["elb_b"] = strike_elb
-	if p.has("leg_f"):
-		var strike_leg: float = p["leg_f"]
-		var strike_knee: float = float(p.get("knee_f", 10.0))
-		if p.has("leg_b"):
-			out["leg_f"] = p["leg_b"]
-			out["knee_f"] = float(p.get("knee_b", 20.0))
-		else:
-			out["leg_f"] = -12.0
-			out["knee_f"] = 18.0
-		out["leg_b"] = strike_leg
-		out["knee_b"] = strike_knee
-	# Lean off the strike side so the weight shift is visible too.
-	if p.has("lean"):
-		out["lean"] = -float(p["lean"]) * 0.35
-	return out
+	return cross_limbs(p)
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:
@@ -339,15 +305,25 @@ func _short(r: FighterRenderer, hip: Vector2, end: Vector2, back: bool) -> void:
 
 ## Studs and a lace tick on the shared shoe. `FighterRenderer.shoe` is not
 ## overridden, so the lime cleat colour is all the base needed.
-func _cleat(r: FighterRenderer, foot: Vector2, fwd: Vector2) -> void:
+## His own lime cleat, in place of the shared slipper: a low shoe with a sole
+## plate, three studs and a lace tick. Studs are small and dark on purpose; the
+## first pass made them big enough to read as holes punched through the shoe.
+func draw_shoe(r: FighterRenderer, foot: Vector2, fwd: Vector2, col: Color) -> void:
 	if fwd.length_squared() < 0.001:
-		return
+		fwd = Vector2.RIGHT
 	fwd = fwd.normalized()
 	var up := Vector2(fwd.y, -fwd.x)
+	var sole: Color = col.darkened(0.28)
+	r.shaded_poly(PackedVector2Array([
+		foot - fwd * 3.0 + up * 2.2, foot + fwd * 0.6 + up * 2.6, foot + fwd * 5.0 + up * 2.0,
+		foot + fwd * 7.0 - up * 0.4, foot + fwd * 6.4 - up * 1.8, foot - fwd * 3.2 - up * 1.8,
+	]), col, 1.0, 0.8)
+	# Sole plate, then the studs under it.
+	r.draw_line(foot - fwd * 2.8 - up * 1.5, foot + fwd * 6.6 - up * 1.5, sole, 1.3, true)
 	var stud := Color(0.16, 0.14, 0.12)
 	for t: float in [-1.5, 1.8, 5.0]:
 		r.draw_circle(foot + fwd * t - up * 2.3, 0.5, stud)
-	r.draw_line(foot + fwd * 1.0 + up * 1.2, foot + fwd * 3.5 + up * 1.4, r.colors["white"], 0.7, true)
+	r.draw_line(foot + fwd * 1.0 + up * 1.4, foot + fwd * 3.5 + up * 1.6, r.colors["white"], 0.7, true)
 
 
 func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
@@ -368,8 +344,6 @@ func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
 		var n := Vector2(-d.y, d.x).normalized()
 		var a: Vector2 = knee + d.normalized() * 4.5
 		r.draw_line(a - n * 3.4, a + n * 3.4, r.colors["legs"].darkened(0.22), 1.6, true)
-	_cleat(r, s["foot_f"], s["foot_dir_f"])
-	_cleat(r, s["foot_b"], s["foot_dir_b"])
 
 
 func draw_face(r: FighterRenderer) -> void:
@@ -381,13 +355,6 @@ func draw_face(r: FighterRenderer) -> void:
 	_mouth(r)
 
 
-## A warm shadow tone. `FighterRenderer.shade` lerps toward a purple, which on
-## warm skin reads as grey and looks like a scar at this size. This is the same
-## value, just on the skin's own hue.
-func _warm_shade(col: Color, amount := 0.22) -> Color:
-	return col.darkened(amount).lerp(Color(0.42, 0.22, 0.26), 0.10)
-
-
 ## Cheekbone and the shadow under the jaw, as two soft warm shapes. Anything
 ## stronger than this on a head 20 units wide reads as a hollow rather than
 ## as form.
@@ -395,7 +362,7 @@ func _jaw(r: FighterRenderer) -> void:
 	var skin: Color = r.colors["skin"]
 	r.draw_colored_polygon(PackedVector2Array([
 		Vector2(-3.4, 3.2), Vector2(-1.2, 7.4), Vector2(1.0, 8.2), Vector2(-0.6, 6.0), Vector2(-2.2, 3.6),
-	]), _warm_shade(skin, 0.13))
+	]), warm_shade(skin, 0.13))
 
 
 ## The ear on the back edge of the cheek, below the hairline and in front of the
@@ -406,7 +373,7 @@ func _ear(r: FighterRenderer) -> void:
 	var c := Vector2(-7.6, 1.8)
 	r.draw_colored_polygon(FighterRenderer.ellipse_pts(c, 1.5, 2.4, -0.2, 12), skin)
 	r.draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(c, 1.5, 2.4, -0.2, 12)), FighterRenderer.OUT, 0.85, true)
-	r.draw_arc(c + Vector2(0.5, 0.0), 0.95, 0.3, PI - 0.35, 8, _warm_shade(skin, 0.2), 0.6, true)
+	r.draw_arc(c + Vector2(0.5, 0.0), 0.95, 0.3, PI - 0.35, 8, warm_shade(skin, 0.2), 0.6, true)
 
 
 ## His own head, in head space, nose to the right. The shared head is a circle
@@ -468,23 +435,6 @@ func draw_hair_front(r: FighterRenderer) -> void:
 ## straight out. `eye_spots` is the shared lookup; the HUD cut-in reads it.
 func eye_spots() -> Array:
 	return [Vector2(3.6, 0.4), Vector2(8.6, 0.1)]
-
-
-## Which eye to draw. Split out from the drawing so the choice is a pure
-## function of the expression: a character that owns the face owns the whole
-## vocabulary, not just the static shape. Returns "happy", "ko", "dizzy",
-## "blink" or "open".
-func eye_style(expr: String, t: float) -> String:
-	if expr in ["happy", "win"]:
-		return "happy"
-	if expr == "ko":
-		return "ko"
-	if expr == "dizzy":
-		return "dizzy"
-	# The blink timer is the shared one: 6 frames of every 190, only while calm.
-	if expr == "normal" and int(t) % 190 < 6:
-		return "blink"
-	return "open"
 
 
 ## His eyes. Five shapes at most, the same budget the shared `face()` works to:
@@ -577,7 +527,7 @@ func _brows(r: FighterRenderer) -> void:
 ## between the eyes and the mouth, well inside the cheek at x 10.6 so it cannot
 ## spike out past the outline.
 func _nose(r: FighterRenderer) -> void:
-	var sh: Color = _warm_shade(r.colors["skin"], 0.2)
+	var sh: Color = warm_shade(r.colors["skin"], 0.2)
 	r.draw_colored_polygon(PackedVector2Array([
 		Vector2(5.8, 0.8), Vector2(7.0, 2.7), Vector2(5.4, 3.2),
 	]), sh)

@@ -126,11 +126,84 @@ func adjust_attack_pose(_f: Fighter, _m: MoveData, p: Dictionary) -> Dictionary:
 	return p
 
 
+## The default limb swap for a connected string: an odd hit is the authored front
+## limb, an even hit is the other one, so a light-light chain reads as a one-two
+## instead of the same arm twice. Only the joints the move actually authored are
+## touched, so a jab with one arm and a kick with one leg each get the other
+## limb, and the idle limb goes to a guard or a plant rather than standing still.
+##
+## Call this from `adjust_attack_pose` and guard on `m.level > 1`, because a
+## special that already poses both limbs (Ulises' bicycle kick, Silvan's roly
+## poly) reads as broken when it is mirrored.
+func cross_limbs(p: Dictionary) -> Dictionary:
+	var out := p.duplicate()
+	if p.has("arm_f"):
+		var strike_arm: float = p["arm_f"]
+		var strike_elb: float = float(p.get("elb_f", 10.0))
+		if p.has("arm_b"):
+			out["arm_f"] = p["arm_b"]
+			out["elb_f"] = float(p.get("elb_b", 90.0))
+		else:
+			# A one-armed move: the other hand goes to a guard instead of
+			# mirroring an angle it was never given.
+			out["arm_f"] = 25.0
+			out["elb_f"] = 80.0
+		out["arm_b"] = strike_arm
+		out["elb_b"] = strike_elb
+	if p.has("leg_f"):
+		var strike_leg: float = p["leg_f"]
+		var strike_knee: float = float(p.get("knee_f", 10.0))
+		if p.has("leg_b"):
+			out["leg_f"] = p["leg_b"]
+			out["knee_f"] = float(p.get("knee_b", 20.0))
+		else:
+			out["leg_f"] = -12.0
+			out["knee_f"] = 18.0
+		out["leg_b"] = strike_leg
+		out["knee_b"] = strike_knee
+	# Lean off the strike side so the weight shift is visible too.
+	if p.has("lean"):
+		out["lean"] = -float(p["lean"]) * 0.35
+	return out
+
+
+## A shadow on the skin's own hue. `FighterRenderer.shade` lerps toward a purple,
+## which on warm skin at this size reads as a grey scar rather than as form, and
+## on Charlie's sallow yellow it goes olive. Keep it light: on a head 20 units
+## wide anything stronger than about 0.2 reads as a hollow.
+static func warm_shade(col: Color, amount := 0.18) -> Color:
+	return col.darkened(amount).lerp(Color(0.42, 0.22, 0.26), 0.10)
+
+
+## Which eye to draw, as a pure function of the expression so it is testable
+## without a renderer: a pixel comparison cannot run under `--headless`.
+##
+## This is the whole vocabulary a character that owns its face has to honour.
+## The shared `face()` has always had it — blink on a timer, X on a KO, a pupil
+## sliding a ring when dizzy, closed arcs when happy or winning, and a squint
+## per expression. A character that overrides only the eye *shape* and ignores
+## this ends up with a permanently open stare, which is easy to miss in a
+## screenshot and obvious in a match.
+func eye_style(expr: String, t: float) -> String:
+	if expr in ["happy", "win"]:
+		return "happy"
+	if expr == "ko":
+		return "ko"
+	if expr == "dizzy":
+		return "dizzy"
+	# The blink timer is the shared one: 6 frames of every 190, calm only.
+	if expr == "normal" and int(t) % 190 < 6:
+		return "blink"
+	return "open"
+
+
 # Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points.
 # Optional, detected with has_method so a character that does not define them
-# is unchanged: head_outline(), torso_outline(r, s), draw_hand. Those replace
-# the shared circle-head, wedge torso and mittens. A character that owns its
-# head also owns the jaw shading, so it should draw that in draw_face.
+# is unchanged: head_outline(), torso_outline(r, s). Those replace the shared
+# circle-head and wedge torso. A character that owns its head also owns the jaw
+# shading, so it should draw that in draw_face.
+# `draw_hand` and `draw_shoe` are normal overrides rather than has_method
+# branches, because their defaults here *are* the shared shapes.
 
 ## Called once per animation step to advance hair / cape chains (see FighterRenderer.chain).
 func update_chains(_r: FighterRenderer, _s: Dictionary) -> void:
@@ -153,7 +226,9 @@ func draw_hair_back(_r: FighterRenderer) -> void:
 	pass
 
 
-## Small ear, for characters whose hair doesn't cover it (head space).
+## Small ear, for characters whose hair doesn't cover it (head space). A
+## character that owns its head draws its own ear in draw_face instead, since
+## these coordinates are the shared circle's.
 static func draw_ear(r: FighterRenderer) -> void:
 	var col: Color = r.colors["skin"]
 	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(-5.5, 2.0), 2.0, 2.8, 0.0, 12), FighterRenderer.OUT)
@@ -177,6 +252,15 @@ func draw_props(_r: FighterRenderer, _s: Dictionary) -> void:
 ## happy or smug expression, which is the shared spread-finger hand. `front` is
 ## false for the back hand. The default here *is* the shared fist, so overriding
 ## can either draw something else or fall back to these two calls.
+## Draws a shoe at `foot`, with `fwd` the direction the toe points. The default
+## here *is* the shared slipper, so overriding can either draw real footwear or
+## fall back to this one call. A character's own `draw_shoe` is where studs,
+## soles and laces go, rather than painting them over the shared shape from
+## `draw_over_legs`.
+func draw_shoe(r: FighterRenderer, foot: Vector2, fwd: Vector2, col: Color) -> void:
+	r.shoe(foot, fwd, col)
+
+
 func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, _front: bool, open: bool) -> void:
 	if open:
 		r.open_hand(p, col, d)
