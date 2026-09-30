@@ -181,6 +181,50 @@ func on_move_frame(f: Fighter, m: MoveData, sf: int) -> void:
 		m.projectile["size"] = HYPER_SIZE_BALL if has_ball(f) else HYPER_SIZE
 
 
+## Connected chain, KOF-style: an odd hit is the authored front limb, an even
+## hit is the other limb, so a light-light string reads as a one-two instead of
+## the same arm twice. Specials are left alone: the bicycle kick already poses
+## both legs and swapping it lands backwards.
+func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
+	if m.level > 1 or f.chain % 2 == 1:
+		return p
+	return _cross_pose(p)
+
+
+## Trades the front limb for the back one. Only the joints the move actually
+## authored are touched, so a jab with one arm and a kick with one leg each get
+## the other limb instead of a whole-body mirror, and the idle limb goes to a
+## guard or a plant rather than standing still.
+func _cross_pose(p: Dictionary) -> Dictionary:
+	var out := p.duplicate()
+	if p.has("arm_f"):
+		var strike_arm: float = p["arm_f"]
+		var strike_elb: float = float(p.get("elb_f", 10.0))
+		if p.has("arm_b"):
+			out["arm_f"] = p["arm_b"]
+			out["elb_f"] = float(p.get("elb_b", 90.0))
+		else:
+			out["arm_f"] = 25.0
+			out["elb_f"] = 80.0
+		out["arm_b"] = strike_arm
+		out["elb_b"] = strike_elb
+	if p.has("leg_f"):
+		var strike_leg: float = p["leg_f"]
+		var strike_knee: float = float(p.get("knee_f", 10.0))
+		if p.has("leg_b"):
+			out["leg_f"] = p["leg_b"]
+			out["knee_f"] = float(p.get("knee_b", 20.0))
+		else:
+			out["leg_f"] = -12.0
+			out["knee_f"] = 18.0
+		out["leg_b"] = strike_leg
+		out["knee_b"] = strike_knee
+	# Lean off the strike side so the weight shift is visible too.
+	if p.has("lean"):
+		out["lean"] = -float(p["lean"]) * 0.35
+	return out
+
+
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:
 	var knot := FighterRenderer.head_point(s, Vector2(-10.5, -6.5))
 	r.chain("band1", knot, 6, 4.5, 0.1, 0.8, 0.45)

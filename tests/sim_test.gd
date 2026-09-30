@@ -38,6 +38,7 @@ func _ready() -> void:
 		_test_combo(id)
 	_test_movement("ulises")
 	_test_throw("ulises")
+	_test_ulises_chain_pose()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -411,6 +412,47 @@ func _test_combo(id: String) -> void:
 	check(jumped, "UP after launcher does a super jump")
 	check(max_combo >= 3, "ground chain combos (max combo %d)" % max_combo)
 	print("       air combo reached %d hits, health left %d" % [max_combo, p2.health])
+	f.free()
+
+
+## Ulises animates a connected string one-two, front limb then back limb, so a
+## light-light chain does not play the same arm twice. This covers the pose hook
+## directly plus the live chain counter, because the swap depends on both.
+func _test_ulises_chain_pose() -> void:
+	print("[ulises chain pose]")
+	var f := _new_fight("ulises", "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	var d: UlisesDef = p1.def as UlisesDef
+	p2.position.x = p1.position.x + 45.0
+	var lg: int = d.moves["L"].startup + d.moves["L"].hitstop + 1
+	var seen_chain := 0
+	_script(p1, [[LI, 2], [0, lg], [LI, 2], [0, lg]])
+	for i in 60:
+		f._physics_process(1.0 / 60.0)
+		if p1.chain == 2 and p1.state == Fighter.S.ATTACK and p1.move.id == "jab":
+			seen_chain = 2
+			break
+	check(seen_chain == 2, "two jabs in a row reach chain 2 (got %d)" % seen_chain)
+
+	# The swap itself, driven off the move's own authored pose. `chain` is the
+	# hit number, so set it explicitly rather than trusting the sim above.
+	var jab: MoveData = d.moves["L"]
+	p1.chain = 1
+	var first: Dictionary = d.adjust_attack_pose(p1, jab, jab.pose_a)
+	check(float(first["arm_f"]) == float(jab.pose_a["arm_f"]), "an odd hit keeps the authored front limb")
+	p1.chain = 2
+	var second: Dictionary = d.adjust_attack_pose(p1, jab, jab.pose_a)
+	check(second["arm_b"] == jab.pose_a["arm_f"], "an even hit strikes with the back limb")
+	check(second["arm_f"] == jab.pose_a["arm_b"], "an even hit pulls the front limb back")
+	p1.chain = 3
+	var third: Dictionary = d.adjust_attack_pose(p1, jab, jab.pose_a)
+	check(float(third["arm_f"]) == float(jab.pose_a["arm_f"]), "hit three goes back to the front limb")
+	# A special is left exactly as authored.
+	var anti: MoveData = d.moves["anti"]
+	var spec: Dictionary = d.adjust_attack_pose(p1, anti, anti.pose_a)
+	check(float(spec["leg_f"]) == float(anti.pose_a["leg_f"]), "specials keep their own pose")
 	f.free()
 
 

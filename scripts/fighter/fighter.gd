@@ -997,6 +997,9 @@ func _pose_target() -> Array:
 			var base := "crouch" if move.crouch else ("jump" if move.air else "idle")
 			var key := move.pose_at(sf)
 			var p := def.pose(base, key[0])
+			# A character may vary the animation per hit of a combo. See
+			# CharacterDef.adjust_attack_pose.
+			p = def.adjust_attack_pose(self, move, p)
 			if move.spin != 0.0 and sf > move.startup:
 				var k := clampf(float(sf - move.startup) / (move.active + move.recovery * 0.6), 0.0, 1.0)
 				p["rot"] = move.spin * k
@@ -1005,7 +1008,12 @@ func _pose_target() -> Array:
 				# Impact frame: exaggerate the pose while the world is frozen.
 				p.merge(move.contact_pose, true)
 				return [p, 1.0]
-			return [p, float(key[1])]
+			# A cancel into a new hit changes limb, so it must not still be
+			# lerping toward the previous one.
+			var speed := float(key[1])
+			if chain >= 2:
+				speed = maxf(speed, 0.85)
+			return [p, speed]
 		S.HITSTUN:
 			if hit_variant == 1:
 				# Gut hit: fold forward instead of snapping back.

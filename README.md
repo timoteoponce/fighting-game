@@ -223,6 +223,17 @@ Graphics uplift pass — making the game look and feel like a real release.
   a short burst. Blocks are an outlined blue shard. Dust is a few soft clumps
   with an edge. The additive glow is only a small halo, and the bloom threshold
   stays at 0.90 so it does not fog the eyes.
+- **Ulises is redrawn for the fight.** The in-match body is no longer the
+  chibi head the portrait suggests: a shorter head, almond eyes with a single
+  catchlight, short hair, a fitted kit with a collar, side seam, mid-thigh
+  shorts, a sock cuff and low cleats. His red headband still trails on its
+  chain, and the menus still use the painted portrait.
+- **A connected string alternates limbs.** Ulises' one-two reads like a KOF
+  close-range combo: the first hit leads with the front limb, a cancel out of
+  it leads with the back one while the first comes back to guard, and the third
+  goes front again. Any character can do this for themselves via
+  `CharacterDef.adjust_attack_pose`; the others keep the single authored pose
+  until they are given one.
 
 ### After the graphics pass
 

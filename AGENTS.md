@@ -127,16 +127,26 @@ Phase B is where that actually gets broken up.
   `roster_order` sets select-screen position, `voice_pitch` (Hz, on `CharacterDef`) is all
   the synthesized shouts need. `tests/sim_test.gd:_test_character_def` validates every
   registered fighter, so a half-finished one fails with a clear message.
-- **A character can own a rule, not just a number.** `CharacterDef` has five
+- **A character can own a rule, not just a number.** `CharacterDef` has six
   behaviour hooks besides the drawing ones, all no-ops so nobody else is affected:
   `tick(f)` (once per step, after the state machine), `on_round_start(f)` (from
   `Fighter.reset_for_round`), `on_move_frame(f, m, sf)` (every attack frame, *just
   before the move's projectile spawns*, so a move can be re-scaled on the way out),
   `choose_move(key, f)` (swap in a variant of an input — this is how Ulises gets a
-  carrying tackle only while he has the ball), and `throw_data()`. The ten-key
+  carrying tackle only while he has the ball), `adjust_attack_pose(f, m, p)` (rewrite
+  the pose a move is animating toward — this is how Ulises alternates limbs across a
+  combo), and `throw_data()`. The ten-key
   contract still holds:
   `choose_move` may only return keys the character actually defines. Design doc:
   `design/characters_redesign.md`.
+- **Combo animation is per character, and it is pose-only.** `Fighter._pose_target`
+  calls `def.adjust_attack_pose(self, move, p)` on every attack frame, so a character
+  can vary how a move *looks* per hit of a string without touching frame data. The
+  signal is `Fighter.chain`, already bumped in `_start_move`: 1 for a fresh attack,
+  2-4 for a cancel out of one that connected. Ulises swaps front and back limb on even
+  hits and leaves `level > 1` alone, because the bicycle kick already poses both legs.
+  A chain cancel also forces a faster pose spring (`speed >= 0.85`), or the new limb
+  still looks like the old one for several frames.
 - **Ulises' ball is the reference mechanic.** It is a `Projectile` with the
   `persistent` lifecycle: it outlives its `life`, sheds speed in `_roll()`, and
   `rest()` leaves it on the floor. It opts out of the "one projectile in flight"

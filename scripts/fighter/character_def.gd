@@ -116,6 +116,16 @@ func choose_move(key: String, _f: Fighter) -> String:
 	return key
 
 
+## Called from `Fighter._pose_target` on every attack frame with the pose the
+## fighter is about to spring toward. The default returns it unchanged, so a
+## character that does not use it animates exactly as before. This is how a
+## character varies an *animation* rather than a move: `f.chain` is 1 for a
+## fresh attack and 2, 3, 4 for a cancel out of one that connected, which is
+## enough to alternate limbs across a combo the way a hand-animated string does.
+func adjust_attack_pose(_f: Fighter, _m: MoveData, p: Dictionary) -> Dictionary:
+	return p
+
+
 # Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points.
 
 ## Called once per animation step to advance hair / cape chains (see FighterRenderer.chain).
