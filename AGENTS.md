@@ -92,12 +92,25 @@ Phase B is where that actually gets broken up.
 - **A character can replace the shared shapes.** Three optional hooks, detected with
   `has_method` so an absent one changes nothing: `head_outline()` (a head in head space,
   replacing the circle-plus-chin), `torso_outline(r, s)` (a torso in torso space,
-  replacing the straight wedge) and `draw_hand(r, p, col, d, front, open)`. Ulises is the
-  only user today. **Owning the head also means owning its shading**: `_draw_head` only
-  draws the shared jaw blob on the shared head, so a character with its own outline must
-  shade the face in `draw_face` instead. `draw_hand`'s default *is* the shared fist, so
-  unlike the other two it is a normal override rather than a `has_method` branch, and
-  `front` is false for the back hand.
+  replacing the straight wedge) and `draw_hand(r, p, col, d, front, open)`. A fourth,
+  `draw_shoe(r, foot, fwd, col)`, is a normal override rather than a `has_method`
+  branch, because both its defaults *are* the shared shapes. All four are in use.
+  **Owning the head also means owning its shading**: `_draw_head` only draws the shared
+  jaw blob on the shared head, so a character with its own outline must shade the face
+  in `draw_face` instead. `front` is false for the back hand.
+- **Every fighter owns its face, and the renderer no longer has a switchboard.**
+  `FighterRenderer.face()` was once 18 `who == ` branches for the four roster members
+  plus a `match` in `eye_spots()`. That hardcoded the whole cast into the shared
+  renderer, and it caused the worst bug of the redesign: a character could override its
+  eye *shape* and silently keep the shared *vocabulary*, which is how Ulises stood
+  through a whole match with a permanent stare. All four now draw their own
+  `draw_face`, and `face()` is a generic default that `_template.gd` inherits. Do not
+  add an `id ==` branch there; add a hook instead.
+- **Generic behaviour lives on `CharacterDef`, art lives in the file.** Four defaults
+  exist because more than one character needed them: `eye_style(expr, t)` (the
+  expression vocabulary as a pure function), `cross_limbs(p)` (the KOF limb swap),
+  `warm_shade(col, amount)` (skin shadow on the skin's own hue) and the two shape hooks
+  above. A character file should contain only what is genuinely its own.
 - **Owning a face means owning the whole expression vocabulary, not just the
   static shape.** The shared `face()` picks from: blink (6 frames of every 190,
   calm only), X on `ko`, a pupil sliding a ring on `dizzy`, closed arcs on
@@ -109,6 +122,16 @@ Phase B is where that actually gets broken up.
   it is testable headlessly — pixel comparison is not, and the same rule applies
   to any character's mouth: give it the `dizzy` and `smug` variants or it will
   grin through a knockdown.
+- **Owning a face means owning the whole expression vocabulary, not just the
+  static shape.** `CharacterDef.eye_style(expr, t)` is the shared default and
+  returns `happy` / `ko` / `dizzy` / `blink` / `open`: blink is 6 frames of
+  every 190 and calm only, `ko` is X, `dizzy` slides a pupil around a ring,
+  `happy`/`win` are closed arcs. A character that overrides only the eye *shape*
+  and ignores `expr` ends up with a permanently open stare, which is easy to
+  miss in a screenshot and obvious in a match. The same applies to the mouth:
+  give it the `dizzy` and `smug` variants or it will grin through a knockdown.
+  `eye_style` is a pure function so it is testable headlessly — pixel comparison
+  is not, since the suite runs `--headless` where a SubViewport renders nothing.
 - **Never fill with `Color.WHITE` on a fighter.** The bloom threshold means a true
   white fill glows, and the ink edge around it dissolves, so the shape reads as a
   pale smear instead of white fabric or a sclera. A character that needs white
@@ -117,10 +140,9 @@ Phase B is where that actually gets broken up.
   his tooth. Tiny specular dots are the exception — a catchlight *should* sparkle,
   so `FighterRenderer._almond` still uses `Color.WHITE` for that.
 - **Shading skin: do not use the shared `shade()`.** `FighterRenderer.shade` lerps toward
-  a purple, which on warm skin at this size reads as a grey scar rather than as form. A
-  character that owns a face wants a shadow on the skin's own hue (`darkened`, then a
-  touch of red-brown) and wants it *light*: on a head 20 units wide anything stronger
-  than ~0.2 reads as a hollow. Ulises has a `_warm_shade(col, amount)` helper.
+  a purple, which on warm skin at this size reads as a grey scar rather than as form, and
+  on Charlie's sallow yellow it reads as olive. Use `CharacterDef.warm_shade`, and keep
+  it light: on a head 20 units wide anything stronger than ~0.2 reads as a hollow.
 - **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
   `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
   `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and

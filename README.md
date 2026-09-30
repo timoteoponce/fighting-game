@@ -207,11 +207,14 @@ Graphics uplift pass — making the game look and feel like a real release.
 
 ### Phase 5 — Faces, clothes, ink hits
 
-- Each kid has their own eyes in `FighterRenderer.face()`, chosen by character
-  id. Ulises has dark almond eyes and one catchlight, Emilia a larger brown eye
-  and a scowl, Charlie small green eyes under one heavy brow, Silvan big round
-  dots. Pupils shift toward the opponent. A blink is a few frames of the
-  existing timer, and only while the face is calm.
+- **Every fighter in the match is their own character now.** Each one owns its
+  head, torso, hands, shoes and face, and is drawn to match their painted
+  portrait in `art/portraits/`: Ulises in the football kit with his trailing
+  red band and a two-finger victory sign, Emilia in wide trousers with the gold
+  star clip and the page she drew, Charlie as a bald egg with white socks, red
+  sneakers and his snaggletooths, Silvan in the star tee with his tongue out and
+  the bone held overhead. Every one of them blinks, squints into an attack and
+  gets X eyes on a knockout.
 - Limbs are one outlined ribbon of clothing (`cloth()`, `_arm()`, `_leg()`) on
   the same pose skeleton. A same-coloured thigh and shin is a single shape. A
   sleeve over a bare forearm, or a sock under shorts, is two pieces overlapping
@@ -231,27 +234,27 @@ Graphics uplift pass — making the game look and feel like a real release.
   lime cleats. The menus still use `art/portraits/ulises.png`. Every white on
   him is the off-white `"white"` colour key, never `Color.WHITE`, so it stays
   under the bloom threshold and keeps its ink edge.
-- **Ulises owns his head, torso and hands.** The shared body is a circle head
-  with a chin blob, a straight wedge torso and mitten hands. He replaces all
-  three: a real skull with a jaw angle, a jersey with shoulders and a waist
-  taper plus a yoke seam and sleeve cuffs, and a fist with knuckles. The hooks
-  are `head_outline()`, `torso_outline(r, s)` and `draw_hand(...)`, all
-  detected with `has_method`, so the other three fighters are bit-identical.
-- **He blinks and his face reacts.** The shared face blinks on a timer (6 frames
-  of every 190, calm only), shows X eyes on a KO, a pupil sliding a ring when
-  dizzy, closed arcs when winning, and a squint on an attack and when hit. He
-  draws his own eyes, so he carries that whole vocabulary rather than a fixed
-  stare, and his mouth follows suit — it squiggles when dizzy and smirks rather
-  than grinning through a knockdown.
-- **Ulises celebrates with a V.** He raises the front arm and flashes a
-  two-finger victory sign instead of holding a book, and says
-  **"Reading is for winners!"** on the win screen.
-- **A connected string alternates limbs.** Ulises' one-two reads like a KOF
-  close-range combo: the first hit leads with the front limb, a cancel out of
-  it leads with the back one while the first comes back to guard, and the third
-  goes front again. Any character can do this for themselves via
-  `CharacterDef.adjust_attack_pose`; the others keep the single authored pose
-  until they are given one.
+- **Every fighter owns its head, torso, hands and shoes.** The shared body is a
+  circle head with a chin blob, a straight wedge torso, mitten hands and a
+  five-point slipper. All four characters replace all four, via `head_outline()`,
+  `torso_outline(r, s)`, `draw_hand(...)` and `draw_shoe(...)`, so nobody in a
+  match is wearing the defaults.
+- **Every fighter blinks and reacts.** Each one blinks on a timer (6 frames of
+  every 190, calm only), shows X eyes on a knockout, a pupil sliding a ring when
+  dizzy, closed arcs when winning, and a squints on an attack and when hit, via
+  `CharacterDef.eye_style`. A character that overrides only the eye *shape*
+  keeps the shared *vocabulary* and stands through a match with a permanent
+  stare, so a character that owns its face owns all of that too.
+- **Everyone has a victory.** Ulises raises a two-finger V and says "Reading is
+  for winners!", Emilia holds up the page she just drew — "Page forty-one: you
+  lose!", Charlie wins and immediately starts bawling — "Don't cry, it's just a
+  game!", and Silvan cheers with both arms up and the bone overhead — "Good dog!
+  ...I am a good dog!"
+- **A connected string alternates limbs, for all four.** Any light-light chain
+  reads like a KOF one-two: the first hit leads with the front limb, a cancel out
+  of it leads with the back one while the first comes back to guard, and the
+  third goes front again. It is `CharacterDef.adjust_attack_pose` calling the
+  shared `cross_limbs`, and it is pose-only — no frame data or hitboxes move.
 
 ### After the graphics pass
 
