@@ -7,7 +7,7 @@ func _init() -> void:
 	id = "ulises"
 	display = "ULISES"
 	likes = "Soccer, running, reading, video games"
-	win_quote = "Game over! Now, where was I in my book?"
+	win_quote = "Reading is for winners!"
 	gag_items = ["ball", "tooth", "star"]
 	taunt_lines = ["TOO SLOW!", "GOOOAL!", "NICE TRY!"]
 	hurt_lines = ["OOF!", "MY BALL!", "HEY!"]
@@ -17,21 +17,21 @@ func _init() -> void:
 	# washed-out blobs. Everything that needs to look like white fabric or a
 	# sclera uses this instead.
 	colors = {
-		"skin": Color("e8b890"), "hair": Color("2a1a0e"), "shirt": Color("1a4d8f"), "sleeve": Color("1a4d8f"),
-		"forearm": Color("e8b890"), "hands": Color("e8b890"), "pants": Color("e8b890"), "shorts": Color("e6e0d2"),
-		"legs": Color("1a4d8f"), "shoes": Color("2a7a2a"), "eyes": Color("3a2010"), "accent": Color("3a8a3a"),
-		"band": Color("c42020"), "white": Color("e6e0d2"),
+		"skin": Color("f2c29b"), "hair": Color("1c120c"), "shirt": Color("2f6fe0"), "sleeve": Color("2f6fe0"),
+		"forearm": Color("f2c29b"), "hands": Color("f2c29b"), "pants": Color("f2c29b"), "shorts": Color("e6e0d2"),
+		"legs": Color("2f6fe0"), "shoes": Color("8ed63a"), "eyes": Color("4a2a14"), "accent": Color("3cb54a"),
+		"band": Color("e02323"), "white": Color("e6e0d2"),
 	}
 	alt_colors = colors.duplicate()
-	alt_colors.merge({"shirt": Color("8f1a1a"), "sleeve": Color("8f1a1a"), "accent": Color("e8c020"), "legs": Color("8f1a1a"),
-		"shoes": Color("d4a020"), "band": Color("1a4d8f"), "shorts": Color("d6d2cc"), "white": Color("d6d2cc")}, true)
+	alt_colors.merge({"shirt": Color("e0402f"), "sleeve": Color("e0402f"), "accent": Color("ffd23f"), "legs": Color("e0402f"),
+		"shoes": Color("e8c84a"), "band": Color("2f6fe0"), "shorts": Color("e6e0d2"), "white": Color("e6e0d2")}, true)
 	walk_speed = 3.4
 	back_speed = 2.8
 	jump_vel = -10.5
 	jump_x = 4.0
 	voice_pitch = 250.0
 	roster_order = 0
-	win_prop = "book"
+	win_prop = "v_sign"
 	intro_prop = "ball_intro"
 	specials_text = [
 		["L + H", "Power Shot"],
@@ -41,8 +41,10 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 160, "elb_f": 15, "arm_b": 30, "elb_b": 100, "lean": -4},
-		"win": {"lean": 4, "head": 8, "leg_f": 70, "knee_f": 15, "leg_b": -30, "knee_b": 20,
-			"arm_f": 175, "elb_f": 5, "arm_b": 55, "elb_b": 45},
+		# Raised V, not a book: the front arm is straight up along the sign and
+		# the back arm hangs loose. `lean` is negative so his chin is up.
+		"win": {"lean": -4, "head": 4, "leg_f": 26, "knee_f": 14, "leg_b": -22, "knee_b": 16,
+			"arm_f": 158, "elb_f": 8, "arm_b": 52, "elb_b": 62},
 	}
 	moves = {
 		"L": MoveData.make({"id": "jab", "startup": 4, "active": 3, "recovery": 8, "damage": 40,
@@ -247,35 +249,78 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	var hip: Vector2 = s["hip"]
 	var top: Vector2 = hip + up * FighterRenderer.TORSO
 	var acc: Color = r.colors["accent"]
-	# Fitted jersey: follows the body, with a collar, side seam, and hem.
-	r.draw_line(hip + perp * 5.5 + up * 2.0, top + perp * 4.5 - up * 3.0, acc, 2.0, true)
-	r.poly(PackedVector2Array([top + perp * 5.0 - up * 0.5, top - perp * 4.5 - up * 0.5, top + perp * 1.5 - up * 5.0]), acc, 1.0)
-	r.draw_colored_polygon(PackedVector2Array([top + perp * 3.0 - up * 1.0, top - perp * 2.0 - up * 1.0, top + perp * 1.2 - up * 3.5]), r.colors["skin"])
-	r.draw_line(hip + perp * 7.0 + up * 1.5, hip - perp * 7.0 + up * 1.5, acc, 1.5, true)
-	# Slight belly curve, not a balloon.
+	var white: Color = r.colors["white"]
+	# White V-neck: skin inside, white trim on the two edges. The painting has a
+	# V, not a collar band, and no side stripe down the body.
+	var v := top + perp * 0.8 - up * 5.0
+	r.draw_colored_polygon(PackedVector2Array([top + perp * 4.2 - up * 0.5, top - perp * 3.2 - up * 0.5, v]), r.colors["skin"])
+	r.draw_line(top + perp * 4.2 - up * 0.2, v, white, 1.4, true)
+	r.draw_line(top - perp * 3.2 - up * 0.2, v, white, 1.4, true)
+	r.draw_line(hip + perp * 7.0 + up * 1.5, hip - perp * 7.0 + up * 1.5, acc.darkened(0.2), 1.4, true)
+	# Slight belly curve, not a balloon. The painting has a round stomach.
 	var belly := hip + up * 9.0 + perp * 4.5
 	r.poly(FighterRenderer.ellipse_pts(belly, 6.0, 4.0, atan2(perp.y, perp.x)), r.colors["shirt"], 1.2)
 	# Number 10, clean and readable.
 	var num: Vector2 = hip + up * 17.0 + perp * 1.0
 	r.draw_set_transform(num, atan2(up.x, -up.y), Vector2(signf(r.scale.x) * 0.5, 0.5))
-	UI.text(r, Vector2(0, 5), "10", 16, r.colors["white"], HORIZONTAL_ALIGNMENT_CENTER, 4, acc.darkened(0.4))
+	UI.text(r, Vector2(0, 5), "10", 16, white, HORIZONTAL_ALIGNMENT_CENTER, 4, acc.darkened(0.4))
 	r.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if not r.head_only:
-		r.limb(s["hip_b"], s["hip_b"].lerp(s["knee_b"], 0.62), 12.0, 11.0, FighterRenderer.dk(r.colors["shorts"]))
+		# Back leg of the shorts (the front one is drawn over the front leg).
+		var sb: Vector2 = s["hip_b"].lerp(s["knee_b"], 0.62)
+		_short(r, s["hip_b"], sb, true)
+		_shoulder(r, s["sh_b"], s["elb_b"])
+
+
+## Green shoulder flash, the band the painting has over each shoulder. Drawn as
+## a thick stroke across the top of the upper arm, so it survives the arm swing.
+func _shoulder(r: FighterRenderer, sh: Vector2, elb: Vector2) -> void:
+	var d := elb - sh
+	if d.length() < 1.0:
+		return
+	var u := d.normalized()
+	var n := Vector2(-u.y, u.x)
+	var p := sh + u * 3.4
+	r.draw_line(p - n * 3.2, p + n * 3.2, r.colors["accent"], 2.2, true)
+
+
+## One short: a fitted tube over the hip with the green side stripe the painting
+## has. `back` darkens it so the far leg reads behind the near one.
+func _short(r: FighterRenderer, hip: Vector2, end: Vector2, back: bool) -> void:
+	var col: Color = r.colors["shorts"]
+	if back:
+		col = FighterRenderer.dk(col)
+	r.limb(hip, end, 12.0, 11.0, col)
+	var d := end - hip
+	if d.length() < 1.0:
+		return
+	var n := Vector2(-d.y, d.x).normalized()
+	r.draw_line(hip + n * 3.4, end + n * 2.8, r.colors["accent"], 1.6, true)
+
+
+## Studs and a lace tick on the shared shoe. `FighterRenderer.shoe` is not
+## overridden, so the lime cleat colour is all the base needed.
+func _cleat(r: FighterRenderer, foot: Vector2, fwd: Vector2) -> void:
+	if fwd.length_squared() < 0.001:
+		return
+	fwd = fwd.normalized()
+	var up := Vector2(fwd.y, -fwd.x)
+	var stud := Color(0.16, 0.14, 0.12)
+	for t: float in [-1.5, 1.8, 5.0]:
+		r.draw_circle(foot + fwd * t - up * 2.3, 0.5, stud)
+	r.draw_line(foot + fwd * 1.0 + up * 1.2, foot + fwd * 3.5 + up * 1.4, r.colors["white"], 0.7, true)
 
 
 func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
-	r.limb(s["hip_f"], s["hip_f"].lerp(s["knee_f"], 0.62), 12.0, 11.0, r.colors["shorts"])
+	_short(r, s["hip_f"], s["hip_f"].lerp(s["knee_f"], 0.62), false)
 	var up: Vector2 = s["up"]
 	var perp: Vector2 = s["perp"]
-	# Fitted shorts: mid-thigh, with a hem line.
-	r.limb(s["hip"] - perp * 6.0 + up * 2.0, s["hip"] + perp * 6.0 + up * 2.0, 4.5, 4.5, r.colors["shorts"])
-	# Sock stripe at the cuff.
-	for leg in [["knee_f", "foot_f"], ["knee_b", "foot_b"]]:
-		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.15)
-		var d: Vector2 = (s[leg[1]] - s[leg[0]]).normalized()
-		var n := Vector2(-d.y, d.x)
-		r.draw_line(a - n * 3.0, a + n * 3.0, r.colors["white"], 1.5, true)
+	# Waistband, sitting on the hip rather than a second pair of thighs.
+	r.limb(s["hip"] - perp * 6.0 + up * 2.0, s["hip"] + perp * 6.0 + up * 2.0, 4.5, 4.5, r.colors["shorts"].darkened(0.08))
+	# Socks are solid blue in the painting, with bare knee between short and
+	# sock, so there is no cuff to draw here.
+	_cleat(r, s["foot_f"], s["foot_dir_f"])
+	_cleat(r, s["foot_b"], s["foot_dir_b"])
 
 
 func draw_face(r: FighterRenderer) -> void:
@@ -291,20 +336,29 @@ func draw_hair_back(r: FighterRenderer) -> void:
 
 func draw_hair_front(r: FighterRenderer) -> void:
 	var hc: Color = r.colors["hair"]
-	# Short textured hair that follows the skull. A few tufts at the front.
-	var hair := PackedVector2Array([
+	# A cap that follows the skull, kept flat so a self-intersecting polygon
+	# cannot be replaced by its convex hull and turn the whole hair into a blob.
+	r.shaded_poly(PackedVector2Array([
 		Vector2(-9, 5), Vector2(-13, 1), Vector2(-10, -3), Vector2(-14, -8), Vector2(-8, -12),
 		Vector2(-3, -14), Vector2(2, -13), Vector2(7, -10), Vector2(10, -6), Vector2(11, -2),
 		Vector2(8, -1), Vector2(3, -3), Vector2(-2, -4), Vector2(-6, -2), Vector2(-8, 2),
-	])
-	r.shaded_poly(hair, hc, 1.8, 0.8)
+	]), hc, 1.8, 0.8)
+	# The painting's spikes, each its own triangle so one spike cannot collapse
+	# the rest of the hair.
+	for tuft in [
+		[Vector2(-5, -9), Vector2(-2.5, -16), Vector2(0, -9)],
+		[Vector2(0.5, -9), Vector2(3.5, -17), Vector2(6, -8.5)],
+		[Vector2(-8, -6), Vector2(-11, -12), Vector2(-5, -8)],
+		[Vector2(5, -7), Vector2(9, -13), Vector2(8, -5)],
+	]:
+		r.shaded_poly(PackedVector2Array(tuft), hc, 1.0, 0.8)
 	for st in [[Vector2(-5, -10), Vector2(-1, -13)], [Vector2(1, -11), Vector2(5, -12)], [Vector2(-9, -6), Vector2(-4, -8)]]:
 		r.draw_line(st[0], st[1], FighterRenderer.hl(hc), 1.0, true)
-	# Headband.
+	# Headband. The knot stays at the chain anchor, or the tails detach.
 	var band: Color = r.colors["band"]
 	r.shaded_poly(PackedVector2Array([Vector2(-10, -7.5), Vector2(-2, -9), Vector2(10, -8), Vector2(10, -5.5),
 		Vector2(-1.5, -6.5), Vector2(-9.5, -4.5)]), band, 1.4, 0.75)
-	r.ball(Vector2(-10, -5.5), 2.0, band)
+	r.ball(Vector2(-10.5, -6.5), 2.0, band)
 
 
 func _stylized_eyes(r: FighterRenderer) -> void:
@@ -342,42 +396,86 @@ func _stylized_brows(r: FighterRenderer) -> void:
 	var spots: Array[Vector2] = [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
 	for i in 2:
 		var e: Vector2 = spots[i]
-		var ry := 3.8
-		var b0 := e + Vector2(-2.5, -ry - 1.5)
-		var b1 := e + Vector2(2.5, -ry - 1.0)
-		if r.expr == "attack":
-			b0.y += 1.0
-			b1.y += 1.0
-		elif r.expr == "hurt" or r.expr == "shock":
-			b0.y -= 1.0
-			b1.y -= 1.0
-		r.draw_line(b0, b1, FighterRenderer.OUT, 1.2, true)
+		# Determined, like the painting: the inner end sits lower, so the two
+		# brows angle in toward the nose.
+		var y := -3.8
+		var inner := 1.4
+		if r.expr == "attack" or r.expr == "smug":
+			inner += 0.8
+		elif r.expr == "hurt" or r.expr == "shock" or r.expr == "ko" or r.expr == "dizzy":
+			y -= 1.4
+			inner = -0.4
+		var rx := 2.5
+		var a := e + Vector2(-rx, y)
+		var b := e + Vector2(rx * 0.85, y - inner)
+		if i == 1:
+			a = e + Vector2(-rx * 0.85, y - inner)
+			b = e + Vector2(rx, y)
+		r.draw_line(a, b, FighterRenderer.OUT, 1.6, true)
 
 
+## The painting's open grin with one tooth, and the two blush strokes on the
+## cheek. `ko` and `hurt` swap the grin for a taller open mouth, `win` keeps it.
 func _stylized_mouth(r: FighterRenderer) -> void:
 	var m := Vector2(8.4, 6.8)
-	var ink := Color(0.45, 0.15, 0.12)
-	# Confident smirk: a slight curve, not a huge grin.
-	r.draw_line(m + Vector2(-1.5, 0.0), m + Vector2(1.5, -0.5), ink, 1.0, true)
-	r.draw_line(m + Vector2(-1.0, 0.5), m + Vector2(1.0, 0.3), ink, 0.6, true)
+	var ink := Color(0.45, 0.12, 0.12)
+	var blush := Color(0.85, 0.32, 0.32, 0.55)
+	var tall := r.expr == "hurt" or r.expr == "ko"
+	r.draw_colored_polygon(PackedVector2Array([
+		m + Vector2(-2.2, -0.6), m + Vector2(2.2, -0.7),
+		m + Vector2(1.6, 2.6 if tall else 1.6), m + Vector2(-1.6, 2.5 if tall else 1.5),
+	]), ink)
+	if not tall:
+		# The one tooth, on the off-white so it does not bloom.
+		r.draw_colored_polygon(PackedVector2Array([
+			m + Vector2(-0.7, -0.5), m + Vector2(0.6, -0.55), m + Vector2(0.35, 0.45), m + Vector2(-0.45, 0.4),
+		]), r.colors["white"])
+	r.draw_line(Vector2(1.4, 5.2), Vector2(3.2, 6.0), blush, 1.0, true)
+	r.draw_line(Vector2(2.0, 6.3), Vector2(3.6, 7.0), blush, 1.0, true)
+
+
+## The victory sign, on the front hand only. The win pose raises the front arm,
+## so the V points along the forearm and stays put while the pose breathes.
+func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, front: bool, open: bool) -> void:
+	if r.prop == "v_sign" and front:
+		_v_sign(r, p, col, d)
+		return
+	if open:
+		r.open_hand(p, col, d)
+	else:
+		r.fist(p, col, d)
+
+
+## Two fingers up. `d` is the forearm direction, so the hand is drawn along it
+## rather than in screen space. The sign is drawn large and well splayed: at
+## this scale a small one just reads as a closed fist.
+func _v_sign(r: FighterRenderer, p: Vector2, col: Color, d: Vector2) -> void:
+	if d.length_squared() < 0.001:
+		d = Vector2.UP
+	d = d.normalized()
+	var n := Vector2(-d.y, d.x)
+	# Three folded fingers, as a closed block that stops short of the knuckles.
+	r.shaded_poly(PackedVector2Array([
+		p - n * 3.0, p + n * 3.0, p + n * 2.8 + d * 1.0, p + n * 2.0 + d * 3.6,
+		p - n * 2.0 + d * 3.6, p - n * 2.8 + d * 1.0,
+	]), col, 1.0, 0.82)
+	r.draw_line(p + n * 1.1 + d * 1.8, p + n * 0.7 + d * 3.4, FighterRenderer.shade(col), 0.6, true)
+	# The two raised fingers: long, and spread wide enough to make a V.
+	r.part(p + n * 1.2 - d * 0.2, p + n * 2.9 + d * 7.6, 2.0, 1.6, col)
+	r.part(p - n * 1.2 - d * 0.2, p - n * 2.8 + d * 7.6, 2.0, 1.6, col)
+	# Thumb across the folded fingers, so the hand does not read as a fork.
+	r.part(p + n * 2.6 + d * 0.4, p + n * 0.7 + d * 3.0, 1.6, 1.3, col)
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
-	if r.prop != "":
+	# The front shoulder flash, over the arm that is already drawn.
+	_shoulder(r, s["sh_f"], s["elb_f"])
+	if r.prop != "" and r.prop != "v_sign":
 		r.part(s["elb_f"].lerp(s["hand_f"], 0.55), s["elb_f"].lerp(s["hand_f"], 0.7), 7.5, 7.0, r.colors["accent"])
 	match r.prop:
 		"ball_intro":
 			var bounce := absf(sin(r.t * 0.12)) * 16.0
 			Projectile.draw_soccer_ball(r, s["hand_f"] + Vector2(0, -12 - bounce), 8.0, r.t * 0.1)
-		"book":
-			# Held open in the left hand, presented outward like a trophy.
-			var c: Vector2 = s["hand_b"] + Vector2(4, -10)
-			var page: Color = r.colors["white"]
-			r.poly(PackedVector2Array([c, c + Vector2(-14, -4), c + Vector2(-14, 10), c + Vector2(0, 13)]), page, 1.5)
-			r.poly(PackedVector2Array([c, c + Vector2(14, -4), c + Vector2(14, 10), c + Vector2(0, 13)]), page, 1.5)
-			for i in 3:
-				r.draw_line(c + Vector2(-12, 1 + i * 3), c + Vector2(-3, 3 + i * 3), Color(0.5, 0.5, 0.6), 1.0)
-				r.draw_line(c + Vector2(3, 3 + i * 3), c + Vector2(12, 1 + i * 3), Color(0.5, 0.5, 0.6), 1.0)
 		"controller":
 			var c: Vector2 = (s["hand_f"] + s["hand_b"]) * 0.5
 			r.shaded_poly(PackedVector2Array([c + Vector2(-13, -6), c + Vector2(13, -6), c + Vector2(15, 6), c + Vector2(7, 8),

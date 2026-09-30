@@ -89,6 +89,13 @@ Phase B is where that actually gets broken up.
   halo, because `shaders/post_fx.gdshader` blooms anything above luminance 0.90, and a
   hyper is a short burst. Menu portraits come from `art/portraits/<id>.png`
   (`scripts/ui/portrait.gd`); they are painted, and they are not the in-match body.
+- **Never fill with `Color.WHITE` on a fighter.** The bloom threshold means a true
+  white fill glows, and the ink edge around it dissolves, so the shape reads as a
+  pale smear instead of white fabric or a sclera. A character that needs white
+  paints it in a `"white"` colour key under the threshold: Ulises uses `e6e0d2`
+  (luminance 0.879) for the shirt number, the sock and shoe ticks, the V-neck and
+  his tooth. Tiny specular dots are the exception — a catchlight *should* sparkle,
+  so `FighterRenderer._almond` still uses `Color.WHITE` for that.
 - **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
   `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
   `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and
@@ -139,6 +146,12 @@ Phase B is where that actually gets broken up.
   contract still holds:
   `choose_move` may only return keys the character actually defines. Design doc:
   `design/characters_redesign.md`.
+- **A character can also own its hand.** `CharacterDef.draw_hand(r, p, col, d,
+  front, open)` is the *default* too: it calls `r.open_hand` or `r.fist`, so
+  overriding can draw its own hand or fall back to those two. `front` is false
+  for the back hand, which is how Ulises flashes a V with one hand only. Note the
+  shared hand selection is `open := expr == "happy" or expr == "smug"`, so a
+  `win` expression draws a **fist** unless the character overrides this.
 - **Combo animation is per character, and it is pose-only.** `Fighter._pose_target`
   calls `def.adjust_attack_pose(self, move, p)` on every attack frame, so a character
   can vary how a move *looks* per hit of a string without touching frame data. The

@@ -167,3 +167,14 @@ func draw_hair_front(_r: FighterRenderer) -> void:
 
 func draw_props(_r: FighterRenderer, _s: Dictionary) -> void:
 	pass
+
+
+## Draws a hand at `p`, with `d` the forearm direction. `open` is true in a
+## happy or smug expression, which is the shared spread-finger hand. `front` is
+## false for the back hand. The default here *is* the shared fist, so overriding
+## can either draw something else or fall back to these two calls.
+func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, _front: bool, open: bool) -> void:
+	if open:
+		r.open_hand(p, col, d)
+	else:
+		r.fist(p, col, d)

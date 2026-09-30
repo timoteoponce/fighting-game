@@ -223,11 +223,19 @@ Graphics uplift pass — making the game look and feel like a real release.
   a short burst. Blocks are an outlined blue shard. Dust is a few soft clumps
   with an edge. The additive glow is only a small halo, and the bloom threshold
   stays at 0.90 so it does not fog the eyes.
-- **Ulises is redrawn for the fight.** The in-match body is no longer the
-  chibi head the portrait suggests: a shorter head, almond eyes with a single
-  catchlight, short hair, a fitted kit with a collar, side seam, mid-thigh
-  shorts, a sock cuff and low cleats. His red headband still trails on its
-  chain, and the menus still use the painted portrait.
+- **Ulises matches his portrait in the fight.** The in-match body is a lean kid
+  in the painted football kit, not the chibi mascot the old head suggested:
+  spiked hair, the red headband still trailing on its chain, an open grin with
+  one tooth and two blush strokes, a blue jersey with a white V and green
+  shoulder flashes, white shorts with a green side stripe, solid blue socks and
+  lime cleats. The menus still use `art/portraits/ulises.png`. Every white on
+  him is the off-white `"white"` colour key, never `Color.WHITE`, so it stays
+  under the bloom threshold and keeps its ink edge.
+- **Ulises celebrates with a V.** He raises the front arm and flashes a
+  two-finger victory sign instead of holding a book, and says
+  **"Reading is for winners!"** on the win screen. A character owns its own hand
+  through `CharacterDef.draw_hand(r, p, col, d, front, open)`, whose default is
+  the shared fist, so the other three fighters are untouched.
 - **A connected string alternates limbs.** Ulises' one-two reads like a KOF
   close-range combo: the first hit leads with the front limb, a cancel out of
   it leads with the back one while the first comes back to guard, and the third

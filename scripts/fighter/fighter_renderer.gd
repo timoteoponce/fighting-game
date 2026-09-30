@@ -274,10 +274,7 @@ func _draw() -> void:
 	# Back arm and leg first. One ribbon when the sleeve and the forearm are the
 	# same colour, so the elbow is a bend and not a ring.
 	_arm(s, "b", b, dk(c["sleeve"]), dk(c["forearm"]))
-	if open:
-		open_hand(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["wrist_b"])
-	else:
-		fist(s["hand_b"], dk(c["hands"]), s["hand_b"] - s["wrist_b"])
+	def.draw_hand(self, s["hand_b"], dk(c["hands"]), s["hand_b"] - s["wrist_b"], false, open)
 	_leg(s, "b", b, dk(c["pants"]), dk(c["legs"]))
 	shoe(s["foot_b"], s["foot_dir_b"], dk(c["shoes"]))
 	torso(s)
@@ -292,10 +289,7 @@ func _draw() -> void:
 		_sleeve(s["sh_f"], s["elb_f"], 7.2 * b * puff, c["sleeve"], true)
 	# Props draw before the fist so the hand wraps over them and reads as gripped.
 	def.draw_props(self, s)
-	if open:
-		open_hand(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
-	else:
-		fist(s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"])
+	def.draw_hand(self, s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"], true, open)
 	_draw_emotes(s)
 
 
