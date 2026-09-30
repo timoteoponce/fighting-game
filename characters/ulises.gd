@@ -11,15 +11,20 @@ func _init() -> void:
 	gag_items = ["ball", "tooth", "star"]
 	taunt_lines = ["TOO SLOW!", "GOOOAL!", "NICE TRY!"]
 	hurt_lines = ["OOF!", "MY BALL!", "HEY!"]
+	# "white" is a warm off-white, not Color.WHITE. shaders/post_fx.gdshader blooms
+	# anything above luminance 0.90, so a true white fill blooms, glows and loses
+	# its ink edge — the eyes, the shirt number and the sock cuffs all read as
+	# washed-out blobs. Everything that needs to look like white fabric or a
+	# sclera uses this instead.
 	colors = {
 		"skin": Color("e8b890"), "hair": Color("2a1a0e"), "shirt": Color("1a4d8f"), "sleeve": Color("1a4d8f"),
-		"forearm": Color("e8b890"), "hands": Color("e8b890"), "pants": Color("e8b890"), "shorts": Color("f0ece4"),
+		"forearm": Color("e8b890"), "hands": Color("e8b890"), "pants": Color("e8b890"), "shorts": Color("e6e0d2"),
 		"legs": Color("1a4d8f"), "shoes": Color("2a7a2a"), "eyes": Color("3a2010"), "accent": Color("3a8a3a"),
-		"band": Color("c42020"),
+		"band": Color("c42020"), "white": Color("e6e0d2"),
 	}
 	alt_colors = colors.duplicate()
 	alt_colors.merge({"shirt": Color("8f1a1a"), "sleeve": Color("8f1a1a"), "accent": Color("e8c020"), "legs": Color("8f1a1a"),
-		"shoes": Color("d4a020"), "band": Color("1a4d8f"), "shorts": Color("2a2a30")}, true)
+		"shoes": Color("d4a020"), "band": Color("1a4d8f"), "shorts": Color("d6d2cc"), "white": Color("d6d2cc")}, true)
 	walk_speed = 3.4
 	back_speed = 2.8
 	jump_vel = -10.5
@@ -253,7 +258,7 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	# Number 10, clean and readable.
 	var num: Vector2 = hip + up * 17.0 + perp * 1.0
 	r.draw_set_transform(num, atan2(up.x, -up.y), Vector2(signf(r.scale.x) * 0.5, 0.5))
-	UI.text(r, Vector2(0, 5), "10", 16, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 4, acc.darkened(0.4))
+	UI.text(r, Vector2(0, 5), "10", 16, r.colors["white"], HORIZONTAL_ALIGNMENT_CENTER, 4, acc.darkened(0.4))
 	r.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if not r.head_only:
 		r.limb(s["hip_b"], s["hip_b"].lerp(s["knee_b"], 0.62), 12.0, 11.0, FighterRenderer.dk(r.colors["shorts"]))
@@ -270,7 +275,7 @@ func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
 		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.15)
 		var d: Vector2 = (s[leg[1]] - s[leg[0]]).normalized()
 		var n := Vector2(-d.y, d.x)
-		r.draw_line(a - n * 3.0, a + n * 3.0, Color.WHITE, 1.5, true)
+		r.draw_line(a - n * 3.0, a + n * 3.0, r.colors["white"], 1.5, true)
 
 
 func draw_face(r: FighterRenderer) -> void:
@@ -305,18 +310,29 @@ func draw_hair_front(r: FighterRenderer) -> void:
 func _stylized_eyes(r: FighterRenderer) -> void:
 	var spots: Array[Vector2] = [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
 	var g := r.gaze.limit_length(1.0)
+	var sclera: Color = r.colors["white"]
 	for i in 2:
 		var e: Vector2 = spots[i]
 		var near := 0.85 if i == 1 else 1.0
 		# Almond shape: wider than tall, with a slight upward tilt at the outer corner.
 		var white := FighterRenderer.ellipse_pts(e, 3.2 * near, 2.6 * near, 0.0, 12)
-		r.draw_colored_polygon(white, Color(0.98, 0.97, 0.95))
+		r.draw_colored_polygon(white, sclera)
 		r.draw_polyline(Stage._closed(white), FighterRenderer.OUT, 1.0, true)
+		# A soft shade under the lid. Without it the sclera is one flat pale
+		# oval and the eye reads as a blank sticker rather than a socket. The arc
+		# and its own endpoints are the whole shape: the chord at y=0 is the
+		# widest point of the almond, and closing it lower would cross the arc.
+		var lid := PackedVector2Array()
+		for k in 5:
+			var t := float(k) / 4.0
+			lid.append(e + Vector2(lerpf(-3.2 * near, 3.2 * near, t), -2.6 * near * sin(t * PI)))
+		r.draw_colored_polygon(lid, FighterRenderer.shade(sclera).lerp(sclera, 0.55))
 		# Iris and pupil.
 		var ic := e + g * 0.5
 		r.draw_circle(ic, 1.6 * near, r.colors["eyes"])
 		r.draw_circle(ic + g * 0.3, 0.8 * near, FighterRenderer.OUT)
-		# Single catchlight.
+		# Single catchlight. This one is meant to be bright: it is a specular
+		# dot, and a highlight that sparkles is the point.
 		r.draw_circle(ic + Vector2(-0.4, -0.4), 0.35, Color.WHITE)
 		# Upper lid line.
 		r.draw_arc(e + Vector2(0, -0.5), 3.0 * near, PI + 0.3, TAU - 0.3, 8, FighterRenderer.OUT, 0.8, true)
@@ -356,8 +372,9 @@ func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 		"book":
 			# Held open in the left hand, presented outward like a trophy.
 			var c: Vector2 = s["hand_b"] + Vector2(4, -10)
-			r.poly(PackedVector2Array([c, c + Vector2(-14, -4), c + Vector2(-14, 10), c + Vector2(0, 13)]), Color("fffaf0"), 1.5)
-			r.poly(PackedVector2Array([c, c + Vector2(14, -4), c + Vector2(14, 10), c + Vector2(0, 13)]), Color("fffaf0"), 1.5)
+			var page: Color = r.colors["white"]
+			r.poly(PackedVector2Array([c, c + Vector2(-14, -4), c + Vector2(-14, 10), c + Vector2(0, 13)]), page, 1.5)
+			r.poly(PackedVector2Array([c, c + Vector2(14, -4), c + Vector2(14, 10), c + Vector2(0, 13)]), page, 1.5)
 			for i in 3:
 				r.draw_line(c + Vector2(-12, 1 + i * 3), c + Vector2(-3, 3 + i * 3), Color(0.5, 0.5, 0.6), 1.0)
 				r.draw_line(c + Vector2(3, 3 + i * 3), c + Vector2(12, 1 + i * 3), Color(0.5, 0.5, 0.6), 1.0)
@@ -365,7 +382,7 @@ func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 			var c: Vector2 = (s["hand_f"] + s["hand_b"]) * 0.5
 			r.shaded_poly(PackedVector2Array([c + Vector2(-13, -6), c + Vector2(13, -6), c + Vector2(15, 6), c + Vector2(7, 8),
 				c + Vector2(-7, 8), c + Vector2(-15, 6)]), Color("3a3a48"), 1.5)
-			r.draw_rect(Rect2(c + Vector2(-11, -1.5), Vector2(7, 2.2)), Color.WHITE)
-			r.draw_rect(Rect2(c + Vector2(-8.5, -4), Vector2(2.2, 7)), Color.WHITE)
+			r.draw_rect(Rect2(c + Vector2(-11, -1.5), Vector2(7, 2.2)), r.colors["white"])
+			r.draw_rect(Rect2(c + Vector2(-8.5, -4), Vector2(2.2, 7)), r.colors["white"])
 			r.draw_circle(c + Vector2(7, -2), 1.8, Color("ff5a5a"))
 			r.draw_circle(c + Vector2(10.5, 1.5), 1.8, Color("5ac8ff"))
