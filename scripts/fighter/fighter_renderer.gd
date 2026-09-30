@@ -790,30 +790,26 @@ func chain_local(name: String) -> PackedVector2Array:
 # --- Faces ---------------------------------------------------------------------
 
 ## Eye centres in head space. The nose-side eye (index 1) sits further right.
-## Character overlays (Charlie's bags, Silvan's nose) read these so they stay
-## glued to the eyes when the face changes.
+## A character that owns its face overrides this so its own overlays stay glued
+## to its own eyes.
 func eye_spots() -> Array:
-	var who := def.id if def != null else ""
-	match who:
-		"charlie":
-			return [Vector2(4.8, 2.4), Vector2(10.6, 2.0)]
-		"silvan":
-			# Low enough to sit under the curls, in the open part of the face.
-			return [Vector2(3.0, 0.8), Vector2(8.4, 0.4)]
-		"emilia":
-			return [Vector2(4.0, 1.6), Vector2(10.0, 1.2)]
-		_:
-			return [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
+	return [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
 
 
-## Face in head space. Each kid has their own eyes: the old path stamped the
-## same stack of ovals on all four, and at this size that stack turned to mud.
-## `girl` is kept so older call sites still compile; the character id decides.
-func face(iris: Color, _girl := false) -> void:
-	var who := def.id if def != null else ""
+## A generic face in head space: almond eyes, brows and a mouth, carrying the
+## whole expression vocabulary. This is the *default* and the starting point a
+## new fighter inherits from `characters/_template.gd`.
+##
+## It used to be a switchboard keyed on `def.id`, with 18 branches for the four
+## roster members. That hardcoded the whole cast into the shared renderer, and
+## worse: a character that overrode only its eye *shape* silently kept the
+## shared *vocabulary*, which is how Ulises ended up staring through a whole
+## match. All four own their faces now, each in its own file.
+func face(iris: Color) -> void:
 	var spots: Array = eye_spots()
-	var blink := int(t) % 190 < 6 and expr == "normal"
-	# A big hit bugs the eyes out for a few frames.
+	var style := "open"
+	if def != null:
+		style = def.eye_style(expr, t)
 	var pop := 1.0 + 0.85 * (float(eye_pop) / 9.0)
 	# Pupils drift about a pixel toward whoever we're looking at. Knocked-out
 	# faces stop tracking.
@@ -821,40 +817,37 @@ func face(iris: Color, _girl := false) -> void:
 	for i in 2:
 		var e: Vector2 = spots[i]
 		var near := 0.78 if i == 1 else 1.0  # the nose-side eye is foreshortened
-		_one_eye(who, e, near * pop, iris, g, blink, i)
-	_brows(who, spots)
-	_mouth(who)
+		_one_eye(e, near * pop, iris, g, style, i)
+	_brows(spots)
+	_mouth()
 
 
 ## One eye, five shapes at most: white, outline, iris, pupil, a single catchlight.
-func _one_eye(who: String, e: Vector2, sc: float, iris: Color, g: Vector2, blink: bool, i: int) -> void:
-	if expr in ["happy", "win"]:
-		var rad := (2.6 if who == "silvan" else 2.2) * sc
-		draw_arc(e + Vector2(0, 1.2), rad, PI, TAU, 8, OUT, 1.8, true)
+## `style` comes from `CharacterDef.eye_style`, the vocabulary every character
+## shares.
+func _one_eye(e: Vector2, sc: float, iris: Color, g: Vector2, style: String, i: int) -> void:
+	if style == "happy":
+		draw_arc(e + Vector2(0, 1.2), 2.2 * sc, PI, TAU, 8, OUT, 1.8, true)
 		return
-	if expr == "ko":
+	if style == "ko":
 		var r := 2.4 * sc
 		draw_line(e + Vector2(-r, -r), e + Vector2(r, r), OUT, 1.8, true)
 		draw_line(e + Vector2(r, -r), e + Vector2(-r, r), OUT, 1.8, true)
 		return
-	if expr == "dizzy":
+	if style == "dizzy":
 		# A pupil sliding around a ring. A spiral of dots was noise at this size.
 		draw_circle(e, 2.3 * sc, Color(0.98, 0.97, 0.94), true, -1.0, true)
 		draw_arc(e, 2.3 * sc, 0, TAU, 12, OUT, 1.3, true)
 		draw_circle(e + Vector2.from_angle(t * 0.15 + i) * 1.1 * sc, 0.9 * sc, OUT, true, -1.0, true)
 		return
-	if who == "silvan":
-		_dot_eye(e, 3.5 * sc * (0.55 if expr == "attack" else 1.0), g, blink)
-		return
-	if blink:
-		var rx := (2.2 if who == "charlie" else 2.8) * sc
-		draw_line(e + Vector2(-rx, 0.4), e + Vector2(rx, 0.2), OUT, 1.6, true)
+	if style == "blink":
+		draw_line(e + Vector2(-2.8 * sc, 0.4), e + Vector2(2.8 * sc, 0.2), OUT, 1.6, true)
 		return
 	var squint := 1.0
 	var pupil := 0.34
 	match expr:
 		"attack":
-			squint = 0.40 if who == "emilia" else 0.62
+			squint = 0.62
 		"hurt":
 			squint = 0.45
 			pupil = 0.22
@@ -863,27 +856,7 @@ func _one_eye(who: String, e: Vector2, sc: float, iris: Color, g: Vector2, blink
 			pupil = 0.18
 		"smug":
 			squint = 0.42 if i == 1 else 0.7
-	if who == "charlie":
-		# Small, but big enough that the green iris survives the unibrow.
-		_almond(e, 2.7 * sc, 2.5 * sc, iris, g, squint, 0.32, 1.1)
-	elif who == "emilia":
-		_almond(e, 3.3 * sc, 3.7 * sc, iris, g, squint, pupil, 1.15)
-	else:
-		_almond(e, 3.0 * sc, 3.3 * sc, iris, g, squint, pupil, 1.15)
-
-
-## Toddler eyes: a round white, a near-black dot, one catchlight. Not a scaled
-## copy of Ulises' iris.
-func _dot_eye(e: Vector2, r: float, g: Vector2, blink: bool) -> void:
-	if blink or expr == "hurt":
-		draw_arc(e + Vector2(0, 0.4), r * 0.7, PI, TAU, 8, OUT, 1.7, true)
-		return
-	var white := ellipse_pts(e, r, r * 1.08, 0.0, 14)
-	draw_colored_polygon(white, Color(0.99, 0.98, 0.96))
-	draw_polyline(Stage._closed(white), OUT, 1.55, true)
-	var p := e + g * 0.55
-	draw_circle(p, r * 0.58, Color(0.07, 0.04, 0.03), true, -1.0, true)
-	draw_circle(p + Vector2(-r * 0.26, -r * 0.30), r * 0.24, Color.WHITE, true, -1.0, true)
+	_almond(e, 3.0 * sc, 3.3 * sc, iris, g, squint, pupil, 1.15)
 
 
 ## White, iris, pupil, one catchlight. An ellipse: the almond outline was
@@ -896,54 +869,20 @@ func _almond(e: Vector2, rx: float, ry: float, iris: Color, g: Vector2, squint: 
 	var ic := e + g * 0.35 + Vector2(0.15, sry * 0.06)
 	var ir := minf(rx, sry) * 0.52
 	draw_colored_polygon(ellipse_pts(ic, ir * 0.95, ir, 0.0, 10), iris)
-	draw_circle(ic + g * 0.12, maxf(0.65, ir * pupil * 1.35), OUT, true, -1.0, true)
-	draw_circle(ic + Vector2(-ir * 0.42, -ir * 0.42), maxf(0.55, ir * 0.34), Color.WHITE, true, -1.0, true)
+	draw_circle(ic + g * 0.12, maxf(0.65, ir * pupil * 1.35), OUT)
+	draw_circle(ic + Vector2(-ir * 0.42, -ir * 0.42), maxf(0.55, ir * 0.34), Color.WHITE)
 	draw_arc(e + Vector2(0, -sry * 0.05), rx * 0.92, PI + 0.55, TAU - 0.45, 7, OUT, lid, true)
 
 
-func _brows(who: String, spots: Array) -> void:
-	if who == "silvan":
-		for i in 2:
-			var e: Vector2 = spots[i]
-			draw_line(e + Vector2(-2.2, -4.4), e + Vector2(2.0, -4.8), OUT, 1.15, true)
-		return
-	if who == "charlie":
-		# One heavy unibrow. The scowl is the whole character.
-		var a: Vector2 = spots[0]
-		var b: Vector2 = spots[1]
-		var lift := -6.6
-		if expr == "attack" or expr == "smug":
-			lift = -5.6
-		elif expr == "hurt" or expr == "shock":
-			lift = -7.4
-		draw_polyline(PackedVector2Array([
-			a + Vector2(-2.4, lift), a + Vector2(1.2, lift + 1.3),
-			(a + b) * 0.5 + Vector2(0, lift + 0.6),
-			b + Vector2(-0.6, lift + 1.1), b + Vector2(2.6, lift - 0.4),
-		]), OUT, 2.3, true)
-		return
+func _brows(spots: Array) -> void:
 	for i in 2:
 		var e: Vector2 = spots[i]
-		var ry := 3.7 if who == "emilia" else 3.3
+		var ry := 3.3
 		var b0 := e + Vector2(-2.6, -ry - 2.4)
 		var b1 := e + Vector2(2.6, -ry - 2.0)
-		var w := 1.25
-		if who == "emilia":
-			# Inner corners down toward the nose: a scowl even at rest.
-			w = 1.35
-			if i == 0:
-				b1.y += 2.2
-			else:
-				b0.y += 2.2
-			if expr == "attack":
-				b0.y += 0.8 if i == 1 else -0.4
-				b1.y += 0.8 if i == 0 else -0.4
-		elif expr == "attack":
-			# Ulises: determined, inner end a little lower.
-			if i == 0:
-				b1.y += 1.2
-			else:
-				b0.y += 1.2
+		if expr == "attack":
+			b0.y += 1.2
+			b1.y += 1.2
 		if expr == "hurt" or expr == "shock":
 			b0.y -= 1.4
 			b1.y -= 1.6
@@ -953,29 +892,15 @@ func _brows(who: String, spots: Array) -> void:
 		elif expr == "ko" or expr == "dizzy":
 			b0.y -= 1.6
 			b1.y -= 1.6
-		draw_line(b0, b1, OUT, w, true)
+		draw_line(b0, b1, OUT, 1.25, true)
 
 
-func _mouth(who: String) -> void:
-	var skin: Color = colors.get("skin", Color(1, 0.8, 0.7))
-	draw_line(Vector2(12.0, 2.6), Vector2(11.2, 4.4), shade(skin), 1.1, true)
-	if who == "emilia":
-		draw_colored_polygon(ellipse_pts(Vector2(4.8, 5.0), 2.0, 0.9), Color(1, 0.45, 0.6, 0.4))
-	elif who == "ulises" or who == "":
-		# Two short blush strokes, the way the portrait paints the cheeks.
-		var blush := Color(0.85, 0.28, 0.32, 0.75)
-		draw_line(Vector2(1.2, 5.4), Vector2(3.2, 6.4), blush, 1.05, true)
-		draw_line(Vector2(2.0, 6.6), Vector2(3.8, 7.4), blush, 1.05, true)
-	var m := Vector2(8.2, 6.8) if who == "silvan" else Vector2(8.4, 7.2)
+func _mouth() -> void:
+	var m := Vector2(8.4, 7.2)
 	var ink := Color(0.45, 0.08, 0.12)
 	match expr:
 		"attack":
-			if who == "emilia":
-				poly(PackedVector2Array([m + Vector2(-2.4, -1.6), m + Vector2(2.6, -1.2), m + Vector2(1.2, 1.4), m + Vector2(-1.4, 1.2)]), ink, 1.15)
-			elif who == "silvan":
-				_smile(m, 3.2, ink)
-			else:
-				poly(PackedVector2Array([m + Vector2(-1.6, -0.6), m + Vector2(1.8, -0.8), m + Vector2(0.5, 1.5)]), ink, 1.0)
+			poly(PackedVector2Array([m + Vector2(-1.6, -0.6), m + Vector2(1.8, -0.8), m + Vector2(0.5, 1.5)]), ink, 1.0)
 		"hurt":
 			poly(ellipse_pts(m + Vector2(0, 0.4), 1.2, 1.6, 0.0, 10), ink, 1.0)
 		"happy", "win":
@@ -993,28 +918,4 @@ func _mouth(who: String) -> void:
 		"smug":
 			draw_arc(m + Vector2(0.2, -0.6), 2.4, 0.2, 1.6, 8, ink, 1.45, true)
 		_:
-			if who == "silvan":
-				_smile(m, 3.6, ink)
-			elif who == "emilia":
-				# Resting face is a frown, not a smile.
-				draw_line(m + Vector2(-2.2, -0.8), m + Vector2(0, 0.5), OUT, 1.45, true)
-				draw_line(m + Vector2(0, 0.5), m + Vector2(2.2, -0.5), OUT, 1.45, true)
-			elif who == "charlie":
-				draw_line(m + Vector2(-2.4, 0.2), m + Vector2(2.2, -0.4), OUT, 1.3, true)
-			else:
-				# Ulises' idle grin: a small open mouth and one tooth.
-				draw_colored_polygon(PackedVector2Array([
-					m + Vector2(-1.8, -0.5), m + Vector2(1.8, -0.7), m + Vector2(1.3, 1.3), m + Vector2(-1.3, 1.2),
-				]), ink)
-				draw_colored_polygon(PackedVector2Array([
-					m + Vector2(-0.7, -0.5), m + Vector2(0.5, -0.6), m + Vector2(0.3, 0.5), m + Vector2(-0.5, 0.4),
-				]), Color(0.98, 0.97, 0.93))
-
-
-func _smile(m: Vector2, w: float, ink: Color) -> void:
-	draw_colored_polygon(PackedVector2Array([
-		m + Vector2(-w, -0.6), m + Vector2(w, -0.8), m + Vector2(w * 0.55, 2.4), m + Vector2(-w * 0.55, 2.2),
-	]), ink)
-	draw_colored_polygon(PackedVector2Array([
-		m + Vector2(-w * 0.4, 0.5), m + Vector2(w * 0.4, 0.4), m + Vector2(w * 0.2, 2.2), m + Vector2(-w * 0.2, 2.0),
-	]), Color(1.0, 0.45, 0.55))
+			draw_line(m + Vector2(-2.2, 0.2), m + Vector2(2.2, -0.4), OUT, 1.3, true)
