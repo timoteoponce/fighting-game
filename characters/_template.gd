@@ -35,7 +35,7 @@ func _init() -> void:
 
 	# --- Colours ----------------------------------------------------------
 	# The shared body renderer needs every key in CharacterDef.REQUIRED_COLORS.
-	# Add your own extra keys if you draw extra parts in draw_behind/draw_front.
+	# Add your own extra keys if you draw extra parts in draw_behind/draw_props.
 	colors = {
 		"skin": Color("e8b98f"), "hair": Color("332218"), "shirt": Color("3aa76d"),
 		"sleeve": Color("3aa76d"), "forearm": Color("e8b98f"), "hands": Color("e8b98f"),
@@ -209,5 +209,17 @@ func _init() -> void:
 
 
 ## Optional. Drawn in front of the body — headbands, goggles, held props.
-#func draw_front(r: FighterRenderer, _s: Dictionary) -> void:
+## This is `draw_props`, not `draw_front`: that is the hook the renderer calls.
+#func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 #	pass
+
+## Optional. Replace the shared circle head with your own, in head space. A
+## character that owns its head must also draw its own jaw and ear shading in
+## draw_face, because the shared ones are positioned for the circle.
+#func head_outline() -> PackedVector2Array:
+#	return PackedVector2Array()
+
+## Optional. Replace the shared wedge torso with your own, in torso space. `up`
+## is shoulder-ward and `perp` points forward, i.e. the belly side.
+#func torso_outline(_r: FighterRenderer, s: Dictionary) -> PackedVector2Array:
+#	return PackedVector2Array()

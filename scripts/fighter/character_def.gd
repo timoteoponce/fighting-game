@@ -10,7 +10,7 @@ extends RefCounted
 ## mid-match.
 const REQUIRED_MOVES := ["L", "H", "cL", "cH", "jL", "jH", "proj", "rush", "anti", "hyper"]
 ## Colour keys the shared body renderer reads. Characters may add more for
-## their own `draw_behind` / `draw_front` parts (capes, skirts, headbands).
+## their own `draw_behind` / `draw_props` parts (capes, skirts, headbands).
 const REQUIRED_COLORS := ["skin", "hair", "shirt", "sleeve", "forearm", "hands",
 	"pants", "legs", "shoes", "eyes", "accent"]
 
