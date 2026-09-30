@@ -237,6 +237,12 @@ Graphics uplift pass — making the game look and feel like a real release.
   taper plus a yoke seam and sleeve cuffs, and a fist with knuckles. The hooks
   are `head_outline()`, `torso_outline(r, s)` and `draw_hand(...)`, all
   detected with `has_method`, so the other three fighters are bit-identical.
+- **He blinks and his face reacts.** The shared face blinks on a timer (6 frames
+  of every 190, calm only), shows X eyes on a KO, a pupil sliding a ring when
+  dizzy, closed arcs when winning, and a squint on an attack and when hit. He
+  draws his own eyes, so he carries that whole vocabulary rather than a fixed
+  stare, and his mouth follows suit — it squiggles when dizzy and smirks rather
+  than grinning through a knockdown.
 - **Ulises celebrates with a V.** He raises the front arm and flashes a
   two-finger victory sign instead of holding a book, and says
   **"Reading is for winners!"** on the win screen.

@@ -470,42 +470,85 @@ func eye_spots() -> Array:
 	return [Vector2(3.6, 0.4), Vector2(8.6, 0.1)]
 
 
+## Which eye to draw. Split out from the drawing so the choice is a pure
+## function of the expression: a character that owns the face owns the whole
+## vocabulary, not just the static shape. Returns "happy", "ko", "dizzy",
+## "blink" or "open".
+func eye_style(expr: String, t: float) -> String:
+	if expr in ["happy", "win"]:
+		return "happy"
+	if expr == "ko":
+		return "ko"
+	if expr == "dizzy":
+		return "dizzy"
+	# The blink timer is the shared one: 6 frames of every 190, only while calm.
+	if expr == "normal" and int(t) % 190 < 6:
+		return "blink"
+	return "open"
+
+
+## His eyes. Five shapes at most, the same budget the shared `face()` works to:
+## white, iris, pupil, one catchlight and a single lid arc. His head is ~28
+## units wide in a fight, so an eye is about six logical pixels across — any
+## more layers than this stop reading as an eye and start reading as a smudge.
+## That thinness is also why the eye has to carry the expression through shape
+## alone, which is what `eye_style` picks.
 func _eyes(r: FighterRenderer) -> void:
 	var spots: Array[Vector2] = [Vector2(3.6, 0.4), Vector2(8.6, 0.1)]
-	var g := r.gaze.limit_length(1.0)
+	var ink := FighterRenderer.OUT
 	var sclera: Color = r.colors["white"]
+	var style := eye_style(r.expr, r.t)
+	# A big hit bugs the eyes out for a few frames.
+	var pop := 1.0 + 0.6 * (float(r.eye_pop) / 9.0)
+	# Knocked-out faces stop tracking the opponent.
+	var g := Vector2.ZERO if r.expr in ["ko", "dizzy", "hurt"] else r.gaze.limit_length(1.0)
 	for i in 2:
 		var e: Vector2 = spots[i]
 		var near := 0.82 if i == 1 else 1.0
-		# Almond shape: wider than tall, with a slight upward tilt at the outer corner.
-		var white := FighterRenderer.ellipse_pts(e, 3.0 * near, 2.5 * near, 0.0, 12)
-		r.draw_colored_polygon(white, sclera)
-		r.draw_polyline(Stage._closed(white), FighterRenderer.OUT, 1.0, true)
-		# A soft shade under the lid. Without it the sclera is one flat pale
-		# oval and the eye reads as a blank sticker rather than a socket. The arc
-		# and its own endpoints are the whole shape: the chord at y=0 is the
-		# widest point of the almond, and closing it lower would cross the arc.
-		var lid := PackedVector2Array()
-		for k in 5:
-			var t := float(k) / 4.0
-			lid.append(e + Vector2(lerpf(-3.0 * near, 3.0 * near, t), -2.5 * near * sin(t * PI)))
-		r.draw_colored_polygon(lid, _warm_shade(sclera, 0.16))
-		# Iris, then a darker cap under the lid, then the pupil. The cap is what
-		# makes an eye look set into a socket instead of stuck on the surface.
-		var ic := e + g * 0.5
-		var ir := 1.5 * near
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(ic, ir * 0.95, ir * 0.9, 0.0, 10), r.colors["eyes"])
-		var cap := PackedVector2Array()
-		for k in 5:
-			var t := float(k) / 4.0
-			cap.append(ic + Vector2(lerpf(-ir * 0.95, ir * 0.95, t), -ir * 0.9 * sin(t * PI)))
-		r.draw_colored_polygon(cap, r.colors["eyes"].darkened(0.3))
-		r.draw_circle(ic + g * 0.28, maxf(0.42, ir * 0.42), FighterRenderer.OUT)
-		# Single catchlight. This one is meant to be bright: it is a specular
-		# dot, and a highlight that sparkles is the point.
-		r.draw_circle(ic + Vector2(-0.4, -0.35), 0.32, Color.WHITE)
-		# Upper lid line, sitting on the shaded edge.
-		r.draw_arc(e + Vector2(0, -0.45), 2.8 * near, PI + 0.3, TAU - 0.3, 8, FighterRenderer.OUT, 0.8, true)
+		if style == "happy":
+			r.draw_arc(e + Vector2(0, 0.8), 2.0 * near, PI, TAU, 8, ink, 1.5, true)
+			continue
+		if style == "ko":
+			var rad := 2.1 * near
+			r.draw_line(e + Vector2(-rad, -rad * 0.8), e + Vector2(rad, rad * 0.8), ink, 1.6, true)
+			r.draw_line(e + Vector2(rad, -rad * 0.8), e + Vector2(-rad, rad * 0.8), ink, 1.6, true)
+			continue
+		if style == "dizzy":
+			r.draw_colored_polygon(FighterRenderer.ellipse_pts(e, 2.0 * near, 1.7 * near, 0.0, 10), sclera)
+			r.draw_arc(e, 2.0 * near, 0.0, TAU, 10, ink, 0.9, true)
+			r.draw_circle(e + Vector2.from_angle(r.t * 0.15 + float(i)) * 0.7 * near, 0.55, ink)
+			continue
+		var sc := near * pop
+		if style == "blink":
+			r.draw_line(e + Vector2(-2.6 * sc, 0.3), e + Vector2(2.5 * sc, 0.15), ink, 1.3, true)
+			continue
+		# Squint: the lid drops over the iris on an attack and opens wide on a
+		# shock. This is most of what sells the expression at six pixels.
+		var squint := 1.0
+		var pupil := 0.34
+		match r.expr:
+			"attack":
+				squint = 0.55
+			"hurt":
+				squint = 0.5
+				pupil = 0.22
+			"shock":
+				squint = 1.12
+				pupil = 0.18
+			"smug":
+				squint = 0.45 if i == 1 else 0.72
+		var ry := maxf(0.9, 2.4 * sc * clampf(squint, 0.4, 1.15))
+		var rx := 3.0 * sc
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(e, rx, ry, 0.0, 10), sclera)
+		var ir := minf(rx * 0.44, ry * 0.9)
+		var ic := e + g * rx * 0.16
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(ic, ir, ir * 0.9, 0.0, 8), r.colors["eyes"])
+		r.draw_circle(ic + g * 0.1, maxf(0.4, ir * pupil * 1.3), ink)
+		# The one deliberately bright white: a sub-pixel specular dot that
+		# should sparkle, the only thing on a fighter allowed to bloom.
+		r.draw_circle(ic + Vector2(-ir * 0.4, -ir * 0.4), 0.28, Color.WHITE)
+		# Upper lid, drawn last so it crops the iris.
+		r.draw_arc(e + Vector2(0, -ry * 0.15), rx * 0.94, PI + 0.35, TAU - 0.35, 8, ink, 0.95, true)
 
 
 func _brows(r: FighterRenderer) -> void:
@@ -542,12 +585,21 @@ func _nose(r: FighterRenderer) -> void:
 
 
 ## The painting's open grin with one tooth, and two blush strokes on the cheek.
-## `ko` and `hurt` swap the grin for a taller open mouth; the others keep it.
-## Sits under the nose, not out at the jaw line.
+## `ko` and `hurt` swap the grin for a taller open mouth, `dizzy` for a squiggle
+## and `smug` for a lopsided line, so the mouth agrees with the eyes.
 func _mouth(r: FighterRenderer) -> void:
 	var m := Vector2(4.9, 6.2)
 	var ink := Color(0.45, 0.12, 0.12)
 	var blush := Color(0.85, 0.32, 0.32, 0.5)
+	if r.expr == "dizzy":
+		var w := PackedVector2Array()
+		for wi in 5:
+			w.append(m + Vector2(-2.0 + float(wi) * 1.0, 0.5 + (0.7 if wi % 2 == 0 else -0.7)))
+		r.draw_polyline(w, ink, 1.1, true)
+		return
+	if r.expr == "smug":
+		r.draw_line(m + Vector2(-1.5, 0.35), m + Vector2(1.6, -0.5), ink, 1.1, true)
+		return
 	var tall := r.expr == "hurt" or r.expr == "ko"
 	r.draw_colored_polygon(PackedVector2Array([
 		m + Vector2(-1.7, -0.5), m + Vector2(1.7, -0.6),

@@ -39,6 +39,7 @@ func _ready() -> void:
 	_test_movement("ulises")
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
+	_test_ulises_face()
 	_test_ulises_outlines()
 	_test_air_block()
 	_test_quick_rise()
@@ -455,6 +456,54 @@ func _test_ulises_chain_pose() -> void:
 	var spec: Dictionary = d.adjust_attack_pose(p1, anti, anti.pose_a)
 	check(float(spec["leg_f"]) == float(anti.pose_a["leg_f"]), "specials keep their own pose")
 	f.free()
+
+
+## Ulises draws his own eyes, and he is the only fighter who does. A character
+## that owns the face owns the whole expression vocabulary, not just the static
+## shape: blink on the shared timer, X on a KO, a sliding pupil when dizzy,
+## closed arcs when happy or winning, and a squint on an attack. Getting that
+## wrong is invisible in a screenshot and obvious in a match — he stands with
+## his eyes permanently open.
+func _test_ulises_face() -> void:
+	print("[ulises face]")
+	var d := UlisesDef.new()
+	# Every expression must pick a distinct eye style, or two of them are drawn
+	# identically and the face stops reading.
+	var styles := {}
+	for e: String in ["normal", "attack", "hurt", "smug", "win", "ko", "dizzy", "shock"]:
+		styles[e] = d.eye_style(e, 40.0)
+	check(styles["win"] == "happy", "winning closes the eyes (got %s)" % styles["win"])
+	check(styles["ko"] == "ko", "a KO is X eyes (got %s)" % styles["ko"])
+	check(styles["dizzy"] == "dizzy", "being dizzy slides the pupil (got %s)" % styles["dizzy"])
+	check(styles["attack"] == "open" and styles["hurt"] == "open"
+			and styles["smug"] == "open" and styles["shock"] == "open",
+		"attacks, hits and shocks stay open and squint instead (got %s)" % str(styles))
+	# The blink is a frame-level event on the shared timer: 6 consecutive
+	# frames per 190-frame cycle. Count cycles rather than total frames, since
+	# an exact multiple is 950 and anything else is a partial cycle.
+	var per_cycle := 0
+	for f in 190:
+		if d.eye_style("normal", float(f)) == "blink":
+			per_cycle += 1
+	check(per_cycle == 6, "he blinks 6 frames per 190-frame cycle (%d)" % per_cycle)
+	var runs := 0
+	var was := false
+	for f in 950:
+		var now := d.eye_style("normal", float(f)) == "blink"
+		if now and not was:
+			runs += 1
+		was = now
+	check(runs == 5, "five blink cycles in 950 frames (5 x 190) (%d)" % runs)
+	check(d.eye_style("attack", 0.0) != "blink", "he does not blink mid-attack")
+	# He is the only one who owns a head or a torso, so nobody else's look moved.
+	var others: Array[String] = []
+	for id: String in GameState.CHARACTERS:
+		if id == "ulises":
+			continue
+		var c: CharacterDef = GameState.make_character(id)
+		if c.has_method("head_outline") or c.has_method("torso_outline"):
+			others.append(id)
+	check(others.is_empty(), "no other fighter owns a head or torso%s" % ("" if others.is_empty() else ", but " + str(others)))
 
 
 ## Ulises' in-match art owns the head and the torso, so both outlines must

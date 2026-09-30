@@ -98,6 +98,17 @@ Phase B is where that actually gets broken up.
   shade the face in `draw_face` instead. `draw_hand`'s default *is* the shared fist, so
   unlike the other two it is a normal override rather than a `has_method` branch, and
   `front` is false for the back hand.
+- **Owning a face means owning the whole expression vocabulary, not just the
+  static shape.** The shared `face()` picks from: blink (6 frames of every 190,
+  calm only), X on `ko`, a pupil sliding a ring on `dizzy`, closed arcs on
+  `happy`/`win`, and a squint per expression, plus `eye_pop` on a big hit. A
+  character that overrides only the eye *shape* and ignores `expr` ends up with
+  a permanently open stare, which is easy to miss in a screenshot and obvious in
+  a match. Ulises' `eye_style(expr, t)` is a pure function returning
+  `happy` / `ko` / `dizzy` / `blink` / `open`, kept separate from the drawing so
+  it is testable headlessly — pixel comparison is not, and the same rule applies
+  to any character's mouth: give it the `dizzy` and `smug` variants or it will
+  grin through a knockdown.
 - **Never fill with `Color.WHITE` on a fighter.** The bloom threshold means a true
   white fill glows, and the ink edge around it dissolves, so the shape reads as a
   pale smear instead of white fabric or a sclera. A character that needs white
