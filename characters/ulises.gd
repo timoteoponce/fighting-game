@@ -12,14 +12,14 @@ func _init() -> void:
 	taunt_lines = ["TOO SLOW!", "GOOOAL!", "NICE TRY!"]
 	hurt_lines = ["OOF!", "MY BALL!", "HEY!"]
 	colors = {
-		"skin": Color("f2c29b"), "hair": Color("2b1a12"), "shirt": Color("2f6fe0"), "sleeve": Color("2f6fe0"),
-		"forearm": Color("f2c29b"), "hands": Color("f2c29b"), "pants": Color("f2c29b"), "shorts": Color("f4f4f4"),
-		"legs": Color("2f6fe0"), "shoes": Color("b6f23a"), "eyes": Color("5a3a22"), "accent": Color("34c759"),
-		"band": Color("e8322e"),
+		"skin": Color("e8b890"), "hair": Color("2a1a0e"), "shirt": Color("1a4d8f"), "sleeve": Color("1a4d8f"),
+		"forearm": Color("e8b890"), "hands": Color("e8b890"), "pants": Color("e8b890"), "shorts": Color("f0ece4"),
+		"legs": Color("1a4d8f"), "shoes": Color("2a7a2a"), "eyes": Color("3a2010"), "accent": Color("3a8a3a"),
+		"band": Color("c42020"),
 	}
 	alt_colors = colors.duplicate()
-	alt_colors.merge({"shirt": Color("e0402f"), "sleeve": Color("e0402f"), "accent": Color("ffffff"), "legs": Color("e0402f"),
-		"shoes": Color("ffd23f"), "band": Color("2f6fe0"), "shorts": Color("2a2a38")}, true)
+	alt_colors.merge({"shirt": Color("8f1a1a"), "sleeve": Color("8f1a1a"), "accent": Color("e8c020"), "legs": Color("8f1a1a"),
+		"shoes": Color("d4a020"), "band": Color("1a4d8f"), "shorts": Color("2a2a30")}, true)
 	walk_speed = 3.4
 	back_speed = 2.8
 	jump_vel = -10.5
@@ -109,6 +109,9 @@ func _init() -> void:
 			"pose_a": {"arm_f": 90, "elb_f": 0, "arm_b": 95, "elb_b": 0, "lean": 8}}),
 	}
 	size = 0.9  # Ulises is about 10% shorter than Emilia
+	# Clean stylized: proportional head, lean limbs, fitted clothing.
+	head_scale = 1.3
+	build = 0.85
 	scale_moves()
 
 
@@ -195,40 +198,42 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	var hip: Vector2 = s["hip"]
 	var top: Vector2 = hip + up * FighterRenderer.TORSO
 	var acc: Color = r.colors["accent"]
-	# Side stripe, V collar and hem of the jersey.
-	r.draw_line(hip + perp * 6.0 + up * 2.0, top + perp * 5.0 - up * 3.0, acc, 2.5, true)
-	r.poly(PackedVector2Array([top + perp * 5.5 - up * 0.5, top - perp * 5.0 - up * 0.5, top + perp * 1.5 - up * 6.0]), acc, 1.2)
-	r.draw_colored_polygon(PackedVector2Array([top + perp * 3.5 - up * 1.0, top - perp * 2.5 - up * 1.0, top + perp * 1.2 - up * 4.0]), r.colors["skin"])
-	r.draw_line(hip + perp * 8.0 + up * 1.5, hip - perp * 8.0 + up * 1.5, acc, 2.0, true)
-	# A small belly pushing the jersey out in front. The shared torso is a straight wedge.
-	var belly := hip + up * 9.0 + perp * 5.5
-	r.poly(FighterRenderer.ellipse_pts(belly, 7.2, 5.0, atan2(perp.y, perp.x)), r.colors["shirt"], 1.6)
-	# Number 10, kept readable when facing left.
+	# Fitted jersey: follows the body, with a collar, side seam, and hem.
+	r.draw_line(hip + perp * 5.5 + up * 2.0, top + perp * 4.5 - up * 3.0, acc, 2.0, true)
+	r.poly(PackedVector2Array([top + perp * 5.0 - up * 0.5, top - perp * 4.5 - up * 0.5, top + perp * 1.5 - up * 5.0]), acc, 1.0)
+	r.draw_colored_polygon(PackedVector2Array([top + perp * 3.0 - up * 1.0, top - perp * 2.0 - up * 1.0, top + perp * 1.2 - up * 3.5]), r.colors["skin"])
+	r.draw_line(hip + perp * 7.0 + up * 1.5, hip - perp * 7.0 + up * 1.5, acc, 1.5, true)
+	# Slight belly curve, not a balloon.
+	var belly := hip + up * 9.0 + perp * 4.5
+	r.poly(FighterRenderer.ellipse_pts(belly, 6.0, 4.0, atan2(perp.y, perp.x)), r.colors["shirt"], 1.2)
+	# Number 10, clean and readable.
 	var num: Vector2 = hip + up * 17.0 + perp * 1.0
 	r.draw_set_transform(num, atan2(up.x, -up.y), Vector2(signf(r.scale.x) * 0.5, 0.5))
 	UI.text(r, Vector2(0, 5), "10", 16, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 4, acc.darkened(0.4))
 	r.draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 	if not r.head_only:
-		# Back leg of the shorts (the front one is drawn over the front leg).
-		r.limb(s["hip_b"], s["hip_b"].lerp(s["knee_b"], 0.62), 14.0, 13.0, FighterRenderer.dk(r.colors["shorts"]))
+		r.limb(s["hip_b"], s["hip_b"].lerp(s["knee_b"], 0.62), 12.0, 11.0, FighterRenderer.dk(r.colors["shorts"]))
 
 
 func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
-	r.limb(s["hip_f"], s["hip_f"].lerp(s["knee_f"], 0.62), 14.0, 13.0, r.colors["shorts"])
+	r.limb(s["hip_f"], s["hip_f"].lerp(s["knee_f"], 0.62), 12.0, 11.0, r.colors["shorts"])
 	var up: Vector2 = s["up"]
 	var perp: Vector2 = s["perp"]
-	r.limb(s["hip"] - perp * 7.0 + up * 2.0, s["hip"] + perp * 7.0 + up * 2.0, 5.5, 5.5, r.colors["shorts"])
-	# Sock stripes.
+	# Fitted shorts: mid-thigh, with a hem line.
+	r.limb(s["hip"] - perp * 6.0 + up * 2.0, s["hip"] + perp * 6.0 + up * 2.0, 4.5, 4.5, r.colors["shorts"])
+	# Sock stripe at the cuff.
 	for leg in [["knee_f", "foot_f"], ["knee_b", "foot_b"]]:
-		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.18)
+		var a: Vector2 = s[leg[0]].lerp(s[leg[1]], 0.15)
 		var d: Vector2 = (s[leg[1]] - s[leg[0]]).normalized()
 		var n := Vector2(-d.y, d.x)
-		r.draw_line(a - n * 3.6, a + n * 3.6, Color.WHITE, 1.8, true)
+		r.draw_line(a - n * 3.0, a + n * 3.0, Color.WHITE, 1.5, true)
 
 
 func draw_face(r: FighterRenderer) -> void:
 	draw_ear(r)
-	r.face(r.colors["eyes"])
+	_stylized_eyes(r)
+	_stylized_brows(r)
+	_stylized_mouth(r)
 
 
 func draw_hair_back(r: FighterRenderer) -> void:
@@ -237,21 +242,64 @@ func draw_hair_back(r: FighterRenderer) -> void:
 
 func draw_hair_front(r: FighterRenderer) -> void:
 	var hc: Color = r.colors["hair"]
-	# Sharp spikes on top. The headband, drawn after this, covers the roots.
+	# Short textured hair that follows the skull. A few tufts at the front.
 	var hair := PackedVector2Array([
-		Vector2(-9, 5), Vector2(-15, 1), Vector2(-11, -3), Vector2(-20, -8), Vector2(-12, -11), Vector2(-18, -18),
-		Vector2(-8, -14), Vector2(-9, -28), Vector2(-3, -15), Vector2(1, -31), Vector2(6, -15), Vector2(12, -26),
-		Vector2(9, -13), Vector2(17, -14), Vector2(11.5, -8), Vector2(13, -4.5), Vector2(9, -6), Vector2(7.5, -2),
-		Vector2(5, -6), Vector2(2, -3.5), Vector2(-0.5, -6), Vector2(-3, -2), Vector2(-5.5, -4), Vector2(-6, 3),
+		Vector2(-9, 5), Vector2(-13, 1), Vector2(-10, -3), Vector2(-14, -8), Vector2(-8, -12),
+		Vector2(-3, -14), Vector2(2, -13), Vector2(7, -10), Vector2(10, -6), Vector2(11, -2),
+		Vector2(8, -1), Vector2(3, -3), Vector2(-2, -4), Vector2(-6, -2), Vector2(-8, 2),
 	])
-	r.shaded_poly(hair, hc, 2.0, 0.82)
-	for st in [[Vector2(-6, -14), Vector2(-1, -18)], [Vector2(1, -15), Vector2(5, -18)], [Vector2(-10, -9), Vector2(-5, -11)]]:
-		r.draw_line(st[0], st[1], FighterRenderer.hl(hc), 1.3, true)
+	r.shaded_poly(hair, hc, 1.8, 0.8)
+	for st in [[Vector2(-5, -10), Vector2(-1, -13)], [Vector2(1, -11), Vector2(5, -12)], [Vector2(-9, -6), Vector2(-4, -8)]]:
+		r.draw_line(st[0], st[1], FighterRenderer.hl(hc), 1.0, true)
 	# Headband.
 	var band: Color = r.colors["band"]
-	r.shaded_poly(PackedVector2Array([Vector2(-11, -8.5), Vector2(-2, -11), Vector2(11.8, -9.5), Vector2(11.5, -6.2),
-		Vector2(-1.5, -7.6), Vector2(-10.6, -4.8)]), band, 1.6, 0.75)
-	r.ball(Vector2(-10.5, -6.5), 2.2, band)
+	r.shaded_poly(PackedVector2Array([Vector2(-10, -7.5), Vector2(-2, -9), Vector2(10, -8), Vector2(10, -5.5),
+		Vector2(-1.5, -6.5), Vector2(-9.5, -4.5)]), band, 1.4, 0.75)
+	r.ball(Vector2(-10, -5.5), 2.0, band)
+
+
+func _stylized_eyes(r: FighterRenderer) -> void:
+	var spots: Array[Vector2] = [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
+	var g := r.gaze.limit_length(1.0)
+	for i in 2:
+		var e: Vector2 = spots[i]
+		var near := 0.85 if i == 1 else 1.0
+		# Almond shape: wider than tall, with a slight upward tilt at the outer corner.
+		var white := FighterRenderer.ellipse_pts(e, 3.2 * near, 2.6 * near, 0.0, 12)
+		r.draw_colored_polygon(white, Color(0.98, 0.97, 0.95))
+		r.draw_polyline(Stage._closed(white), FighterRenderer.OUT, 1.0, true)
+		# Iris and pupil.
+		var ic := e + g * 0.5
+		r.draw_circle(ic, 1.6 * near, r.colors["eyes"])
+		r.draw_circle(ic + g * 0.3, 0.8 * near, FighterRenderer.OUT)
+		# Single catchlight.
+		r.draw_circle(ic + Vector2(-0.4, -0.4), 0.35, Color.WHITE)
+		# Upper lid line.
+		r.draw_arc(e + Vector2(0, -0.5), 3.0 * near, PI + 0.3, TAU - 0.3, 8, FighterRenderer.OUT, 0.8, true)
+
+
+func _stylized_brows(r: FighterRenderer) -> void:
+	var spots: Array[Vector2] = [Vector2(4.4, 1.8), Vector2(10.2, 1.4)]
+	for i in 2:
+		var e: Vector2 = spots[i]
+		var ry := 3.8
+		var b0 := e + Vector2(-2.5, -ry - 1.5)
+		var b1 := e + Vector2(2.5, -ry - 1.0)
+		if r.expr == "attack":
+			b0.y += 1.0
+			b1.y += 1.0
+		elif r.expr == "hurt" or r.expr == "shock":
+			b0.y -= 1.0
+			b1.y -= 1.0
+		r.draw_line(b0, b1, FighterRenderer.OUT, 1.2, true)
+
+
+func _stylized_mouth(r: FighterRenderer) -> void:
+	var m := Vector2(8.4, 6.8)
+	var ink := Color(0.45, 0.15, 0.12)
+	# Confident smirk: a slight curve, not a huge grin.
+	r.draw_line(m + Vector2(-1.5, 0.0), m + Vector2(1.5, -0.5), ink, 1.0, true)
+	r.draw_line(m + Vector2(-1.0, 0.5), m + Vector2(1.0, 0.3), ink, 0.6, true)
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
