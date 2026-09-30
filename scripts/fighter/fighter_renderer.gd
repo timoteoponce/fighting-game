@@ -285,8 +285,7 @@ func _draw() -> void:
 	_draw_head(s)
 	_arm(s, "f", b, c["sleeve"], c["forearm"])
 	if not c["sleeve"].is_equal_approx(c["forearm"]):
-		var puff := 1.35 if def.id == "emilia" else 1.0
-		_sleeve(s["sh_f"], s["elb_f"], 7.2 * b * puff, c["sleeve"], true)
+		_sleeve(s["sh_f"], s["elb_f"], 7.2 * b, c["sleeve"], true)
 	# Props draw before the fist so the hand wraps over them and reads as gripped.
 	def.draw_props(self, s)
 	def.draw_hand(self, s["hand_f"], c["hands"], s["hand_f"] - s["wrist_f"], true, open)

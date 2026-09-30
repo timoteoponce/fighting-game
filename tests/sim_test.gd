@@ -39,8 +39,7 @@ func _ready() -> void:
 	_test_movement("ulises")
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
-	_test_ulises_face()
-	_test_ulises_outlines()
+	_test_roster_faces()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -458,67 +457,44 @@ func _test_ulises_chain_pose() -> void:
 	f.free()
 
 
-## Ulises draws his own eyes, and he is the only fighter who does. A character
-## that owns the face owns the whole expression vocabulary, not just the static
-## shape: blink on the shared timer, X on a KO, a sliding pupil when dizzy,
-## closed arcs when happy or winning, and a squint on an attack. Getting that
-## wrong is invisible in a screenshot and obvious in a match — he stands with
-## his eyes permanently open.
-func _test_ulises_face() -> void:
-	print("[ulises face]")
-	var d := UlisesDef.new()
-	# Every expression must pick a distinct eye style, or two of them are drawn
-	# identically and the face stops reading.
-	var styles := {}
-	for e: String in ["normal", "attack", "hurt", "smug", "win", "ko", "dizzy", "shock"]:
-		styles[e] = d.eye_style(e, 40.0)
-	check(styles["win"] == "happy", "winning closes the eyes (got %s)" % styles["win"])
-	check(styles["ko"] == "ko", "a KO is X eyes (got %s)" % styles["ko"])
-	check(styles["dizzy"] == "dizzy", "being dizzy slides the pupil (got %s)" % styles["dizzy"])
-	check(styles["attack"] == "open" and styles["hurt"] == "open"
-			and styles["smug"] == "open" and styles["shock"] == "open",
-		"attacks, hits and shocks stay open and squint instead (got %s)" % str(styles))
-	# The blink is a frame-level event on the shared timer: 6 consecutive
-	# frames per 190-frame cycle. Count cycles rather than total frames, since
-	# an exact multiple is 950 and anything else is a partial cycle.
-	var per_cycle := 0
-	for f in 190:
-		if d.eye_style("normal", float(f)) == "blink":
-			per_cycle += 1
-	check(per_cycle == 6, "he blinks 6 frames per 190-frame cycle (%d)" % per_cycle)
-	var runs := 0
-	var was := false
-	for f in 950:
-		var now := d.eye_style("normal", float(f)) == "blink"
-		if now and not was:
-			runs += 1
-		was = now
-	check(runs == 5, "five blink cycles in 950 frames (5 x 190) (%d)" % runs)
-	check(d.eye_style("attack", 0.0) != "blink", "he does not blink mid-attack")
-	# He is the only one who owns a head or a torso, so nobody else's look moved.
-	var others: Array[String] = []
+## Every fighter owns its own head, torso, hand and face, and that face carries
+## the whole expression vocabulary rather than a fixed shape.
+##
+## Two things are being defended here. First, `FighterRenderer.safe` silently
+## replaces a self-intersecting polygon with its convex hull, so a bad outline
+## turns into a blob with no error at all; the triangulation checks are the only
+## way to catch it. Second, owning an eye *shape* without honouring `expr` is
+## invisible in a screenshot and obvious in a match: Ulises stood through a whole
+## match with a permanent stare because his rewrite had dropped blink, X eyes
+## and the squint. `eye_style` is a pure function precisely so this is testable
+## headlessly, since a pixel comparison cannot run under --headless.
+func _test_roster_faces() -> void:
+	print("[roster faces]")
 	for id: String in GameState.CHARACTERS:
-		if id == "ulises":
-			continue
 		var c: CharacterDef = GameState.make_character(id)
-		if c.has_method("head_outline") or c.has_method("torso_outline"):
-			others.append(id)
-	check(others.is_empty(), "no other fighter owns a head or torso%s" % ("" if others.is_empty() else ", but " + str(others)))
-
-
-## Ulises' in-match art owns the head and the torso, so both outlines must
-## survive the geometry helpers. `FighterRenderer.safe` silently replaces a
-## self-intersecting polygon with its convex hull, which is how a bad outline
-## quietly turns into a blob instead of failing.
-func _test_ulises_outlines() -> void:
-	print("[ulises outlines]")
-	var d := UlisesDef.new()
-	var head := d.head_outline()
-	check(head.size() >= 8, "his head outline is a real shape (%d points)" % head.size())
-	check(not Geometry2D.triangulate_polygon(head).is_empty(), "his head outline triangulates, so it is not a self-intersecting blob")
-	var chest := d.torso_outline(null, {"up": Vector2.UP, "perp": Vector2.RIGHT, "hip": Vector2.ZERO})
-	check(chest.size() >= 6, "his torso outline is a real shape (%d points)" % chest.size())
-	check(not Geometry2D.triangulate_polygon(chest).is_empty(), "his torso outline triangulates")
+		if not c.has_method("head_outline"):
+			check(false, "%s owns a head" % id)
+			continue
+		if not c.has_method("torso_outline"):
+			check(false, "%s owns a torso" % id)
+			continue
+		var head: PackedVector2Array = c.head_outline()
+		var chest: PackedVector2Array = c.torso_outline(null, {"up": Vector2.UP, "perp": Vector2.RIGHT, "hip": Vector2.ZERO})
+		check(head.size() >= 8, "%s has a real head outline (%d points)" % [id, head.size()])
+		check(not Geometry2D.triangulate_polygon(head).is_empty(), "%s's head outline triangulates" % id)
+		check(chest.size() >= 6, "%s has a real torso outline (%d points)" % [id, chest.size()])
+		check(not Geometry2D.triangulate_polygon(chest).is_empty(), "%s's torso outline triangulates" % id)
+		var styles := {}
+		for e: String in ["normal", "attack", "hurt", "smug", "win", "ko", "dizzy", "shock"]:
+			styles[e] = c.eye_style(e, 40.0)
+		check(styles["win"] == "happy", "%s closes the eyes when winning (got %s)" % [id, styles["win"]])
+		check(styles["ko"] == "ko", "%s gets X eyes on a KO (got %s)" % [id, styles["ko"]])
+		check(styles["dizzy"] == "dizzy", "%s slides the pupil when dizzy (got %s)" % [id, styles["dizzy"]])
+		var blinked := 0
+		for f in 190:
+			if c.eye_style("normal", float(f)) == "blink":
+				blinked += 1
+		check(blinked == 6, "%s blinks 6 frames per 190-frame cycle (%d)" % [id, blinked])
 
 
 ## Ulises' signature mechanic: a real ball on the floor, and the fact that it
