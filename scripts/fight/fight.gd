@@ -41,6 +41,16 @@ var cutin_color := Color.WHITE
 ## How long the world stops for a hyper. The HUD reads this to work out how far
 ## through the cut-in animation it is.
 const HYPER_FREEZE := 56
+## Post-FX white mix for one of a hyper's running hits, and for its finishing hit.
+## The shader clamps at 0.8, so anything at or above that is a flat white frame.
+const HYPER_TICK_IMPACT := 0.16
+const HYPER_HIT_IMPACT := 0.62
+## Frames of half-speed on the last hit of a super. `slowmo` skips every other
+## sim frame, so this is about a sixth of a second.
+const HYPER_CATCH_SLOWMO := 20
+## How far the camera leans in while a super is on screen. A super is the one
+## moment the camera should not sit on the midpoint of the two fighters.
+const HYPER_ZOOM := 1.34
 ## KO camera: how far it pushes in, and for how many (sim) frames of the KO phase.
 const KO_ZOOM := 1.75
 const KO_CAM_FRAMES := 80
@@ -239,9 +249,9 @@ func _physics_process(_delta: float) -> void:
 	_resolve_bounds()
 	_cleanup_projectiles()
 	_update_camera()
-	var hyper_on := fighters.any(func(f: Fighter) -> bool: return f.is_hyper_active())
-	hyper_on = hyper_on or projectiles.any(func(p: Projectile) -> bool: return p.m.level == 3)
-	stage.dim = move_toward(stage.dim, 1.0 if hyper_on else 0.0, 0.05)
+	# One source of truth for "is a super on screen": the same helper the camera
+	# uses, so the dim and the framing can never disagree.
+	stage.dim = move_toward(stage.dim, 1.0 if _hyper_focus() != null else 0.0, 0.05)
 	stage.cam_y = camera.position.y
 	stage.cam_zoom = cam_z
 	_update_phase()
@@ -443,6 +453,10 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 	var blocked := res == "block"
 	if p != null:
 		p.register_hit()
+	# `register_hit` has already decremented, so nothing left means this was the
+	# last hit of the move. A hyper lands a dozen hits in a row and only the last
+	# one should be treated as the event; every one of them used to slam the screen.
+	var last_hit := p != null and p.hits_left <= 0
 	a.on_hit_landed(m, blocked)
 	if blocked:
 		effects.spawn("block", point, {"dir": signf(a.position.x - d.position.x)})
@@ -461,7 +475,18 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
 		shake = maxf(shake, 3.0 + m.level + m.shake)
-		impact = maxf(impact, 0.35 + 0.25 * m.level)
+		# The post-FX white mix tops out at 0.8. A level 3 asks for 1.1, so a hyper
+		# was pinning it there on all ten to fourteen of its hits and the whole super
+		# read as a washed-out smear. Now the running hits only breathe and the
+		# finishing hit is the one that punches.
+		if m.level == 3:
+			impact = maxf(impact, HYPER_HIT_IMPACT if last_hit else HYPER_TICK_IMPACT)
+		else:
+			impact = maxf(impact, 0.35 + 0.25 * m.level)
+	# The payoff beat: the last hit of a super slows the world down for a moment,
+	# so a dozen small hits resolve into one heavy landing.
+	if m.level == 3 and last_hit:
+		slowmo = maxi(slowmo, HYPER_CATCH_SLOWMO)
 	if m.flash > 0:
 		flash = maxi(flash, m.flash)
 	# Big hits shake your belongings loose. One item per hit, so a long combo
@@ -556,8 +581,19 @@ func _update_camera() -> void:
 	var bottom := maxf(fighters[0].position.y, fighters[1].position.y) + 30.0
 	var z := clampf(360.0 / (bottom - top), 0.85, ZOOM)
 	var focus_y := (top + bottom) * 0.5
+	# Hyper: lean in on whoever just fired, led slightly toward the opponent so the
+	# beam has somewhere to go. A super is the one moment the camera should not be
+	# parked on the midpoint of two people.
+	var hf := _hyper_focus()
+	if hf != null:
+		mid = hf.position.x
+		if hf.opponent != null:
+			mid += signf(hf.opponent.position.x - mid) * 34.0
+		z = maxf(z, HYPER_ZOOM)
+		focus_y = hf.position.y - 46.0
 	# KO punch-in: during the slow-motion the camera leans in on the loser, then
-	# eases back out in time for the winner's victory pose.
+	# eases back out in time for the winner's victory pose. This one outranks the
+	# hyper framing, so a super that ends the round still gets the KO camera.
 	var loser := _ko_focus()
 	if loser != null:
 		mid = loser.position.x
@@ -575,9 +611,24 @@ func _update_camera() -> void:
 	var base_y := 342.0 - 180.0 / cam_z
 	camera.position.y = minf(base_y, focus_y)
 	var x := clampf(mid, 320.0 / cam_z, STAGE_W - 320.0 / cam_z)
-	# Pan rather than cut while the KO or victory camera is doing its thing.
-	camera.position.x = lerpf(camera.position.x, x, 0.18) if phase == "ko" or phase == "over" else x
+	# Pan rather than cut while the KO, victory or hyper camera is doing its thing.
+	var easing := phase == "ko" or phase == "over" or hf != null
+	camera.position.x = lerpf(camera.position.x, x, 0.18) if easing else x
 	stage.cam_x = camera.position.x
+
+
+## The fighter currently performing a hyper, or null. Their cut-in is the
+## loudest thing on screen and the camera should follow it. Checks the move and
+## then the projectile, because the two cover different halves of a super: the
+## body is in its recovery while the beam is still chewing on the opponent.
+func _hyper_focus() -> Fighter:
+	for f in fighters:
+		if f.is_hyper_active():
+			return f
+	for p in projectiles:
+		if p.m != null and p.m.level == 3 and not p.dead:
+			return p.owner_f
+	return null
 
 
 ## The fighter the KO camera should push in on, or null. Only a clean KO

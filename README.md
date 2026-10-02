@@ -279,6 +279,27 @@ Graphics uplift pass — making the game look and feel like a real release.
   third goes front again. It is `CharacterDef.adjust_attack_pose` calling the
   shared `cross_limbs`, and it is pose-only — no frame data or hitboxes move.
 
+### A super lands like one hit
+
+A hyper used to arrive as ten to fourteen identical chip hits that each slammed the
+screen to its whitest, so it read as a wash rather than a blow. Now:
+
+- **Only the finishing hit punches.** The running hits breathe; the last one flashes
+  the screen, hits the post-FX harder, and drops the world into a sixth of a second
+  of slow motion so a dozen small hits resolve into one heavy landing.
+- **The camera leans in** on whoever just fired, led slightly toward the opponent so
+  the beam has somewhere to go. A super is the only thing besides a KO that moves the
+  camera now.
+- **The screen effects every super already asked for actually happen.** They were
+  authored on the move but read from the projectile, so all four were silently doing
+  nothing. They belong on the projectile spec, where they are now.
+
+Also fixed: **Emilia's two supers fly across the arena** instead of sitting anchored
+like everyone else's, which meant they crossed the opponent in about thirty frames
+and could only land four of their ten hits — a third of the damage they advertised,
+and never reaching the finishing hit at all. She now deals 208 instead of 109, and
+every super on the roster can land all of its hits.
+
 ### Two supers per fighter
 
 - **Everyone has a second super, on `UP + L + H`.** A full meter bar buys either

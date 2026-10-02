@@ -49,12 +49,23 @@ func setup(owner: Fighter, spec: Dictionary) -> void:
 		"kb": spec.get("kb", Vector2(3, 0)), "chip": spec.get("chip", 0.15), "hitstop": spec.get("hitstop", 5),
 		"meter": spec.get("meter", 6.0), "level": spec.get("level", 2), "hit_interval": spec.get("interval", 0),
 		"hit_sfx": spec.get("hit_sfx", "heavy"),
+		# `_apply_hit` reads the flash and shake off the MoveData it is handed, and
+		# for a projectile hit that is this one — so these have to be forwarded to
+		# get here at all. They used to be missing, which meant every hyper that
+		# authored `"flash": 5, "shake": 2.0` on its *move* was silently reading zero
+		# on all ten to fourteen of its hits. A multi-hit super wants them here, on
+		# the spec, not on the move: they are per hit.
+		"flash": spec.get("flash", 0), "shake": spec.get("shake", 0.0),
 	}
 	m = MoveData.make(hit)
 	if spec.get("final_knockdown", false):
 		hit["knockdown"] = true
 		hit["kb"] = Vector2(4.0, -8.0)
 		hit["hitstop"] = 12
+		# The finishing hit is the one that gets the full screen effect, so it is
+		# the only one that flashes. The running hits just rumble.
+		hit["flash"] = maxi(int(hit["flash"]), 3)
+		hit["shake"] = maxf(float(hit["shake"]), 3.0)
 		m_final = MoveData.make(hit)
 	scale.x = dir
 	_follow()

@@ -40,6 +40,7 @@ func _ready() -> void:
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
 	_test_hyper_cutin()
+	_test_hyper_landing()
 	_test_roster_faces()
 	_test_air_block()
 	_test_quick_rise()
@@ -177,6 +178,76 @@ func _check_hyper_spec(d: CharacterDef, h: MoveData, key: String) -> void:
 	check(not h.projectile.is_empty(), "%s's %s shoots something" % [id, key])
 	check(int(h.projectile.get("level", 0)) == 3,
 		"%s's %s projectile is level 3, or it takes the projectile slot and costs no meter" % [id, key])
+	# The shake is read by `_apply_hit` off the *projectile's* MoveData, which
+	# `Projectile.setup` builds from this spec. A hyper that leaves it out lands
+	# with no screen effect on any of its hits. The screen *flash* is not checked
+	# here because `final_knockdown` supplies it on the finishing hit — see
+	# `_test_hyper_landing`, which checks it on a real projectile.
+	check(float(h.projectile.get("shake", 0.0)) > 0.0, "%s's %s projectile shakes the screen" % [id, key])
+
+
+## A hyper used to land as ten to fourteen identical chip hits that each slammed
+## the post-FX white mix to its 0.8 ceiling, so the whole super read as a washed
+## out smear rather than one heavy blow. This drives a real hyper and watches the
+## screen effect per frame: the running hits should only breathe, and the
+## finishing hit should be the one that flashes, slows the world and punches.
+func _test_hyper_landing() -> void:
+	print("[hyper landing]")
+	for id: String in GameState.CHARACTERS:
+		var f := _new_fight(id, "emilia")
+		_start(f)
+		var p1 := f.fighters[0]
+		var p2 := f.fighters[1]
+		# Stand them off: a close L+H is a throw, and a throw resolves nothing here.
+		# 100 is outside Fighter.THROW_RANGE (66) but close enough that Emilia's
+		# travelling dragon still crosses the opponent and lands all ten hits —
+		# her super flies, unlike the other three which sit anchored in front.
+		p2.position.x = p1.position.x + 100.0
+		p1.meter = Fighter.HYPER_COST
+		_script(p1, [[Lf, 3], [Lf | LI | HE, 2], [0, 300]])
+		# Grab the projectile as it spawns: by the end of the run it has been
+		# cleaned up of `fight.projectiles`. Snapshots of the MoveData rather than
+		# the node, because the node is freed with the fight.
+		var hyper_m: MoveData = null
+		var hyper_final: MoveData = null
+		# Sampled *before* each step, because `impact` decays at the top of
+		# `_physics_process` — reading it afterwards would only ever show the
+		# decayed value and would miss the peak.
+		var peak := 0.0
+		var slowmo_seen := 0
+		var flash_seen := 0
+		var zoom_seen := 0.0
+		for i in 300:
+			if hyper_m == null:
+				for p in f.projectiles:
+					if p.m != null and p.m.level == 3:
+						hyper_m = p.m
+						hyper_final = p.m_final
+						break
+			peak = maxf(peak, f.impact)
+			slowmo_seen = maxi(slowmo_seen, f.slowmo)
+			flash_seen = maxi(flash_seen, f.flash)
+			zoom_seen = maxf(zoom_seen, f.cam_z)
+			f._physics_process(1.0 / 60.0)
+		peak = maxf(peak, f.impact)
+		flash_seen = maxi(flash_seen, f.flash)
+		check(peak <= 0.7, "%s's hyper never pins the post-FX white mix (peak %.2f)" % [id, peak])
+		check(peak >= Fight.HYPER_HIT_IMPACT - 0.01,
+			"%s's hyper finishing hit still punches (peak %.2f)" % [id, peak])
+		check(slowmo_seen > 0, "%s's hyper slows the world down on the finishing hit" % id)
+		check(flash_seen > 0, "%s's hyper flashes the screen on the finishing hit" % id)
+		check(zoom_seen >= Fight.HYPER_ZOOM - 0.06,
+			"%s's hyper pushes the camera in (reached %.2f of %.2f)" % [id, zoom_seen, Fight.HYPER_ZOOM])
+		# And the projectile really does carry the effect forwards, and only the
+		# finishing one flashes.
+		check(hyper_m != null, "%s's hyper put a level 3 projectile in the arena" % id)
+		if hyper_m != null:
+			check(float(hyper_m.shake) > 0.0, "%s's hyper projectile carries its shake through (%.2f)"
+				% [id, float(hyper_m.shake)])
+			check(int(hyper_m.flash) == 0 and hyper_final != null and int(hyper_final.flash) > 0,
+				"%s's hyper flashes only on the finishing hit (running %d, finishing %d)" % [id,
+					int(hyper_m.flash), int(hyper_final.flash) if hyper_final != null else -1])
+		f.free()
 
 
 func _new_fight(p1: String, p2: String) -> Fight:

@@ -269,9 +269,34 @@ so existing moves keep working untouched:
   visual-only counter — `sf` must not advance, that is the whole point of a freeze.
   Every hyper is required to have one, a `contact_pose`, and a >=3-key clip that is
   still moving at `startup`; `_test_hyper_spec` (roster-wide) checks all three.
-- A hyper's `flash` and `shake` are **dead fields** — `_apply_hit` reads them off the
-  *projectile's* `MoveData`, which `Projectile.setup` does not build them on. Phase 3
-  of the roadmap wires them through; until then treat them as cosmetic on hypers only.
+- **Only the finishing hit is allowed to punch the screen.** The post-FX shader clamps
+  the white `impact` mix at 0.8, and a level 3 move used to ask for `0.35 + 0.25 * 3 =
+  1.1` — on all ten to fourteen hits — so the whole super sat pinned at the ceiling and
+  read as a washed-out smear. Now `HYPER_TICK_IMPACT` (0.16) on the running hits and
+  `HYPER_HIT_IMPACT` (0.62) on the last one, which is also where `HYPER_CATCH_SLOWMO`
+  fires. `slowmo` skips every other sim frame, so it is about a sixth of a second.
+- **A hyper is the only thing that moves the camera other than a KO or a win.**
+  `_hyper_focus()` checks the fighter's move and then the live projectiles, because the
+  two cover different halves of a super: the body is in its recovery while the beam is
+  still chewing on the opponent. It pushes to `HYPER_ZOOM` and leans 34px toward the
+  opponent, and the KO framing deliberately outranks it so a super that ends the round
+  still gets the KO camera. `_update_camera` is skipped entirely during the cut-in
+  freeze, which is fine — the HUD cut-in covers those frames.
+- **A hyper's `flash` and `shake` live on the *projectile* spec, not on the move.**
+  `_apply_hit` reads them off the `MoveData` it is handed, and for a projectile hit
+  that is the one `Projectile.setup` builds from the spec — so a `"flash": 5` on
+  the hyper *move* does nothing at all, which is exactly where all four used to
+  sit. `final_knockdown` supplies the screen flash on the finishing hit; leave
+  `flash` alone and use `shake` as the per-hit rumble.
+- **A multi-hit hyper has to be able to finish.** `hits_left` reaching 0 is what
+  triggers the finishing hit, and `_apply_hit` keys the screen punch, the flash
+  and the slow-motion catch on it. Six of the eight hypers are `anchored: true`
+  and sit in front of their owner, so they land every hit. **Emilia's two fly
+  across the arena**, and when they were fast they crossed the opponent in about
+  thirty frames and could only ever land four of ten — a third of the damage they
+  advertise, and no finishing hit, so no punch and no catch. Her rule of thumb is
+  the one to remember: keep `(size.x + hurtbox) / speed` comfortably longer than
+  `hits * interval`, or anchor the projectile. `_test_hyper_landing` catches it.
 - Event kinds (`Fighter._fire_event`): `slash`, `fx`, `dust`, `sfx`, `voice`, `shake`.
   `data.offset` is in the fighter's own space facing right, exactly like a hitbox.
 - Events fire on **exact frames only, and never during hitstop** (`sf` does not advance
@@ -328,14 +353,20 @@ input did nothing. Move the opponent out of range before scripting another super
 - A hyper freezes the world for `Fight.HYPER_FREEZE` frames before the move's `sf` advances,
   so a test that watches a hyper must run **more than ~75 frames** or it never reaches the
   startup frame. A test that asserts on a hyper's spec can pass vacuously this way.
-- `_test_hyper_spec` checks a hyper's *authoring* (a `cutin_pose`, a `contact_pose`, a
-  >=3-key clip that still moves at `startup`, and a `"level": 3` projectile spec) and runs for
-  every character from `_test_character_def`, on `hyper` and `hyper2` alike via
+- `_test_hyper_cutin` checks a hyper's *authoring* (a `cutin_pose`, a `contact_pose`, a
+  >=3-key clip that still moves at `startup`, and a `"level": 3` projectile spec) and runs
+  for every character from `_test_character_def`, on `hyper` and `hyper2` alike via
   `_check_hyper_spec`. It calls `h.pose_at(0)` first, because that is what builds the
   clip out of the `pose_s`/`pose_a` fallback — without it `keys` is empty and the checks
   pass vacuously against an unbuilt move. `_test_hyper_cutin` is the runtime half: it
-  drives a real hyper of each kind, then asserts `sf` is held while `hyper_t` advances and
-  the pose on screen is the cut-in pose.
+  drives a real hyper, then asserts `sf` is held while `hyper_t` advances and the pose on
+  screen is the cut-in pose.
+- `_test_hyper_landing` watches the screen effect per frame and samples **`impact` before
+  each step**, not after: it decays `-0.2` at the top of `_physics_process`, so reading it
+  once the frame is done only ever shows the decayed value and misses the peak entirely.
+  It also snaps the projectile's `MoveData` the moment it spawns, because by the end of the
+  run `_cleanup_projectiles` has dropped it from `fight.projectiles` and the node is freed
+  with the fight.
 - `_test_specials` resolves what a move *should* be through `def.choose_move(key, f)`
   (`_expected`), because a character may swap in a variant of an input. A hard-coded
   `moves["proj"].id` is wrong the moment a character has two answers for one button.

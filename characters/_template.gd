@@ -186,8 +186,13 @@ func _init() -> void:
 				"kind": "beam", "speed": 9.0, "size": Vector2(120, 70), "offset": Vector2(60, -80),
 				"life": 160, "hits": 8, "interval": 6, "damage": 34, "hitstun": 18,
 				"kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
-				"final_knockdown": true, "strength": 99, "sfx": "hyper",
+				"final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
 			},
+			# `shake` and `flash` belong on the *projectile* spec, not here. A hyper
+			# delivers a dozen hits and each one is resolved from the projectile's own
+			# MoveData, so a "flash" authored on the move itself does nothing at all.
+			# `final_knockdown` supplies the screen flash on the finishing hit, so
+			# leave `flash` alone and let `shake` be the per-hit rumble.
 			# The super-activation cut-in freezes the world for Fight.HYPER_FREEZE
 			# frames, so `sf` cannot advance and this pose is what the player sees
 			# for all of it. Without one you would sit on the clip's first key and

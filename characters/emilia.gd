@@ -99,10 +99,17 @@ func _init() -> void:
 			"pose_a": {"arm_f": 150, "elb_f": 0, "arm_b": 210, "elb_b": 0, "leg_f": 40, "knee_f": 0, "leg_b": -40, "knee_b": 0,
 				"lean": 0, "ground": 0, "hip": -46}}),
 		"hyper": MoveData.make({"id": "sketchbook summon", "display": "SKETCHBOOK SUMMON!", "level": 3, "startup": 20, "active": 1,
-			"recovery": 40, "invuln": 45, "prop": "sketch", "sfx": "magic", "flash": 5, "shake": 2.0,
-			"projectile": {"kind": "dragon", "speed": 6.5, "size": Vector2(130, 120), "offset": Vector2(65, -78), "life": 170,
-				"hits": 10, "interval": 6, "damage": 32, "hitstun": 18, "kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "hyper"},
+			"recovery": 40, "invuln": 45, "prop": "sketch", "sfx": "magic",
+			# Both of her supers fly across the arena rather than sitting anchored in
+			# front of her, which is why they are slower than the rest of the roster's.
+			# At the speed this used to be it crossed the opponent in about thirty
+			# frames and could only ever land four of its ten hits, so it delivered a
+			# third of the damage it advertised and never reached the finishing hit.
+			# A hyper that cannot finish is not a hyper. Keep the overlap window
+			# (`(size.x + hurtbox) / speed`) comfortably longer than `hits * interval`.
+			"projectile": {"kind": "dragon", "speed": 3.2, "size": Vector2(130, 120), "offset": Vector2(65, -78), "life": 170,
+				"hits": 10, "interval": 5, "damage": 32, "hitstun": 18, "kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper"},
 			# She floats for the cut-in, sketchbook open above her, both feet off
 			# the floor — a wizard summoning, not a kid holding a stance.
 			"cutin_pose": {"lean": -6, "head": -20, "arm_f": 168, "elb_f": 30, "arm_b": 150, "elb_b": 45,
@@ -125,10 +132,10 @@ func _init() -> void:
 		# across the arena, this one is the wand itself: a solid bar of raw light
 		# fired point blank. It is a block of colour, not a creature.
 		"hyper2": MoveData.make({"id": "wand blitz", "display": "WAND BLITZ!", "level": 3, "startup": 15, "active": 1,
-			"recovery": 44, "invuln": 43, "prop": "sketch", "sfx": "magic", "flash": 5, "shake": 2.0,
-			"projectile": {"kind": "beam", "speed": 9.5, "size": Vector2(300, 130), "offset": Vector2(60, -80), "life": 80,
-				"hits": 8, "interval": 5, "damage": 28, "hitstun": 18, "kb": Vector2(4.5, 0), "chip": 0.2,
-				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "magic"},
+			"recovery": 44, "invuln": 43, "prop": "sketch", "sfx": "magic",
+			"projectile": {"kind": "beam", "speed": 5.0, "size": Vector2(300, 130), "offset": Vector2(60, -80), "life": 80,
+				"hits": 8, "interval": 4, "damage": 28, "hitstun": 18, "kb": Vector2(4.5, 0), "chip": 0.2,
+				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "magic"},
 			# Both arms up, wand above her head, floating on the spell.
 			"cutin_pose": {"lean": -10, "head": -24, "arm_f": 176, "elb_f": 16, "arm_b": 152, "elb_b": 30,
 				"leg_f": 20, "knee_f": 28, "leg_b": -18, "knee_b": 26, "ground": 0, "hip": -60},

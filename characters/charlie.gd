@@ -147,12 +147,11 @@ func _init() -> void:
 		"hyper": MoveData.make({
 			"id": "crybaby flood", "display": "CRYBABY FLOOD!", "level": 3, "startup": 18,
 			"active": 1, "recovery": 48, "invuln": 44, "prop": "tears", "sfx": "hyper",
-			"flash": 5, "shake": 2.0,
 			"projectile": {
 				"kind": "tears", "anchored": true, "size": Vector2(300, 150), "offset": Vector2(60, -80),
 				"life": 60, "hits": 14, "interval": 4, "damage": 19, "hitstun": 16, "kb": Vector2(1.0, -1.0),
 				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
-				"strength": 99, "sfx": "hyper",
+				"strength": 99, "shake": 0.8, "sfx": "hyper",
 			},
 			"keys": [
 				# Fists to the eyes, shoulders shaking...
@@ -177,14 +176,13 @@ func _init() -> void:
 		"hyper2": MoveData.make({
 			"id": "tear geyser", "display": "TEAR GEYSER!", "level": 3, "startup": 17,
 			"active": 1, "recovery": 46, "invuln": 43, "prop": "tears", "sfx": "hyper",
-			"flash": 5, "shake": 2.0,
 			"projectile": {
 				# Tall and narrow, against the flood's wide and low. The tears art
 				# runs from the floor up to the top of `size.y`, so this is a column.
 				"kind": "tears", "anchored": true, "size": Vector2(230, 300), "offset": Vector2(50, -150),
 				"life": 60, "hits": 12, "interval": 4, "damage": 20, "hitstun": 16,
 				"kb": Vector2(1.0, -5.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
-				"final_knockdown": true, "strength": 99, "sfx": "hyper",
+				"final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
 			},
 			# Head thrown right back, eyes shut, cheeks blown out: the inhale before
 			# the geyser, with his whole body arched away from where it will come out.
