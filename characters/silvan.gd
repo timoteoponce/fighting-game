@@ -190,6 +190,13 @@ func _init() -> void:
 				[40, {"head": -22, "lean": -18, "arm_f": 150, "elb_f": 30, "arm_b": 155, "elb_b": 30}, 0.5],
 				[55, {"head": 0, "lean": 4, "arm_f": 40, "elb_f": 100, "arm_b": 40, "elb_b": 100}, 0.3],
 			],
+			# Through the cut-in he is already up on his back legs, head thrown
+			# back, front paws up in the air — a two-year-old about to lose it.
+			"cutin_pose": {"head": -30, "lean": -26, "arm_f": 172, "elb_f": 6, "arm_b": 176, "elb_b": 6,
+				"leg_f": 30, "knee_f": 16, "leg_b": -14, "knee_b": 18},
+			# The wolves are on them and he is leaning into the howl.
+			"contact_pose": {"head": -36, "lean": -32, "arm_f": 180, "elb_f": 0, "arm_b": 182, "elb_b": 0,
+				"leg_f": 38, "knee_f": 12, "leg_b": -20, "knee_b": 14},
 			"events": {
 				18: [["voice", {"line": "hyper"}], ["shake", {"amount": 5.0}]],
 				24: [["shake", {"amount": 3.0}]],

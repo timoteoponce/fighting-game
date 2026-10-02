@@ -102,8 +102,24 @@ func _init() -> void:
 			"projectile": {"kind": "dragon", "speed": 6.5, "size": Vector2(130, 120), "offset": Vector2(65, -78), "life": 170,
 				"hits": 10, "interval": 6, "damage": 32, "hitstun": 18, "kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3,
 				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "hyper"},
-			"pose_s": {"arm_f": 140, "elb_f": 40, "arm_b": 70, "elb_b": 80},
-			"pose_a": {"arm_f": 100, "elb_f": 0, "arm_b": 70, "elb_b": 80, "lean": 8}}),
+			# She floats for the cut-in, sketchbook open above her, both feet off
+			# the floor — a wizard summoning, not a kid holding a stance.
+			"cutin_pose": {"lean": -6, "head": -20, "arm_f": 168, "elb_f": 30, "arm_b": 150, "elb_b": 45,
+				"leg_f": 34, "knee_f": 40, "leg_b": -26, "knee_b": 34, "ground": 0, "hip": -58},
+			"keys": [
+				# Reaches up and back, heels lifting off the floor...
+				[0, {"lean": -4, "head": -18, "arm_f": 160, "elb_f": 35, "arm_b": 145, "elb_b": 50,
+					"leg_f": 28, "knee_f": 34, "leg_b": -20, "knee_b": 28, "ground": 0, "hip": -52}, 0.5],
+				# ...then throws the page forward and drops back onto one leg.
+				[18, {"lean": 6, "head": 2, "arm_f": 108, "elb_f": 10, "arm_b": 128, "elb_b": 20,
+					"leg_f": 52, "knee_f": 30, "leg_b": -44, "knee_b": 52, "ground": 0, "hip": -50}, 0.95],
+				[44, {"lean": 0, "head": -4, "arm_f": 96, "elb_f": 25, "arm_b": 118, "elb_b": 35,
+					"leg_f": 40, "knee_f": 40, "leg_b": -34, "knee_b": 46, "ground": 0, "hip": -54}, 0.4],
+				[58, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 90, "arm_b": 50, "elb_b": 95}, 0.35],
+			],
+			# The dragon is through them: she flings the page after it.
+			"contact_pose": {"lean": 14, "head": 6, "arm_f": 118, "elb_f": 0, "arm_b": 136, "elb_b": 6,
+				"leg_f": 62, "knee_f": 34, "leg_b": -52, "knee_b": 58, "ground": 0, "hip": -48}}),
 	}
 
 

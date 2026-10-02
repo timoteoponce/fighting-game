@@ -174,6 +174,7 @@ func start_round() -> void:
 	winner = -1
 	hitstop = 0
 	freeze = 0
+	freeze_owner = null
 	slowmo = 0
 	stage.dim = 0.0
 	var final: bool = wins[0] == ROUNDS_TO_WIN - 1 and wins[1] == ROUNDS_TO_WIN - 1
@@ -215,6 +216,10 @@ func _physics_process(_delta: float) -> void:
 	if freeze > 0:
 		freeze -= 1
 		stage.dim = 1.0
+		# The fighter who fired keeps performing through the cut-in, so the
+		# wind-up plays into the strike instead of standing still for 56 frames.
+		if freeze_owner != null:
+			freeze_owner.hyper_freeze_visual()
 		return
 	if hitstop > 0:
 		hitstop -= 1
@@ -315,7 +320,10 @@ func on_hyper(f: Fighter, m: MoveData) -> void:
 	Sfx.play("hyper")
 	effects.spawn("sparkle", f.position + Vector2(0, -80))
 	effects.spawn("ring", f.position)
-	flash = 8
+	# A three-frame punch, not a full white-out. This used to be 8, which is the
+	# same value a KO gets, and it meant the cut-in artwork was hidden behind a
+	# solid white screen for eight frames of the 56 it is supposed to be showing.
+	flash = 3
 	shake = maxf(shake, 4.0)
 	stage.hyper_color = f.renderer.colors["accent"]
 	# The user stretches up on the spot as the screen stops for them, and the

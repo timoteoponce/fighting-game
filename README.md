@@ -256,6 +256,30 @@ Graphics uplift pass — making the game look and feel like a real release.
   third goes front again. It is `CharacterDef.adjust_attack_pose` calling the
   shared `cross_limbs`, and it is pose-only — no frame data or hitboxes move.
 
+### The hyper pass
+
+Hypers used to look like the fighter forgot to move. Three separate causes, all
+fixed:
+
+- **Two of the four hypers were frozen solid for their whole length.** Ulises and
+  Emilia were still authored with the old two-pose form, which silently becomes a
+  *two-key* animation clip — so the second pose was held motionless for the entire
+  recovery, fifty frames of standing still. Charlie and Silvan already had real
+  multi-key clips. All four now do: wind-up, strike, follow-through, settle. Each
+  super also has an **impact pose** that gets snapped in the instant the beam or
+  dragon connects, so a hyper visibly bites rather than just reaching.
+- **The cut-in itself was a statue.** Activating a super stops the world for 56
+  frames for the portrait cut-in — and the fighter was frozen along with it,
+  stuck in the first frame of their wind-up for the entire cinematic. They now
+  snap into a dedicated **charge pose** and hold it, with a slow swell through it,
+  while the world is stopped. The opponent still does *not* get it: they are meant
+  to be caught mid-reaction.
+- **The cut-in was hidden behind a white screen.** The activation flash was set to
+  the same 8 frames a knockout gets, so the artwork it was introducing was behind
+  solid white for eight of its fifty-six frames. It is now a three-frame punch.
+
+Nothing about frame data, damage or balance changed.
+
 ### After the graphics pass
 
 - **Renamed to PJ's Clash.** The game was *Ulises vs Emilia: Ultimate Friends

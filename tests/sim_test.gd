@@ -39,6 +39,7 @@ func _ready() -> void:
 	_test_movement("ulises")
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
+	_test_hyper_cutin()
 	_test_roster_faces()
 	_test_air_block()
 	_test_quick_rise()
@@ -124,8 +125,40 @@ func _test_character_def(id: String) -> void:
 	check(d.moves["H"].launch, "%s's heavy launches, so air combos work" % id)
 	check(d.moves["anti"].invuln > 0, "%s's anti-air special has invulnerability" % id)
 	check(d.moves["hyper"].level >= 3, "%s's hyper is a level 3 move" % id)
+	_test_hyper_spec(d)
 	check(d.specials_text.size() >= 4, "%s lists its specials for the move list" % id)
 	check(d.throw_data() != null, "%s has a throw" % id)
+
+
+## The hyper is the one move a player spends a whole meter bar on, and it is the
+## only one shown during a cut-in that stops the world, so it has to be authored
+## rather than left on the defaults. Three things used to go wrong: the legacy
+## `pose_s` / `pose_a` pair desugars into a two-key clip that holds its second
+## pose for the entire recovery (a fighter standing still through their own
+## super), and there was nothing to hold during the freeze at all, because `sf`
+## cannot advance while the world is stopped — so the body sat on the clip's
+## first key for all 56 frames.
+func _test_hyper_spec(d: CharacterDef) -> void:
+	var id := d.id
+	var h: MoveData = d.moves["hyper"]
+	check(not h.cutin_pose.is_empty(), "%s's hyper has a cut-in pose for the freeze" % id)
+	check(not h.contact_pose.is_empty(), "%s's hyper has an impact pose for the hit freeze" % id)
+	# `pose_at` builds the clip from the pose_s / pose_a fallback if needed, which
+	# is exactly the two-key form this is checking against.
+	h.pose_at(0)
+	var varied := false
+	var first: Dictionary = h.keys[0][1] if not h.keys.is_empty() else {}
+	for k in h.keys:
+		for pkey in k[1]:
+			if not first.has(pkey) or not is_equal_approx(float(first[pkey]), float(k[1][pkey])):
+				varied = true
+	check(h.keys.size() >= 3, "%s's hyper is a real animation clip, not the static two-pose form (%d keys)"
+		% [id, h.keys.size()])
+	check(varied, "%s's hyper clip changes pose across its keys" % id)
+	# Something has to happen at or after the frame the attack goes live, or the
+	# clip is all wind-up and the whole recovery is one held pose.
+	check(not h.keys.is_empty() and int(h.keys[-1][0]) >= h.startup,
+		"%s's hyper clip is still moving when the attack goes live" % id)
 
 
 func _new_fight(p1: String, p2: String) -> Fight:
@@ -455,6 +488,51 @@ func _test_ulises_chain_pose() -> void:
 	var spec: Dictionary = d.adjust_attack_pose(p1, anti, anti.pose_a)
 	check(float(spec["leg_f"]) == float(anti.pose_a["leg_f"]), "specials keep their own pose")
 	f.free()
+
+
+## The super-activation cut-in stops the world for Fight.HYPER_FREEZE frames. The
+## fighter has to keep performing through it, because that stop is the most
+## visible moment in the game. `sf` must stay put — nothing about the fight is
+## allowed to progress — so the pose comes from a visual counter and the move's
+## authored `cutin_pose` instead of the animation clip. The opponent is meant to
+## be frozen in the pose they were caught in, so they do not get it.
+func _test_hyper_cutin() -> void:
+	print("[hyper cut-in]")
+	for id: String in GameState.CHARACTERS:
+		var f := _new_fight(id, "emilia")
+		_start(f)
+		var p1 := f.fighters[0]
+		var p2 := f.fighters[1]
+		p1.meter = Fighter.HYPER_COST
+		var back := Lf if p1.facing > 0 else R
+		_script(p1, [[back, 3], [back | LI | HE, 2], [0, 30]])
+		var guard := 0
+		while f.freeze <= 0 and guard < 40:
+			f._physics_process(1.0 / 60.0)
+			guard += 1
+		check(f.freeze > 0, "%s's hyper froze the world for the cut-in" % id)
+		if f.freeze <= 0:
+			f.free()
+			continue
+		check(p1.cutin_active(), "%s owns the cut-in while it plays" % id)
+		check(not p2.cutin_active(), "%s's opponent is not performing the cut-in" % id)
+		var sf_held := p1.sf
+		var vis := p1.hyper_t
+		# A few frames into the cut-in, having let the body snap in.
+		_run(f, 6)
+		check(p1.sf == sf_held, "%s's state frame is held during the freeze (%d -> %d)" % [id, sf_held, p1.sf])
+		check(p1.hyper_t > vis, "%s's visual counter advances during the freeze (%d -> %d)" % [id, vis, p1.hyper_t])
+		# The pose actually on screen is the cut-in pose, not the clip's first key.
+		# It is snapped (speed 1.0) with a slow swell on the lean, hence the slack.
+		var tgt := p1._pose_target()
+		check(float(tgt[1]) >= 1.0, "%s snaps into the cut-in pose (speed %.2f)" % [id, float(tgt[1])])
+		var want := float(p1.move.cutin_pose.get("lean", 0.0))
+		var got := float(tgt[0].get("lean", 0.0))
+		check(absf(got - want) <= 3.5, "%s holds its cut-in lean, not the clip's first key (%.1f vs %.1f)" % [id, got, want])
+		# And it is released: the move resumes once the world unfreezes.
+		_run(f, Fight.HYPER_FREEZE + 20)
+		check(p1.sf > sf_held, "%s's move resumed after the cut-in (%d -> %d)" % [id, sf_held, p1.sf])
+		f.free()
 
 
 ## Every fighter owns its own head, torso, hand and face, and that face carries

@@ -52,6 +52,15 @@ var vel := Vector2.ZERO
 var facing := 1
 var state := S.INTRO
 var sf := 0  # frames spent in the current state
+## Visual-only frame counter for the hyper cut-in. `Fight` freezes the sim for
+## `HYPER_FREEZE` frames, and it returns *before* `step()`, so `sf` cannot move
+## and the animation clip would sit on its first key for the whole cinematic.
+## This advances during that freeze instead, and is what `_pose_target` uses to
+## animate the held `cutin_pose` — the pose itself comes from the move, because
+## a clock that ran the clip forward and then handed back to `sf` on resume would
+## visibly rewind the fighter. `sf` deliberately never advances on the strength of
+## this: nothing about the fight may progress while the world is stopped.
+var hyper_t := 0
 var health := MAX_HEALTH
 var meter := 0.0
 var stun := 0
@@ -100,6 +109,7 @@ func reset_for_round(x: float, face: int) -> void:
 	move = null
 	combo = 0
 	juggle = 0
+	hyper_t = 0
 	invuln = 0
 	launch_window = 0
 	flash = 0
@@ -208,6 +218,25 @@ func freeze_visual() -> void:
 	if shook > 0:
 		shook -= 1
 	_update_visual()
+
+
+## Called by Fight on the fighter who just started a hyper, for each frame of
+## the super-activation cut-in. The simulation is stopped, so `sf` stays put and
+## the fighter would otherwise be left in whatever pose they happened to be in.
+## Only the visual counter moves. The opponent does not get this: they are meant
+## to be frozen in the pose they were hit in.
+func hyper_freeze_visual() -> void:
+	hyper_t += 1
+	_update_visual()
+
+
+## True while this fighter is the one performing the super-activation cut-in.
+## They hold `move.cutin_pose` through it, because `sf` cannot advance — the
+## move's own clip is still sitting on its first key and would read as a fighter
+## who forgot to move.
+func cutin_active() -> bool:
+	return fight != null and fight.freeze > 0 and fight.freeze_owner == self \
+		and state == S.ATTACK and move != null and not move.cutin_pose.is_empty()
 
 
 # --- Direction helpers -----------------------------------------------------
@@ -583,6 +612,7 @@ func _start_move(m: MoveData) -> void:
 	move_connected = false
 	hits_done = 0
 	hit_timer = 0
+	hyper_t = 0
 	set_state(S.ATTACK, true)
 	if m.invuln > 0:
 		invuln = m.invuln
@@ -995,6 +1025,16 @@ func _pose_target() -> Array:
 			return [def.pose("jump", {"leg_f": 30, "knee_f": 40, "leg_b": -10, "knee_b": 30, "lean": 0, "arm_f": 110, "arm_b": 10}), 0.45]
 		S.ATTACK:
 			var base := "crouch" if move.crouch else ("jump" if move.air else "idle")
+			# The super-activation cut-in freezes the sim, so `sf` is stuck and the
+			# clip below would hold its first key for the whole 56 frames. Hold the
+			# authored cut-in pose instead, with a slow swell so it is not a dead
+			# frame. Speed 1.0 snaps into it on the first cut-in frame.
+			if cutin_active():
+				var cp := def.pose(base, move.cutin_pose)
+				var w := sin(float(hyper_t) * 0.17)
+				cp["lean"] = float(cp.get("lean", 0.0)) + w * 3.0
+				cp["hip"] = float(cp.get("hip", -42.0)) + w * 1.6
+				return [cp, 1.0]
 			var key := move.pose_at(sf)
 			var p := def.pose(base, key[0])
 			# A character may vary the animation per hit of a combo. See

@@ -188,8 +188,22 @@ func _init() -> void:
 				"kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "sfx": "hyper",
 			},
-			"pose_s": {"arm_f": 30, "elb_f": 140, "arm_b": 20, "elb_b": 140, "lean": -10},
-			"pose_a": {"arm_f": 95, "elb_f": 0, "arm_b": 95, "elb_b": 0, "lean": 16},
+			# The super-activation cut-in freezes the world for Fight.HYPER_FREEZE
+			# frames, so `sf` cannot advance and this pose is what the player sees
+			# for all of it. Without one you would sit on the clip's first key and
+			# the hyper would look like it never moved.
+			"cutin_pose": {"arm_f": 20, "elb_f": 110, "arm_b": 165, "elb_b": 20, "lean": -14, "head": -18},
+			"keys": [
+				# A real clip, not the pose_s / pose_a pair: that legacy form
+				# desugars into two keys and holds the second one for the whole
+				# recovery, which is what makes a hyper look static.
+				[0, {"arm_f": 25, "elb_f": 120, "arm_b": 20, "elb_b": 130, "lean": -12}, 0.5],
+				[16, {"arm_f": 95, "elb_f": 0, "arm_b": 95, "elb_b": 0, "lean": 16}, 0.95],
+				[44, {"arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95, "lean": 4}, 0.4],
+			],
+			# Snapped in for the frames the hit freeze holds, so a connecting
+			# hyper visibly bites.
+			"contact_pose": {"arm_f": 104, "elb_f": 0, "arm_b": 104, "elb_b": 0, "lean": 22},
 		}),
 	}
 

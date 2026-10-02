@@ -112,8 +112,26 @@ func _init() -> void:
 			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(560, 72), "offset": Vector2(39, -75), "life": 56,
 				"hits": 12, "interval": 4, "damage": 20, "hitstun": 16, "kb": Vector2(1.2, 0), "chip": 0.2, "hitstop": 3,
 				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "special"},
-			"pose_s": {"arm_f": 80, "elb_f": 60, "arm_b": 80, "elb_b": 60, "lean": -5},
-			"pose_a": {"arm_f": 90, "elb_f": 0, "arm_b": 95, "elb_b": 0, "lean": 8}}),
+			# Through the cut-in freeze he is planted, controller up, both feet
+			# braced — the pose a kid holds before he mashes the final button.
+			"cutin_pose": {"lean": -12, "head": -18, "arm_f": 20, "elb_f": 95, "arm_b": 165, "elb_b": 25,
+				"leg_f": -8, "knee_f": 10, "leg_b": 30, "knee_b": 26},
+			"keys": [
+				# Controller cocked over his head, weight on the back foot...
+				[0, {"lean": -10, "head": -16, "arm_f": 20, "elb_f": 100, "arm_b": 170, "elb_b": 20,
+					"leg_f": -6, "knee_f": 12, "leg_b": 28, "knee_b": 24}, 0.5],
+				# ...then he slams it down and both arms punch straight out.
+				[14, {"lean": 10, "head": 4, "arm_f": 92, "elb_f": 4, "arm_b": 96, "elb_b": 4,
+					"leg_f": 34, "knee_f": 30, "leg_b": -30, "knee_b": 26}, 0.95],
+				# The beam holds; he pushes into it and settles onto the front foot.
+				[40, {"lean": 6, "head": 0, "arm_f": 88, "elb_f": 10, "arm_b": 92, "elb_b": 10,
+					"leg_f": 26, "knee_f": 26, "leg_b": -22, "knee_b": 22}, 0.4],
+				[62, {"lean": 2, "head": 2, "arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95,
+					"leg_f": 16, "knee_f": 18, "leg_b": -14, "knee_b": 16}, 0.35],
+			],
+			# Snapped in while the beam is chewing on them: he drives it forward.
+			"contact_pose": {"lean": 16, "head": 8, "arm_f": 100, "elb_f": 0, "arm_b": 104, "elb_b": 0,
+				"leg_f": 44, "knee_f": 34, "leg_b": -38, "knee_b": 30}}),
 	}
 	size = 0.9  # Ulises is about 10% shorter than Emilia
 	# Clean stylized: proportional head, lean limbs, fitted clothing.

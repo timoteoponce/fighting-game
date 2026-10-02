@@ -161,6 +161,13 @@ func _init() -> void:
 				[18, {"arm_f": 120, "elb_f": 10, "arm_b": 150, "elb_b": 10, "lean": -14, "head": -22}, 0.95],
 				[44, {"arm_f": 110, "elb_f": 30, "arm_b": 130, "elb_b": 30, "lean": -8, "head": -14}, 0.3],
 			],
+			# Held through the cut-in: fists still pressed to the eyes, chin
+			# already going up, braced for it. The sob building before the wail.
+			"cutin_pose": {"lean": -16, "head": -26, "arm_f": 148, "elb_f": 152, "arm_b": 138, "elb_b": 152,
+				"leg_f": 26, "knee_f": 34, "leg_b": -22, "knee_b": 30},
+			# The flood is through them and he is still going.
+			"contact_pose": {"lean": -22, "head": -32, "arm_f": 126, "elb_f": 4, "arm_b": 156, "elb_b": 4,
+				"leg_f": 34, "knee_f": 22, "leg_b": -30, "knee_b": 20},
 			"events": {18: [["shake", {"amount": 4.0}]]},
 		}),
 	}

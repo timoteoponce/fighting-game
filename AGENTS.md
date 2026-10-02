@@ -237,14 +237,36 @@ so existing moves keep working untouched:
 
 "keys": [[0, {...}, 0.5], [8, {...}, 0.95], [16, {...}, 0.35]]   # [frame, pose, approach speed]
 "contact_pose": {...}                   # snapped to for a few frames when the move lands
+"cutin_pose": {...}                     # held through the super-activation freeze
 "events": {8: [["slash", {}], ["sfx", {"name": "whoosh"}]]}
 ```
 
 - `Fighter._pose_target` reads the clip; `_fire_events(sf)` fires the track.
+- **The simple form is a trap on anything long.** `pose_s`/`pose_a` desugars into a
+  *two-key* clip, so `pose_a` is held, motionless, for the whole `active + recovery`.
+  That is fine for a 14-frame jab and it is why Ulises' and Emilia's hypers used to look
+  like a standing statue. Any move over ~30 frames wants real `keys`.
+- **`cutin_pose` is what makes a hyper look alive.** `Fight` stops the simulation for
+  `HYPER_FREEZE` (56) frames during super activation, and it returns *before* `f.step()`,
+  so `sf` cannot advance — the body would sit on the clip's first key for the entire
+  cinematic. `cutin_pose` is snapped in (speed 1.0) and held, with a slow sine swell on
+  `lean`/`hip` so it is not a dead frame. Driven by `Fighter.cutin_active()`, which is
+  true only for `Fight.freeze_owner`; the opponent deliberately does not get it, since
+  they are supposed to be frozen in the pose they were caught in. `hyper_t` is the
+  visual-only counter — `sf` must not advance, that is the whole point of a freeze.
+  Every hyper is required to have one, a `contact_pose`, and a >=3-key clip that is
+  still moving at `startup`; `_test_hyper_spec` (roster-wide) checks all three.
+- A hyper's `flash` and `shake` are **dead fields** — `_apply_hit` reads them off the
+  *projectile's* `MoveData`, which `Projectile.setup` does not build them on. Phase 3
+  of the roadmap wires them through; until then treat them as cosmetic on hypers only.
 - Event kinds (`Fighter._fire_event`): `slash`, `fx`, `dust`, `sfx`, `voice`, `shake`.
   `data.offset` is in the fighter's own space facing right, exactly like a hitbox.
+- Events fire on **exact frames only, and never during hitstop** (`sf` does not advance
+  while frozen, so an event authored on a hitstop frame is silently skipped). Author with
+  margin.
 - A default `slash` is injected at `startup + 1` **only** when the move has a hitbox and the
-  author wrote nothing at that frame. Authoring any event there replaces it.
+  author wrote nothing at that frame. Authoring any event there replaces it. Note `slash`
+  early-returns when the move has no hitbox, so it is a no-op on every hyper.
 - Impact feedback: `Fighter.contact` (contact-pose countdown) and `shook` (jitter) are set
   during hit resolution, which runs *after* fighters step, so `Fight` calls
   `Fighter.freeze_visual()` from the hitstop branch to make those frames visible.
@@ -284,6 +306,13 @@ Double-tap detection lives in `InputBuffer.double_tapped()` / `consume_tap()`. `
 - A hyper freezes the world for `Fight.HYPER_FREEZE` frames before the move's `sf` advances,
   so a test that watches a hyper must run **more than ~75 frames** or it never reaches the
   startup frame. A test that asserts on a hyper's spec can pass vacuously this way.
+- `_test_hyper_spec` checks the hyper's *authoring* (a `cutin_pose`, a `contact_pose`, a
+  >=3-key clip that still moves at `startup`) and runs for every character from
+  `_test_character_def`. It calls `h.pose_at(0)` first, because that is what builds the
+  clip out of the `pose_s`/`pose_a` fallback — without it `keys` is empty and the checks
+  pass vacuously against an unbuilt move. `_test_hyper_cutin` is the runtime half: it
+  drives a real hyper, then asserts `sf` is held while `hyper_t` advances and the pose on
+  screen is the cut-in pose.
 - `_test_specials` resolves what a move *should* be through `def.choose_move(key, f)`
   (`_expected`), because a character may swap in a variant of an input. A hard-coded
   `moves["proj"].id` is wrong the moment a character has two answers for one button.

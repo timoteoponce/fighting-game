@@ -38,6 +38,12 @@ var pose_a := {}  # pose while active / recovering
 ## Pose merged in while the hit freeze plays, so a connecting move visibly
 ## bites instead of only stopping the world. Empty = no impact emphasis.
 var contact_pose := {}
+## The pose the fighter snaps into and holds through the super-activation
+## cut-in. `Fight` stops the simulation for `HYPER_FREEZE` frames there, so `sf`
+## cannot advance and the animation clip would sit on its first key for the whole
+## cinematic — a hyper that looks like it never moved. Authoring this separately
+## is what makes the freeze read as a charge. Empty = no cut-in pose.
+var cutin_pose := {}
 ## Animation clip: [[frame, pose, speed], ...] in ascending order of state frame.
 ## Each key sets a new pose *target*; the renderer's springs do the in-between,
 ## so two keys 6 frames apart read as one smooth motion, not a snap. Leave this
