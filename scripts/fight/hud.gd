@@ -254,7 +254,15 @@ func _gauge(o: Node2D, i: int) -> void:
 	o.draw_circle(bc, 17.0, Color("15102a"), true, -1.0, true)
 	o.draw_circle(bc, 15.0, LEVEL_COLORS[mini(maxi(levels, 1), 3) - 1] if levels > 0 else Color("3a3458"), true, -1.0, true)
 	UI.text(o, bc + Vector2(0, 9), str(levels), 24, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 4, Color("15102a"), UI.arcade_font())
-	var label := "HYPER COMBO" if levels == 0 else ("HYPER COMBO  READY!" if frame % 30 < 20 else "HYPER COMBO")
+	# With two hypers the label names both inputs, so the second one is findable
+	# without pausing. There is deliberately no "which one is selected" marker:
+	# the direction is the selection and it is momentary, so anything that stayed
+	# lit on the gauge would be a lie. Only shown when the fighter has a second.
+	var two := fr.def.moves.has("hyper2")
+	var label := "HYPER COMBO"
+	if levels > 0:
+		label = "BACK+L+H  /  UP+L+H  READY!" if (two and frame % 30 < 20) else \
+			("BACK+L+H  /  UP+L+H" if two else ("HYPER COMBO  READY!" if frame % 30 < 20 else "HYPER COMBO"))
 	UI.text(o, Vector2(x0 + w if right else x0, y - 6), label, 11, Color(1, 0.95, 0.5) if levels > 0 else Color.WHITE,
 		HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT, 4, Color("15102a"), UI.arcade_font())
 

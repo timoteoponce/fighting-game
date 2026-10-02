@@ -38,6 +38,7 @@ func _init() -> void:
 		["FWD + L + H", "Sprint Dash"],
 		["DOWN + L + H", "Bicycle Kick"],
 		["BACK + L + H", "GAME OVER COMBO"],
+		["UP + L + H", "FULL PITCH!"],
 	]
 	poses = {
 		"intro": {"arm_f": 160, "elb_f": 15, "arm_b": 30, "elb_b": 100, "lean": -4},
@@ -132,6 +133,34 @@ func _init() -> void:
 			# Snapped in while the beam is chewing on them: he drives it forward.
 			"contact_pose": {"lean": 16, "head": 8, "arm_f": 100, "elb_f": 0, "arm_b": 104, "elb_b": 0,
 				"leg_f": 44, "knee_f": 34, "leg_b": -38, "knee_b": 30}}),
+		# Hyper B — UP + L + H. The other Game Over: instead of firing a beam
+		# across the screen he slides the length of the pitch on his side, low
+		# enough to take the legs out from under anything standing.
+		"hyper2": MoveData.make({"id": "full pitch", "display": "FULL PITCH!", "level": 3, "startup": 14, "active": 1,
+			"recovery": 46, "invuln": 43, "prop": "controller", "sfx": "kick", "flash": 5, "shake": 2.0,
+			# Not anchored: this one travels, and it rides low (its belly clears the
+			# ball, so it never steals it).
+			"projectile": {"kind": "beam", "speed": 11.0, "size": Vector2(430, 60), "offset": Vector2(40, -52), "life": 90,
+				"hits": 9, "interval": 5, "damage": 22, "hitstun": 18, "kb": Vector2(1.4, -2.5), "chip": 0.18,
+				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "kick"},
+			"cutin_pose": {"lean": 34, "head": 6, "arm_f": -46, "elb_f": 30, "arm_b": -70, "elb_b": 20,
+				"leg_f": 96, "knee_f": 8, "leg_b": -44, "knee_b": 78},
+			"keys": [
+				# Drops his weight and throws his legs out, head up, still grinning.
+				[0, {"lean": 32, "head": 6, "arm_f": -44, "elb_f": 32, "arm_b": -68, "elb_b": 22,
+					"leg_f": 92, "knee_f": 10, "leg_b": -42, "knee_b": 74}, 0.5],
+				# The slide: front leg thrown right out, trailing leg tucked under.
+				[13, {"lean": 52, "head": 14, "arm_f": -68, "elb_f": 16, "arm_b": -92, "elb_b": 10,
+					"leg_f": 122, "knee_f": 0, "leg_b": -58, "knee_b": 96}, 0.95],
+				# Still travelling: the slide skids and settles lower.
+				[40, {"lean": 46, "head": 10, "arm_f": -58, "elb_f": 22, "arm_b": -80, "elb_b": 14,
+					"leg_f": 112, "knee_f": 4, "leg_b": -52, "knee_b": 88}, 0.4],
+				[58, {"lean": 14, "head": 2, "arm_f": 20, "elb_f": 90, "arm_b": 25, "elb_b": 95,
+					"leg_f": 34, "knee_f": 34, "leg_b": -28, "knee_b": 28}, 0.35],
+			],
+			# The tackle is through them and he skids past, still on his side.
+			"contact_pose": {"lean": 58, "head": 18, "arm_f": -76, "elb_f": 10, "arm_b": -100, "elb_b": 6,
+				"leg_f": 132, "knee_f": 0, "leg_b": -64, "knee_b": 104}}),
 	}
 	size = 0.9  # Ulises is about 10% shorter than Emilia
 	# Clean stylized: proportional head, lean limbs, fitted clothing.

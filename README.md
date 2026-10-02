@@ -15,11 +15,14 @@ snowy park.
 
 - **Ulises**: soccer, running, reading and video games. Fast, and he plays with a
   real ball that rolls around the stage — with it at his feet he is quicker and
-  hits harder, without it he is a much poorer fighter. His hyper is a game-over
-  beam, and he throws the controller into it.
+  hits harder, without it he is a much poorer fighter. His supers are a
+  game-over beam and a slide down the length of the pitch, and he throws the
+  controller into both.
 - **Emilia**: wizard stories, anime, drawing and aerobics. High jumps, a long-range wand spark, and a doodle-dragon hyper.
 - **Charlie**: basketball and crying. A skinny kid with a huge bald head and a nasty grin — slow, long reach, and the hardest single hits on the roster.
 - **Silvan**: two years old, in pants and little boots, and somehow part puppy. Fastest walk and highest jump, weakest hits.
+
+Everyone has **two supers** — see "Two supers, one meter bar" below.
 
 Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Normal / Hard).
 
@@ -56,6 +59,26 @@ cd PJsClash
 | Forward + L + H | Driving Tackle, or **Sprint Dash** with no ball | Cartwheel Rush | Fast Break | Puppy Dash |
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
 | Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | CRYBABY FLOOD | MOON HOWL |
+| Up + L + H, **full HYPER meter** | FULL PITCH! | WAND BLITZ! | TEAR GEYSER! | FULL MOON! |
+
+### Two supers, one meter bar
+
+Every fighter has **two** supers and a full meter bar buys you either one, so
+which direction you press is the whole decision:
+
+- **BACK + L + H** is the heavy cinematic super — a screen-crossing beam, a
+  summoned creature, a wave.
+- **UP + L + H** is the faster, more situational one — Ulises slides the length
+  of the pitch on his side, Emilia fires a solid bar of raw wand light, Charlie
+  puts a geyser of tears straight up (good against jumpers), Silvan drops a
+  pillar of moonlight (it comes from above, so stepping back does not help).
+
+UP is also the jump, so **UP + L + H works in the air too**: you can throw your
+second super out of a jump, and holding Up a moment before the buttons still
+comes out as the super rather than a jump into an ordinary air attack.
+
+The meter gauge names both inputs as soon as it is full, so you can find the
+second one without pausing.
 
 ### The ball (Ulises)
 
@@ -255,6 +278,25 @@ Graphics uplift pass — making the game look and feel like a real release.
   of it leads with the back one while the first comes back to guard, and the
   third goes front again. It is `CharacterDef.adjust_attack_pose` calling the
   shared `cross_limbs`, and it is pose-only — no frame data or hitboxes move.
+
+### Two supers per fighter
+
+- **Everyone has a second super, on `UP + L + H`.** A full meter bar buys either
+  one, so the direction is the decision: **BACK + L + H** is the big cinematic
+  super, **UP + L + H** is the quicker, more situational one. Ulises slides the
+  length of the pitch on his side, Emilia fires a bar of raw wand light, Charlie
+  puts a geyser of tears straight up against jumpers, and Silvan drops a pillar
+  of moonlight from above so stepping back does not save you.
+- **`UP + L + H` also works in the air.** `UP` is both the jump and the only
+  direction the special ladder left free, so a player who holds Up a beat before
+  the buttons would otherwise jump and get an ordinary air attack. Resolving the
+  input in the air as well means both orderings give you the super, and you can
+  throw your second super out of a jump.
+- **The meter gauge names both inputs** once it is full, so the second super is
+  findable without pausing. There is deliberately no "which one is selected"
+  marker — the direction is the selection and it is momentary, so anything that
+  stayed lit would be a lie.
+- **The CPU uses both**, picking one at random when it has the meter.
 
 ### The hyper pass
 

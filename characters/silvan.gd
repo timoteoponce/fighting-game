@@ -46,6 +46,7 @@ func _init() -> void:
 		["FWD + L + H", "Puppy Dash"],
 		["DOWN + L + H", "Bouncy Bounce"],
 		["BACK + L + H", "MOON HOWL"],
+		["UP + L + H", "FULL MOON!"],
 	]
 	poses = {
 		"intro": {"arm_f": 140, "elb_f": 60, "arm_b": 140, "elb_b": 60, "head": 12, "lean": -4},
@@ -201,6 +202,43 @@ func _init() -> void:
 				18: [["voice", {"line": "hyper"}], ["shake", {"amount": 5.0}]],
 				24: [["shake", {"amount": 3.0}]],
 				32: [["shake", {"amount": 2.0}]],
+			},
+		}),
+		# Hyper B — UP + L + H. His first super sends the wolves running along the
+		# ground. This one calls up the moon itself: a pillar of light that drops
+		# onto him from above, so it catches anyone above and cannot be dodged by
+		# stepping back.
+		"hyper2": MoveData.make({
+			"id": "full moon", "display": "FULL MOON!", "level": 3, "startup": 16,
+			"active": 1, "recovery": 44, "invuln": 43, "prop": "moon", "sfx": "hyper",
+			"flash": 5, "shake": 2.0,
+			"projectile": {
+				# A tall narrow column instead of the howl's long low charge.
+				"kind": "beam", "anchored": true, "size": Vector2(190, 320), "offset": Vector2(50, -160),
+				"life": 60, "hits": 11, "interval": 4, "damage": 20, "hitstun": 16,
+				"kb": Vector2(1.2, -3.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "sfx": "hyper",
+			},
+			# Arms up, chin up, back leg stretched out behind him, reaching for it.
+			"cutin_pose": {"head": -34, "lean": -18, "arm_f": 180, "elb_f": 0, "arm_b": 176, "elb_b": 4,
+				"leg_f": 18, "knee_f": 8, "leg_b": -34, "knee_b": 40},
+			"keys": [
+				# Reaches for the sky, up on his toes, one leg trailing.
+				[0, {"head": -32, "lean": -16, "arm_f": 178, "elb_f": 2, "arm_b": 174, "elb_b": 6,
+					"leg_f": 16, "knee_f": 10, "leg_b": -32, "knee_b": 38}, 0.5],
+				# Splayed out under it, front leg planted, whole body lifted.
+				[15, {"head": -38, "lean": -6, "arm_f": 100, "elb_f": 20, "arm_b": 96, "elb_b": 24,
+					"leg_f": 62, "knee_f": 12, "leg_b": -46, "knee_b": 56}, 0.95],
+				[40, {"head": -34, "lean": -10, "arm_f": 108, "elb_f": 14, "arm_b": 104, "elb_b": 18,
+					"leg_f": 52, "knee_f": 16, "leg_b": -40, "knee_b": 48}, 0.4],
+				[54, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+			],
+			# The light lands on him and he holds it open over his head.
+			"contact_pose": {"head": -42, "lean": -2, "arm_f": 112, "elb_f": 8, "arm_b": 108, "elb_b": 12,
+				"leg_f": 70, "knee_f": 10, "leg_b": -52, "knee_b": 60},
+			"events": {
+				15: [["voice", {"line": "hyper"}], ["shake", {"amount": 5.0}]],
+				26: [["shake", {"amount": 3.0}]],
 			},
 		}),
 	}

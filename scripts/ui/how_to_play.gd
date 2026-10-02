@@ -13,7 +13,8 @@ const SPECIALS := [
 	["L + H", "Projectile"],
 	["FORWARD + L + H", "Rush attack"],
 	["DOWN + L + H", "Anti-air (hits jumpers)"],
-	["BACK + L + H", "HYPER move! (needs a full HYPER meter)"],
+	["BACK + L + H", "HYPER 1! (needs a full HYPER meter)"],
+	["UP + L + H", "HYPER 2! (also works in the air)"],
 ]
 
 

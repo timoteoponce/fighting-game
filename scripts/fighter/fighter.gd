@@ -440,10 +440,31 @@ func _super_jump() -> void:
 func _jump_step() -> void:
 	if _try_air_moves():
 		return
+	if _try_air_special():
+		return
 	if _try_normal():
 		return
 	if _air_physics():
 		_land()
+
+
+## UP + L + H is the second hyper, and UP is also the jump. `_try_special` runs
+## before `_jump`, so pressing the direction and the buttons on the same frame
+## works from the ground — but a player who holds UP a beat early has already
+## left the floor by the time L+H arrives, and would get an air normal instead.
+## Resolving the same input here makes both orderings work: you can throw your
+## second super out of a jump, and there is no dead way to press it.
+func _try_air_special() -> bool:
+	if not buf.lh_combo() or not buf.current() & Controls.UP:
+		return false
+	if meter < HYPER_COST or not def.moves.has("hyper2"):
+		return false
+	var m: MoveData = def.moves[def.choose_move("hyper2", self)]
+	if not _can_start(m):
+		return false
+	buf.consume_combo()
+	_start_move(m)
+	return true
 
 
 func _air_physics() -> bool:
@@ -569,7 +590,17 @@ func _try_special() -> bool:
 		return false
 	var h := buf.current()
 	var key := "proj"
-	if h & Controls.DOWN:
+	# UP is the one direction the rest of the ladder does not use, so it is the
+	# second hyper: UP+L+H is hyper B, BACK+L+H is hyper A. It is checked first and
+	# gated on the character actually defining one, so a fighter without a second
+	# hyper falls through to their normal special instead of swallowing the input.
+	# UP is also the jump, and this runs before `_jump`, so pressing them together
+	# lands here — `_try_air_special` covers the player who holds UP first.
+	# Human input has already cancelled UP+DOWN in `Controls`, so that combination
+	# only ever arrives from the CPU, which builds its own masks.
+	if h & Controls.UP and meter >= HYPER_COST and def.moves.has("hyper2"):
+		key = "hyper2"
+	elif h & Controls.DOWN:
 		key = "anti"
 	elif h & _fwd():
 		key = "rush"

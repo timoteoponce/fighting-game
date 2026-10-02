@@ -125,6 +125,10 @@ func _test_character_def(id: String) -> void:
 	check(d.moves["H"].launch, "%s's heavy launches, so air combos work" % id)
 	check(d.moves["anti"].invuln > 0, "%s's anti-air special has invulnerability" % id)
 	check(d.moves["hyper"].level >= 3, "%s's hyper is a level 3 move" % id)
+	# Optional in the ten-key contract, but the roster is expected to give every
+	# fighter a second super: it is UP+L+H, and it is what makes the direction
+	# choice on the meter gauge mean something.
+	check(d.moves.has("hyper2"), "%s has a second hyper on UP+L+H" % id)
 	_test_hyper_spec(d)
 	check(d.specials_text.size() >= 4, "%s lists its specials for the move list" % id)
 	check(d.throw_data() != null, "%s has a throw" % id)
@@ -139,10 +143,18 @@ func _test_character_def(id: String) -> void:
 ## cannot advance while the world is stopped — so the body sat on the clip's
 ## first key for all 56 frames.
 func _test_hyper_spec(d: CharacterDef) -> void:
+	_check_hyper_spec(d, d.moves["hyper"], "hyper")
+	# `hyper2` is optional — it is the UP+L+H answer, not part of the ten-key
+	# contract — but a fighter that has one is held to the same bar, and the
+	# roster is expected to give all of them one.
+	if d.moves.has("hyper2"):
+		_check_hyper_spec(d, d.moves["hyper2"], "hyper2")
+
+
+func _check_hyper_spec(d: CharacterDef, h: MoveData, key: String) -> void:
 	var id := d.id
-	var h: MoveData = d.moves["hyper"]
-	check(not h.cutin_pose.is_empty(), "%s's hyper has a cut-in pose for the freeze" % id)
-	check(not h.contact_pose.is_empty(), "%s's hyper has an impact pose for the hit freeze" % id)
+	check(not h.cutin_pose.is_empty(), "%s's %s has a cut-in pose for the freeze" % [id, key])
+	check(not h.contact_pose.is_empty(), "%s's %s has an impact pose for the hit freeze" % [id, key])
 	# `pose_at` builds the clip from the pose_s / pose_a fallback if needed, which
 	# is exactly the two-key form this is checking against.
 	h.pose_at(0)
@@ -152,13 +164,19 @@ func _test_hyper_spec(d: CharacterDef) -> void:
 		for pkey in k[1]:
 			if not first.has(pkey) or not is_equal_approx(float(first[pkey]), float(k[1][pkey])):
 				varied = true
-	check(h.keys.size() >= 3, "%s's hyper is a real animation clip, not the static two-pose form (%d keys)"
-		% [id, h.keys.size()])
-	check(varied, "%s's hyper clip changes pose across its keys" % id)
+	check(h.keys.size() >= 3, "%s's %s is a real animation clip, not the static two-pose form (%d keys)"
+		% [id, key, h.keys.size()])
+	check(varied, "%s's %s clip changes pose across its keys" % [id, key])
 	# Something has to happen at or after the frame the attack goes live, or the
 	# clip is all wind-up and the whole recovery is one held pose.
 	check(not h.keys.is_empty() and int(h.keys[-1][0]) >= h.startup,
-		"%s's hyper clip is still moving when the attack goes live" % id)
+		"%s's %s clip is still moving when the attack goes live" % [id, key])
+	# It is a projectile super, so it needs one, and the slot exemption and the
+	# meter cost are both keyed on the projectile's own `level` — forget that and
+	# the super quietly occupies the one-projectile slot and cannot be fired.
+	check(not h.projectile.is_empty(), "%s's %s shoots something" % [id, key])
+	check(int(h.projectile.get("level", 0)) == 3,
+		"%s's %s projectile is level 3, or it takes the projectile slot and costs no meter" % [id, key])
 
 
 func _new_fight(p1: String, p2: String) -> Fight:
@@ -240,6 +258,56 @@ func _test_specials(id: String) -> void:
 	var hp := f.fighters[1].health
 	_run(f, 200)
 	check(f.fighters[1].health < hp, "hyper damages the opponent (%d -> %d)" % [hp, f.fighters[1].health])
+	# The second hyper: UP+L+H, where the rest of the direction ladder does not
+	# reach. Runs for every character that defines one.
+	if p1.def.moves.has("hyper2"):
+		_run(f, 150)
+		p1.meter = 100.0
+		# Holding UP a beat before the buttons is the way a player actually presses
+		# it, and it must still be the hyper rather than a jump into an air normal.
+		_script(p1, [[U, 3], [U | LI | HE, 2], [0, 60]])
+		want = _expected(p1, "hyper2")
+		seen = _watch_move(f, p1, 90)
+		check(seen.has(want), "UP+L+H with full meter does the second hyper (%s)" % str(seen))
+		check(p1.meter < 1.0, "the second hyper spends the meter")
+		# It has to be a different move, or "two hypers" is one hyper twice.
+		check(want != _expected(p1, "hyper"), "%s's two hypers are different moves" % id)
+		var hp2 := f.fighters[1].health
+		_run(f, 240)
+		check(f.fighters[1].health < hp2, "the second hyper damages the opponent (%d -> %d)" % [hp2, f.fighters[1].health])
+		# UP on its own must still jump: the hyper cannot have eaten the jump.
+		_run(f, 120)
+		var air := false
+		var y0 := p1.position.y
+		_script(p1, [[U, 4], [0, 10]])
+		for i in 12:
+			f._physics_process(1.0 / 60.0)
+			if p1.position.y < y0 - 4.0:
+				air = true
+		check(air, "UP alone still jumps after firing the second hyper")
+		# The other order: direction and buttons on the same frame, from the
+		# ground. That is the other code path — `_try_special` rather than
+		# `_try_air_special` — and it must not have jumped on the way. Push the
+		# opponent out of reach and top them back up first: a few hypers in a row
+		# can leave them standing next to us, and a close L+H is a throw before it
+		# is ever a special.
+		f.fighters[1].position.x = p1.position.x + 220.0
+		f.fighters[1].health = Fighter.MAX_HEALTH
+		_run(f, 150)
+		p1.meter = 100.0
+		var y_start := p1.position.y
+		_script(p1, [[U | LI | HE, 3], [0, 60]])
+		seen = _watch_move(f, p1, 90)
+		check(seen.has(want), "UP+L+H all at once is the second hyper too (%s)" % str(seen))
+		check(p1.position.y <= y_start + 0.01, "the simultaneous press did not jump first")
+	# Without a second hyper, UP+L+H must fall through to the normal special
+	# rather than being swallowed by the input.
+	else:
+		_run(f, 150)
+		p1.meter = 100.0
+		_script(p1, [[U, 3], [U | LI | HE, 2], [0, 60]])
+		seen = _watch_move(f, p1, 50)
+		check(seen.has(_expected(p1, "proj")), "UP+L+H falls through to the special with no second hyper (%s)" % str(seen))
 	f.free()
 
 
@@ -499,40 +567,50 @@ func _test_ulises_chain_pose() -> void:
 func _test_hyper_cutin() -> void:
 	print("[hyper cut-in]")
 	for id: String in GameState.CHARACTERS:
-		var f := _new_fight(id, "emilia")
-		_start(f)
-		var p1 := f.fighters[0]
-		var p2 := f.fighters[1]
-		p1.meter = Fighter.HYPER_COST
-		var back := Lf if p1.facing > 0 else R
-		_script(p1, [[back, 3], [back | LI | HE, 2], [0, 30]])
-		var guard := 0
-		while f.freeze <= 0 and guard < 40:
-			f._physics_process(1.0 / 60.0)
-			guard += 1
-		check(f.freeze > 0, "%s's hyper froze the world for the cut-in" % id)
-		if f.freeze <= 0:
-			f.free()
-			continue
-		check(p1.cutin_active(), "%s owns the cut-in while it plays" % id)
-		check(not p2.cutin_active(), "%s's opponent is not performing the cut-in" % id)
-		var sf_held := p1.sf
-		var vis := p1.hyper_t
-		# A few frames into the cut-in, having let the body snap in.
-		_run(f, 6)
-		check(p1.sf == sf_held, "%s's state frame is held during the freeze (%d -> %d)" % [id, sf_held, p1.sf])
-		check(p1.hyper_t > vis, "%s's visual counter advances during the freeze (%d -> %d)" % [id, vis, p1.hyper_t])
-		# The pose actually on screen is the cut-in pose, not the clip's first key.
-		# It is snapped (speed 1.0) with a slow swell on the lean, hence the slack.
-		var tgt := p1._pose_target()
-		check(float(tgt[1]) >= 1.0, "%s snaps into the cut-in pose (speed %.2f)" % [id, float(tgt[1])])
-		var want := float(p1.move.cutin_pose.get("lean", 0.0))
-		var got := float(tgt[0].get("lean", 0.0))
-		check(absf(got - want) <= 3.5, "%s holds its cut-in lean, not the clip's first key (%.1f vs %.1f)" % [id, got, want])
-		# And it is released: the move resumes once the world unfreezes.
-		_run(f, Fight.HYPER_FREEZE + 20)
-		check(p1.sf > sf_held, "%s's move resumed after the cut-in (%d -> %d)" % [id, sf_held, p1.sf])
+		var d: CharacterDef = GameState.make_character(id)
+		# P1 is placed on the left facing right, so "away" is LEFT and "up" is UP
+		# for both. BACK is the only relative direction in the special ladder.
+		_cutin_one(id, "hyper", Lf)
+		if d.moves.has("hyper2"):
+			_cutin_one(id, "hyper2", U)
+
+
+## Drives one hyper for real and checks it performs through its cut-in.
+func _cutin_one(id: String, key: String, held: int) -> void:
+	var f := _new_fight(id, "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	var p2 := f.fighters[1]
+	p1.meter = Fighter.HYPER_COST
+	_script(p1, [[held, 3], [held | LI | HE, 2], [0, 30]])
+	var guard := 0
+	while f.freeze <= 0 and guard < 40:
+		f._physics_process(1.0 / 60.0)
+		guard += 1
+	check(f.freeze > 0, "%s's %s froze the world for the cut-in" % [id, key])
+	if f.freeze <= 0:
 		f.free()
+		return
+	check(p1.cutin_active(), "%s owns the %s cut-in while it plays" % [id, key])
+	check(not p2.cutin_active(), "%s's opponent is not performing the %s cut-in" % [id, key])
+	var sf_held := p1.sf
+	var vis := p1.hyper_t
+	# A few frames into the cut-in, having let the body snap in.
+	_run(f, 6)
+	check(p1.sf == sf_held, "%s's state frame is held during the %s freeze (%d -> %d)" % [id, key, sf_held, p1.sf])
+	check(p1.hyper_t > vis, "%s's visual counter advances during the %s freeze (%d -> %d)" % [id, key, vis, p1.hyper_t])
+	# The pose actually on screen is the cut-in pose, not the clip's first key.
+	# It is snapped (speed 1.0) with a slow swell on the lean, hence the slack.
+	var tgt := p1._pose_target()
+	check(float(tgt[1]) >= 1.0, "%s snaps into the %s cut-in pose (speed %.2f)" % [id, key, float(tgt[1])])
+	var want := float(p1.move.cutin_pose.get("lean", 0.0))
+	var got := float(tgt[0].get("lean", 0.0))
+	check(absf(got - want) <= 3.5, "%s holds its %s cut-in lean, not the clip's first key (%.1f vs %.1f)"
+		% [id, key, got, want])
+	# And it is released: the move resumes once the world unfreezes.
+	_run(f, Fight.HYPER_FREEZE + 20)
+	check(p1.sf > sf_held, "%s's %s resumed after the cut-in (%d -> %d)" % [id, key, sf_held, p1.sf])
+	f.free()
 
 
 ## Every fighter owns its own head, torso, hand and face, and that face carries

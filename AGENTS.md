@@ -168,6 +168,19 @@ Phase B is where that actually gets broken up.
 - **Move keys are a fixed 10-slot contract**: `L, H, cL, cH, jL, jH, proj, rush, anti, hyper`.
   `Fighter._try_normal` / `_try_special` index `def.moves[key]` directly, so every character
   **must define all 10** — a missing key is a runtime error, not a fallback.
+- **`hyper2` is the one optional key**: the `UP + L + H` super. `_try_special` gates the UP
+  rung on `def.moves.has("hyper2")`, so a fighter without one falls through to `proj` instead
+  of swallowing the input, and `CharacterDef.REQUIRED_MOVES` deliberately still lists only ten.
+  Extra keys beyond the ten have always been legal (Ulises has `"slide"` and `"tackle"`).
+  **UP is the only direction the ladder left free** — down is anti-air, forward is rush,
+  back is hyper — and it is *also the jump*, which is the whole awkwardness: `_try_special`
+  runs before `_jump`, so pressing them together works from the ground, but a player who
+  holds up first is already airborne by the time `L+H` arrives. `_try_air_special` resolves
+  the same input in `S.JUMP` so both orderings work and you can super out of a jump.
+- **A hyper projectile must carry `"level": 3` in its own spec.** The one-projectile slot
+  exemption (`Fight.spawn_projectile`) and the meter spend are both keyed on it, so a
+  hyper that forgets it silently occupies the slot and fires for free. `_check_hyper_spec`
+  checks this for every hyper the fighter defines.
 - `MoveData.hitbox` is relative to the fighter's **feet, facing right**. `CharacterDef.size`
   (body scale) does *not* rescale hitboxes automatically: the character must call
   `scale_moves()` at the end of `_init()` whenever `size != 1.0`.
@@ -279,12 +292,21 @@ so existing moves keep working untouched:
 | Backdash | double-tap back | 6 invulnerable frames |
 | Air dash | double-tap a direction in the air | one per jump, halves gravity for 12 frames |
 | Double jump | Up in the air | one per jump |
+| Hyper 1 | `BACK+L+H`, full meter | also a cancel out of anything that connected |
+| Hyper 2 | `UP+L+H`, full meter | resolves in the air too, so it is an air super as well |
 | Throw | `L+H` within `THROW_RANGE * def.size` of a grounded opponent | unblockable; victim breaks with `L+H` within 10 frames. Outside that range `L+H` is still `proj` |
 | Air block | hold away in the air | |
 | Quick-rise | any input during `KNOCKDOWN` after frame 10 | |
 
 Double-tap detection lives in `InputBuffer.double_tapped()` / `consume_tap()`. `_jump()` must
 `buf.consume(Controls.UP)` or the ground jump immediately re-triggers as a double jump.
+
+**`_try_throw()` runs before `_try_special()` in `_ground_step`, for every direction.** A close
+`L+H` is therefore a throw and *not* a hyper, whichever hyper you were reaching for. That is
+deliberate, and it is the first thing that bites a test firing several supers in a row: the
+opponent is left standing next to you and the next `L+H` quietly becomes a throw, which sets
+no `move` at all — so `_watch_move` returns an empty list and the failure reads as though the
+input did nothing. Move the opponent out of range before scripting another super.
 
 ## Controllers (cheap PSX/PS2 USB adapters are the target)
 
@@ -306,16 +328,21 @@ Double-tap detection lives in `InputBuffer.double_tapped()` / `consume_tap()`. `
 - A hyper freezes the world for `Fight.HYPER_FREEZE` frames before the move's `sf` advances,
   so a test that watches a hyper must run **more than ~75 frames** or it never reaches the
   startup frame. A test that asserts on a hyper's spec can pass vacuously this way.
-- `_test_hyper_spec` checks the hyper's *authoring* (a `cutin_pose`, a `contact_pose`, a
-  >=3-key clip that still moves at `startup`) and runs for every character from
-  `_test_character_def`. It calls `h.pose_at(0)` first, because that is what builds the
+- `_test_hyper_spec` checks a hyper's *authoring* (a `cutin_pose`, a `contact_pose`, a
+  >=3-key clip that still moves at `startup`, and a `"level": 3` projectile spec) and runs for
+  every character from `_test_character_def`, on `hyper` and `hyper2` alike via
+  `_check_hyper_spec`. It calls `h.pose_at(0)` first, because that is what builds the
   clip out of the `pose_s`/`pose_a` fallback — without it `keys` is empty and the checks
   pass vacuously against an unbuilt move. `_test_hyper_cutin` is the runtime half: it
-  drives a real hyper, then asserts `sf` is held while `hyper_t` advances and the pose on
-  screen is the cut-in pose.
+  drives a real hyper of each kind, then asserts `sf` is held while `hyper_t` advances and
+  the pose on screen is the cut-in pose.
 - `_test_specials` resolves what a move *should* be through `def.choose_move(key, f)`
   (`_expected`), because a character may swap in a variant of an input. A hard-coded
   `moves["proj"].id` is wrong the moment a character has two answers for one button.
+- `_test_specials` covers **both** supers, for every roster entry, in both input orders —
+  `UP` held a few frames before `L+H` (the airborne path, `_try_air_special`) and
+  `UP+L+H` on one frame (the ground path, `_try_special`). Both are separate code and the
+  second one is the one that proves the hyper did not swallow the jump first.
 - A fighter that owns an object in the arena puts it in `fight.projectiles`, so assertions
   like "no projectile came out of the throw" must filter `not p.persistent`.
 - `_test_character_def` checks **every** move a character defines, not just the required ten,

@@ -85,7 +85,13 @@ func _decide(f: Fighter, o: Fighter) -> void:
 	if f.launch_window > 0:
 		_q([[U, 3], [0, 8], [L, 2], [0, 6], [L, 2], [0, 7], [H, 2], [0, 10]])
 	elif f.meter >= Fighter.HYPER_COST and dx < 320 and r < 0.35:
-		_q([[BACK, 3], [BACK | L | H, 3], [0, 20]])
+		# Two supers on UP+L+H and BACK+L+H, so use whichever this fighter
+		# actually has. Never both at once: `Controls` cancels UP+DOWN for a
+		# human, but the CPU builds its own masks and has to keep them clean.
+		if f.def.moves.has("hyper2") and rng.randf() < 0.5:
+			_q([[U, 3], [U | L | H, 3], [0, 20]])
+		else:
+			_q([[BACK, 3], [BACK | L | H, 3], [0, 20]])
 	elif o.state == Fighter.S.JUMP and dx < 130 and r < ANTI_AIR_P[level]:
 		_q([[D | L | H, 3], [0, 10]])
 	elif dx < Fighter.THROW_RANGE * 0.8 and o.on_ground() and mobile and r < 0.25:

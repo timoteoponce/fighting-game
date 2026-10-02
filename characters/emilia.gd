@@ -46,6 +46,7 @@ func _init() -> void:
 		["FWD + L + H", "Cartwheel Rush"],
 		["DOWN + L + H", "Star Jump"],
 		["BACK + L + H", "SKETCHBOOK SUMMON"],
+		["UP + L + H", "WAND BLITZ!"],
 	]
 	poses = {
 		"intro": {"arm_f": 165, "elb_f": 10, "arm_b": 25, "elb_b": 110, "lean": -6},
@@ -120,6 +121,32 @@ func _init() -> void:
 			# The dragon is through them: she flings the page after it.
 			"contact_pose": {"lean": 14, "head": 6, "arm_f": 118, "elb_f": 0, "arm_b": 136, "elb_b": 6,
 				"leg_f": 62, "knee_f": 34, "leg_b": -52, "knee_b": 58, "ground": 0, "hip": -48}}),
+		# Hyper B — UP + L + H. Where her first super sends a doodle creature
+		# across the arena, this one is the wand itself: a solid bar of raw light
+		# fired point blank. It is a block of colour, not a creature.
+		"hyper2": MoveData.make({"id": "wand blitz", "display": "WAND BLITZ!", "level": 3, "startup": 15, "active": 1,
+			"recovery": 44, "invuln": 43, "prop": "sketch", "sfx": "magic", "flash": 5, "shake": 2.0,
+			"projectile": {"kind": "beam", "speed": 9.5, "size": Vector2(300, 130), "offset": Vector2(60, -80), "life": 80,
+				"hits": 8, "interval": 5, "damage": 28, "hitstun": 18, "kb": Vector2(4.5, 0), "chip": 0.2,
+				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "sfx": "magic"},
+			# Both arms up, wand above her head, floating on the spell.
+			"cutin_pose": {"lean": -10, "head": -24, "arm_f": 176, "elb_f": 16, "arm_b": 152, "elb_b": 30,
+				"leg_f": 20, "knee_f": 28, "leg_b": -18, "knee_b": 26, "ground": 0, "hip": -60},
+			"keys": [
+				# Draws the wand back over her shoulder to load it...
+				[0, {"lean": -8, "head": -22, "arm_f": 172, "elb_f": 22, "arm_b": 148, "elb_b": 36,
+					"leg_f": 18, "knee_f": 24, "leg_b": -16, "knee_b": 24, "ground": 0, "hip": -56}, 0.5],
+				# ...then drives it straight out and the light leaves the tip.
+				[14, {"lean": 12, "head": 4, "arm_f": 86, "elb_f": 4, "arm_b": 74, "elb_b": 96,
+					"leg_f": 44, "knee_f": 26, "leg_b": -38, "knee_b": 44, "ground": 0, "hip": -48}, 0.95],
+				# Braced, holding the beam out at arm's length.
+				[40, {"lean": 8, "head": 2, "arm_f": 82, "elb_f": 10, "arm_b": 72, "elb_b": 100,
+					"leg_f": 36, "knee_f": 28, "leg_b": -32, "knee_b": 42, "ground": 0, "hip": -50}, 0.4],
+				[56, {"lean": 2, "head": -2, "arm_f": 44, "elb_f": 80, "arm_b": 46, "elb_b": 96}, 0.35],
+			],
+			# The bar is through them and she shoves it further out.
+			"contact_pose": {"lean": 20, "head": 8, "arm_f": 96, "elb_f": 0, "arm_b": 84, "elb_b": 88,
+				"leg_f": 54, "knee_f": 30, "leg_b": -46, "knee_b": 50, "ground": 0, "hip": -46}}),
 	}
 
 

@@ -48,6 +48,7 @@ func _init() -> void:
 		["FWD + L + H", "Fast Break"],
 		["DOWN + L + H", "Rim Shot"],
 		["BACK + L + H", "CRYBABY FLOOD"],
+		["UP + L + H", "TEAR GEYSER!"],
 	]
 	poses = {
 		"intro": {"arm_f": 70, "elb_f": 60, "arm_b": 30, "elb_b": 90, "lean": 4, "head": 6},
@@ -169,6 +170,41 @@ func _init() -> void:
 			"contact_pose": {"lean": -22, "head": -32, "arm_f": 126, "elb_f": 4, "arm_b": 156, "elb_b": 4,
 				"leg_f": 34, "knee_f": 22, "leg_b": -30, "knee_b": 20},
 			"events": {18: [["shake", {"amount": 4.0}]]},
+		}),
+		# Hyper B — UP + L + H. His flood spreads sideways along the floor. This
+		# one goes straight up: a geyser of tears that erupts over his head, so it
+		# catches jumpers and anyone hovering above him.
+		"hyper2": MoveData.make({
+			"id": "tear geyser", "display": "TEAR GEYSER!", "level": 3, "startup": 17,
+			"active": 1, "recovery": 46, "invuln": 43, "prop": "tears", "sfx": "hyper",
+			"flash": 5, "shake": 2.0,
+			"projectile": {
+				# Tall and narrow, against the flood's wide and low. The tears art
+				# runs from the floor up to the top of `size.y`, so this is a column.
+				"kind": "tears", "anchored": true, "size": Vector2(230, 300), "offset": Vector2(50, -150),
+				"life": 60, "hits": 12, "interval": 4, "damage": 20, "hitstun": 16,
+				"kb": Vector2(1.0, -5.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "sfx": "hyper",
+			},
+			# Head thrown right back, eyes shut, cheeks blown out: the inhale before
+			# the geyser, with his whole body arched away from where it will come out.
+			"cutin_pose": {"lean": -30, "head": -34, "arm_f": 168, "elb_f": 12, "arm_b": 150, "elb_b": 20,
+				"leg_f": 30, "knee_f": 26, "leg_b": -24, "knee_b": 24},
+			"keys": [
+				# Reeling back, arms up and away from his face...
+				[0, {"lean": -28, "head": -32, "arm_f": 164, "elb_f": 14, "arm_b": 146, "elb_b": 22,
+					"leg_f": 28, "knee_f": 28, "leg_b": -22, "knee_b": 26}, 0.5],
+				# ...then the wail, straight up, on his toes with both arms punched out.
+				[16, {"lean": -6, "head": -30, "arm_f": 178, "elb_f": 4, "arm_b": 174, "elb_b": 4,
+					"leg_f": 44, "knee_f": 10, "leg_b": -16, "knee_b": 14}, 0.95],
+				[40, {"lean": -12, "head": -26, "arm_f": 172, "elb_f": 8, "arm_b": 168, "elb_b": 8,
+					"leg_f": 38, "knee_f": 14, "leg_b": -20, "knee_b": 18}, 0.4],
+				[56, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+			],
+			# The column is up and he is still pushing at the sky.
+			"contact_pose": {"lean": -2, "head": -36, "arm_f": 184, "elb_f": 0, "arm_b": 180, "elb_b": 0,
+				"leg_f": 50, "knee_f": 8, "leg_b": -14, "knee_b": 12},
+			"events": {16: [["shake", {"amount": 5.0}]]},
 		}),
 	}
 	size = 1.12  # the tall one
