@@ -12,6 +12,10 @@ const LAUNCH_GRAVITY := 0.45
 const MAX_HEALTH := 1000
 const MAX_METER := 300.0  # three hyper levels, like MvC
 const HYPER_COST := 100.0
+## What a MAX super costs: the whole meter. A level 3 move may set its own
+## `meter_cost`, and this is the bar the EX variants of a move have to clear
+## before the input is routed to it.
+const EX_COST := 300.0
 const JUGGLE_LIMIT := 7
 const BUFFER := 8
 const SCALE := 1.25
@@ -149,6 +153,21 @@ func is_human() -> bool:
 
 func is_hyper_active() -> bool:
 	return state == S.ATTACK and move != null and move.level == 3
+
+
+## What a level 3 move actually costs. `MoveData.meter_cost` of 0 means the
+## default, so a character only has to set it on the 3-bar EX versions.
+func hyper_cost(m: MoveData) -> int:
+	return int(m.meter_cost) if m.meter_cost > 0 else HYPER_COST
+
+
+## True when this fighter could pay for a level 3 move right now. Anything that
+## fires a super checks this against the *resolved* move, which is what keeps the
+## meter from going negative: the old code spent an unclamped HYPER_COST and
+## relied on the caller having already checked, so a level 3 move reaching
+## `_start_move` by any other route drove the meter below zero.
+func can_pay(m: MoveData) -> bool:
+	return m.level != 3 or meter >= float(hyper_cost(m))
 
 
 func poll_input() -> void:
@@ -459,8 +478,11 @@ func _try_air_special() -> bool:
 		return false
 	if meter < HYPER_COST or not def.moves.has("hyper2"):
 		return false
-	var m: MoveData = def.moves[def.choose_move("hyper2", self)]
-	if not _can_start(m):
+	var key := def.choose_move("hyper2", self)
+	if meter >= EX_COST and def.moves.has(key + "_max"):
+		key += "_max"
+	var m: MoveData = def.moves[key]
+	if not can_pay(m) or not _can_start(m):
 		return false
 	buf.consume_combo()
 	_start_move(m)
@@ -609,10 +631,16 @@ func _try_special() -> bool:
 	# The character gets to swap in a worse alternative of the same input when
 	# it is not set up: Ulises' L+H is a Slide Kick with no ball to his feet.
 	key = def.choose_move(key, self)
+	# A 3-bar EX version of whatever we just picked. `hyper_max` is the same
+	# input as `hyper` with all three bars on the table, so a character opts in
+	# by defining the key rather than by overriding anything. Gated on `has()`
+	# like `hyper2` above, so a fighter without one is unaffected.
+	if meter >= EX_COST and def.moves.has(key + "_max"):
+		key += "_max"
 	if key == "proj" and is_instance_valid(projectile) and not projectile.dead:
 		return false
 	var m: MoveData = def.moves[key]
-	if not _can_start(m):
+	if not can_pay(m) or not _can_start(m):
 		return false
 	buf.consume_combo()
 	_start_move(m)
@@ -656,7 +684,7 @@ func _start_move(m: MoveData) -> void:
 	if m.level > 0 or randf() < 0.5:
 		Sfx.voice(def.id, line, index, def.voice_pitch)
 	if m.level == 3:
-		meter -= HYPER_COST
+		meter = maxf(0.0, meter - float(hyper_cost(m)))
 		fight.on_hyper(self, m)
 
 

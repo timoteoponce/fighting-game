@@ -177,6 +177,17 @@ Phase B is where that actually gets broken up.
   runs before `_jump`, so pressing them together works from the ground, but a player who
   holds up first is already airborne by the time `L+H` arrives. `_try_air_special` resolves
   the same input in `S.JUMP` so both orderings work and you can super out of a jump.
+- **`<key>_max` is the MAX super, and it is generic.** `MAX_METER` is 300 and
+  `HYPER_COST` is 100, so with one key per super the third bar had no way to be spent — both
+  supers cost one bar and the third was dead weight. `_try_special` (and `_try_air_special`)
+  resolve `key + "_max"` whenever `meter >= Fighter.EX_COST` and the character defines it, so a
+  fighter opts in by **defining the key** and nothing else. Set `"meter_cost": 300` on it;
+  `Fighter.hyper_cost()` treats 0 as "the default" so nobody restates `HYPER_COST` on every
+  super. Two bars is deliberately not enough: the input falls back to the ordinary super.
+- **A level 3 move is gated on its *own* cost, and that is what keeps the meter sane.**
+  `Fighter.can_pay()` is checked against the resolved move just before `_start_move`. The old
+  code spent an unclamped `HYPER_COST` and relied on the caller having already checked, so a
+  level 3 move arriving by any other route drove the meter below zero.
 - **A hyper projectile must carry `"level": 3` in its own spec.** The one-projectile slot
   exemption (`Fight.spawn_projectile`) and the meter spend are both keyed on it, so a
   hyper that forgets it silently occupies the slot and fires for free. `_check_hyper_spec`
@@ -319,6 +330,7 @@ so existing moves keep working untouched:
 | Double jump | Up in the air | one per jump |
 | Hyper 1 | `BACK+L+H`, full meter | also a cancel out of anything that connected |
 | Hyper 2 | `UP+L+H`, full meter | resolves in the air too, so it is an air super as well |
+| MAX hyper | either of the above with **all 3** bars | same input, bigger move, costs the whole meter. Two bars is not enough — it falls back to the ordinary super |
 | Throw | `L+H` within `THROW_RANGE * def.size` of a grounded opponent | unblockable; victim breaks with `L+H` within 10 frames. Outside that range `L+H` is still `proj` |
 | Air block | hold away in the air | |
 | Quick-rise | any input during `KNOCKDOWN` after frame 10 | |
@@ -355,8 +367,10 @@ input did nothing. Move the opponent out of range before scripting another super
   startup frame. A test that asserts on a hyper's spec can pass vacuously this way.
 - `_test_hyper_cutin` checks a hyper's *authoring* (a `cutin_pose`, a `contact_pose`, a
   >=3-key clip that still moves at `startup`, and a `"level": 3` projectile spec) and runs
-  for every character from `_test_character_def`, on `hyper` and `hyper2` alike via
-  `_check_hyper_spec`. It calls `h.pose_at(0)` first, because that is what builds the
+  for every character from `_test_character_def`, on `hyper`, `hyper2` and both `_max`
+  variants alike via `_check_hyper_spec`; the MAX ones additionally have to cost the
+  whole meter and be a different move from the version they upgrade. It calls
+  `h.pose_at(0)` first, because that is what builds the
   clip out of the `pose_s`/`pose_a` fallback — without it `keys` is empty and the checks
   pass vacuously against an unbuilt move. `_test_hyper_cutin` is the runtime half: it
   drives a real hyper, then asserts `sf` is held while `hyper_t` advances and the pose on

@@ -259,10 +259,20 @@ func _gauge(o: Node2D, i: int) -> void:
 	# the direction is the selection and it is momentary, so anything that stayed
 	# lit on the gauge would be a lie. Only shown when the fighter has a second.
 	var two := fr.def.moves.has("hyper2")
+	var ex := fr.def.moves.has("hyper_max") or fr.def.moves.has("hyper2_max")
+	# Three bars is the MAX super, and it is the only thing worth saving up for,
+	# so it says so. The badge ring pulses with it.
+	var maxed := ex and levels >= 3
+	if maxed:
+		o.draw_arc(bc, 18.0 + (1.5 if frame % 30 < 15 else 0.0), 0.0, TAU, 24,
+			Color(1, 0.95, 0.5, 0.9), 2.0, true)
 	var label := "HYPER COMBO"
 	if levels > 0:
-		label = "BACK+L+H  /  UP+L+H  READY!" if (two and frame % 30 < 20) else \
-			("BACK+L+H  /  UP+L+H" if two else ("HYPER COMBO  READY!" if frame % 30 < 20 else "HYPER COMBO"))
+		var base := "BACK+L+H  /  UP+L+H" if two else "HYPER COMBO"
+		if maxed:
+			label = "MAX SUPER READY!!" if frame % 30 < 20 else "MAX SUPER"
+		else:
+			label = base + ("  READY!" if frame % 30 < 20 else "")
 	UI.text(o, Vector2(x0 + w if right else x0, y - 6), label, 11, Color(1, 0.95, 0.5) if levels > 0 else Color.WHITE,
 		HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT, 4, Color("15102a"), UI.arcade_font())
 

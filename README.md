@@ -60,6 +60,8 @@ cd PJsClash
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
 | Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | CRYBABY FLOOD | MOON HOWL |
 | Up + L + H, **full HYPER meter** | FULL PITCH! | WAND BLITZ! | TEAR GEYSER! | FULL MOON! |
+| ...with **all three** bars | FINAL SCORE!! | PAGE ONE HUNDRED! | SOBBING FIT! | THE WHOLE SKY! |
+| ...with all three bars | THE LAST DITCH! | THE WHOLE CHAPTER! | ABSOLUTE DELUGE! | SUPER MOON! |
 
 ### Two supers, one meter bar
 
@@ -72,6 +74,23 @@ which direction you press is the whole decision:
   of the pitch on his side, Emilia fires a solid bar of raw wand light, Charlie
   puts a geyser of tears straight up (good against jumpers), Silvan drops a
   pillar of moonlight (it comes from above, so stepping back does not help).
+
+### The third bar: MAX supers
+
+Banking two bars used to buy you nothing, because both supers cost one. Now **all
+three bars** upgrades whichever super you press into its MAX version — a bigger,
+longer, considerably nastier version of the same move. The gauge says
+**MAX SUPER READY!!** when you can afford one.
+
+| | MAX of hyper 1 (Back) | MAX of hyper 2 (Up) |
+|---|---|---|
+| Ulises | the beam fills the whole screen | an even longer slide down the pitch |
+| Emilia | an enormous doodle dragon | one bar of light for the whole chapter |
+| Charlie | the flood climbs past his head | a column that comes off the top of the screen |
+| Silvan | the whole pack arrives, not two wolves | the moon comes down over the whole stage |
+
+Two bars is not enough, so the input falls back to the ordinary super — you are
+never left with a dead button.
 
 UP is also the jump, so **UP + L + H works in the air too**: you can throw your
 second super out of a jump, and holding Up a moment before the buttons still
@@ -278,6 +297,16 @@ Graphics uplift pass — making the game look and feel like a real release.
   of it leads with the back one while the first comes back to guard, and the
   third goes front again. It is `CharacterDef.adjust_attack_pose` calling the
   shared `cross_limbs`, and it is pose-only — no frame data or hitboxes move.
+
+### The third meter bar finally means something
+
+You could bank three HYPER bars but both supers cost one, so the third bar was
+dead weight and there was nothing to save up for. Now **all three bars** upgrades
+whichever super you press into its **MAX** version — bigger, longer and much
+nastier: Ulises' beam fills the whole screen, Charlie's flood climbs past his
+head, Silvan's moon comes down over the whole stage. Two bars is not enough, so
+the input falls back to the ordinary super rather than becoming a dead button.
+The gauge announces **MAX SUPER READY!!** when you can afford one.
 
 ### A super lands like one hit
 

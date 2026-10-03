@@ -239,6 +239,69 @@ func _init() -> void:
 				26: [["shake", {"amount": 3.0}]],
 			},
 		}),
+		# MAX version of MOON HOWL — same input, all three bars. The whole pack
+		# arrives, not just the two at the front.
+		"hyper_max": MoveData.make({
+			"id": "the whole sky", "display": "THE WHOLE SKY!", "level": 3, "startup": 20,
+			"active": 1, "recovery": 52, "invuln": 47, "prop": "moon", "sfx": "hyper",
+			"meter_cost": 300,
+			"projectile": {
+				"kind": "wolf", "anchored": true, "size": Vector2(700, 140), "offset": Vector2(40, -70),
+				"life": 76, "hits": 19, "interval": 4, "damage": 20, "hitstun": 18,
+				"kb": Vector2(1.2, -2.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+			},
+			# Thrown back on one leg, both arms straight up, mouth wide open.
+			"cutin_pose": {"head": -42, "lean": -30, "arm_f": 188, "elb_f": 0, "arm_b": 190, "elb_b": 0,
+				"leg_f": 22, "knee_f": 6, "leg_b": -42, "knee_b": 48},
+			"keys": [
+				[0, {"head": -38, "lean": -26, "arm_f": 184, "elb_f": 0, "arm_b": 186, "elb_b": 0,
+					"leg_f": 20, "knee_f": 8, "leg_b": -38, "knee_b": 44}, 0.5],
+				[19, {"head": -46, "lean": -32, "arm_f": 178, "elb_f": 0, "arm_b": 182, "elb_b": 0,
+					"leg_f": 34, "knee_f": 6, "leg_b": -26, "knee_b": 26}, 0.95],
+				[52, {"head": -40, "lean": -28, "arm_f": 172, "elb_f": 4, "arm_b": 176, "elb_b": 4,
+					"leg_f": 30, "knee_f": 8, "leg_b": -30, "knee_b": 30}, 0.4],
+				[68, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+			],
+			# Leaning into the full pack, nose up.
+			"contact_pose": {"head": -50, "lean": -38, "arm_f": 186, "elb_f": 0, "arm_b": 190, "elb_b": 0,
+				"leg_f": 40, "knee_f": 4, "leg_b": -22, "knee_b": 20},
+			"events": {
+				19: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
+				30: [["shake", {"amount": 3.0}]],
+			},
+		}),
+		# MAX version of FULL MOON! — the moon comes down over the whole stage.
+		"hyper2_max": MoveData.make({
+			"id": "super moon", "display": "SUPER MOON!", "level": 3, "startup": 18,
+			"active": 1, "recovery": 50, "invuln": 47, "prop": "moon", "sfx": "hyper",
+			"meter_cost": 300,
+			"projectile": {
+				"kind": "beam", "anchored": true, "size": Vector2(270, 410), "offset": Vector2(50, -205),
+				"life": 70, "hits": 16, "interval": 4, "damage": 22, "hitstun": 18,
+				"kb": Vector2(1.2, -4.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+			},
+			# Arms crossed over his eyes, bracing for it to land on him.
+			"cutin_pose": {"head": -38, "lean": -12, "arm_f": 186, "elb_f": 0, "arm_b": 182, "elb_b": 0,
+				"leg_f": 30, "knee_f": 20, "leg_b": -26, "knee_b": 26},
+			"keys": [
+				[0, {"head": -36, "lean": -10, "arm_f": 184, "elb_f": 2, "arm_b": 180, "elb_b": 2,
+					"leg_f": 28, "knee_f": 22, "leg_b": -24, "knee_b": 28}, 0.5],
+				[17, {"head": -44, "lean": 4, "arm_f": 106, "elb_f": 16, "arm_b": 102, "elb_b": 20,
+					"leg_f": 72, "knee_f": 8, "leg_b": -54, "knee_b": 64}, 0.95],
+				[48, {"head": -40, "lean": 0, "arm_f": 114, "elb_f": 12, "arm_b": 110, "elb_b": 16,
+					"leg_f": 64, "knee_f": 12, "leg_b": -48, "knee_b": 58}, 0.4],
+				[62, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+			],
+			# Holding it open over his head with the whole moon behind it.
+			"contact_pose": {"head": -48, "lean": 8, "arm_f": 118, "elb_f": 6, "arm_b": 114, "elb_b": 10,
+				"leg_f": 82, "knee_f": 6, "leg_b": -60, "knee_b": 70},
+			"events": {
+				17: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
+				30: [["shake", {"amount": 3.0}]],
+			},
+		}),
 	}
 	size = 0.78  # he is two
 	build = 0.84  # slimmer than the old round diaper silhouette; still a toddler

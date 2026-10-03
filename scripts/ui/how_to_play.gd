@@ -15,6 +15,7 @@ const SPECIALS := [
 	["DOWN + L + H", "Anti-air (hits jumpers)"],
 	["BACK + L + H", "HYPER 1! (needs a full HYPER meter)"],
 	["UP + L + H", "HYPER 2! (also works in the air)"],
+	["...with all 3 bars", "MAX version of whichever hyper you press"],
 ]
 
 
@@ -39,11 +40,11 @@ func _draw() -> void:
 	for row in SPECIALS:
 		UI.text(self, Vector2(260, y), row[0], 13, Color(1, 0.9, 0.3), HORIZONTAL_ALIGNMENT_RIGHT, 3)
 		UI.text(self, Vector2(272, y), row[1], 13, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, 3)
-		y += 18.0
-	y += 10.0
+		y += 16.0
+	y += 8.0
 	UI.text(self, Vector2(320, y), "SUPER COMBO:  L, L, H  (launch!)  ->  hold UP to super jump  ->  L, L, H in the air", 12, Color(0.6, 1, 0.7))
-	y += 18.0
+	y += 16.0
 	UI.text(self, Vector2(320, y), "You can cancel a hit into a special: L, then L + H right away", 12, Color(0.6, 1, 0.7))
-	y += 18.0
+	y += 16.0
 	UI.text(self, Vector2(320, y), "Hitting and getting hit fills your HYPER meter.  F1 during a fight shows hitboxes and frame counts.", 11, Color(1, 1, 1, 0.8))
 	UI.text(self, Vector2(320, 350), "Press any button to go back", 11, Color(1, 1, 1, 0.7))

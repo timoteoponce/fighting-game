@@ -161,6 +161,55 @@ func _init() -> void:
 			# The tackle is through them and he skids past, still on his side.
 			"contact_pose": {"lean": 58, "head": 18, "arm_f": -76, "elb_f": 10, "arm_b": -100, "elb_b": 6,
 				"leg_f": 132, "knee_f": 0, "leg_b": -64, "knee_b": 104}}),
+		# MAX version of GAME OVER COMBO — same input, all three bars. The beam is
+		# tall enough to fill the screen instead of cutting across it, and it stays
+		# out twice as long.
+		"hyper_max": MoveData.make({"id": "final score", "display": "FINAL SCORE!!", "level": 3,
+			"startup": 18, "active": 1, "recovery": 56, "invuln": 47, "prop": "controller",
+			"meter_cost": 300, "sfx": "special",
+			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(900, 190), "offset": Vector2(39, -90), "life": 96,
+				"hits": 18, "interval": 5, "damage": 26, "hitstun": 20, "kb": Vector2(1.2, -1.5), "chip": 0.2, "hitstop": 4,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "special"},
+			# Arms flung wide and up, head back, both heels off the floor: he is
+			# about to blow the whole game open rather than push a button.
+			"cutin_pose": {"lean": -20, "head": -28, "arm_f": 168, "elb_f": 8, "arm_b": 176, "elb_b": 6,
+				"leg_f": 6, "knee_f": 4, "leg_b": -6, "knee_b": 6, "ground": 0, "hip": -62},
+			"keys": [
+				[0, {"lean": -18, "head": -26, "arm_f": 162, "elb_f": 14, "arm_b": 170, "elb_b": 12,
+					"leg_f": 4, "knee_f": 6, "leg_b": -4, "knee_b": 8, "ground": 0, "hip": -58}, 0.5],
+				[16, {"lean": 14, "head": 6, "arm_f": 94, "elb_f": 0, "arm_b": 98, "elb_b": 0,
+					"leg_f": 48, "knee_f": 36, "leg_b": -42, "knee_b": 32, "ground": 0, "hip": -50}, 0.95],
+				[48, {"lean": 8, "head": 2, "arm_f": 90, "elb_f": 8, "arm_b": 94, "elb_b": 8,
+					"leg_f": 38, "knee_f": 30, "leg_b": -34, "knee_b": 28, "ground": 0, "hip": -52}, 0.4],
+				[70, {"lean": 2, "head": 2, "arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95}, 0.35],
+			],
+			# Driving it forward with everything he has.
+			"contact_pose": {"lean": 24, "head": 10, "arm_f": 108, "elb_f": 0, "arm_b": 112, "elb_b": 0,
+				"leg_f": 60, "knee_f": 40, "leg_b": -52, "knee_b": 36, "ground": 0, "hip": -46}}),
+		# MAX version of FULL PITCH! — the slide down the whole pitch, wide enough
+		# and long enough that stepping over it is not an option.
+		"hyper2_max": MoveData.make({"id": "the last ditch", "display": "THE LAST DITCH!", "level": 3,
+			"startup": 16, "active": 1, "recovery": 50, "invuln": 45, "prop": "controller",
+			"meter_cost": 300, "sfx": "kick",
+			"projectile": {"kind": "beam", "speed": 12.0, "size": Vector2(640, 96), "offset": Vector2(40, -56), "life": 110,
+				"hits": 14, "interval": 5, "damage": 28, "hitstun": 20, "kb": Vector2(1.4, -3.0), "chip": 0.18,
+				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "kick"},
+			# Down on his side before he has even moved, arms tucked, chin up.
+			"cutin_pose": {"lean": 56, "head": 20, "arm_f": -80, "elb_f": 8, "arm_b": -104, "elb_b": 4,
+				"leg_f": 132, "knee_f": 0, "leg_b": -66, "knee_b": 106},
+			"keys": [
+				[0, {"lean": 54, "head": 18, "arm_f": -78, "elb_f": 10, "arm_b": -102, "elb_b": 6,
+					"leg_f": 128, "knee_f": 0, "leg_b": -64, "knee_b": 102}, 0.5],
+				[15, {"lean": 70, "head": 26, "arm_f": -100, "elb_f": 2, "arm_b": -124, "elb_b": 0,
+					"leg_f": 152, "knee_f": 0, "leg_b": -76, "knee_b": 118}, 0.95],
+				[48, {"lean": 60, "head": 20, "arm_f": -84, "elb_f": 8, "arm_b": -108, "elb_b": 4,
+					"leg_f": 138, "knee_f": 0, "leg_b": -70, "knee_b": 110}, 0.4],
+				[64, {"lean": 14, "head": 2, "arm_f": 20, "elb_f": 90, "arm_b": 25, "elb_b": 95,
+					"leg_f": 34, "knee_f": 34, "leg_b": -28, "knee_b": 28}, 0.35],
+			],
+			# Straight through them, still horizontal.
+			"contact_pose": {"lean": 78, "head": 30, "arm_f": -112, "elb_f": 0, "arm_b": -136, "elb_b": 0,
+				"leg_f": 164, "knee_f": 0, "leg_b": -82, "knee_b": 124}}),
 	}
 	size = 0.9  # Ulises is about 10% shorter than Emilia
 	# Clean stylized: proportional head, lean limbs, fitted clothing.

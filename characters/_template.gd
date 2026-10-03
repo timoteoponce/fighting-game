@@ -210,6 +210,29 @@ func _init() -> void:
 			# hyper visibly bites.
 			"contact_pose": {"arm_f": 104, "elb_f": 0, "arm_b": 104, "elb_b": 0, "lean": 22},
 		}),
+		# MAX version of the hyper above — same input, but only when the meter is
+		# full, and it spends all three bars. Nothing has to override anything to
+		# opt in: `_try_special` routes to `<key>_max` whenever `meter >=
+		# Fighter.EX_COST` and this key exists. Give it a real clip and a cut-in
+		# pose of its own; `_check_hyper_spec` holds it to the same bar.
+		"hyper_max": MoveData.make({
+			"id": "template finish max", "display": "TEMPLATE FINISH MAX!", "level": 3,
+			"startup": 20, "active": 1, "recovery": 46, "invuln": 46, "sfx": "magic",
+			"meter_cost": 300,
+			"projectile": {
+				"kind": "beam", "speed": 8.0, "size": Vector2(300, 150), "offset": Vector2(60, -80),
+				"life": 180, "hits": 16, "interval": 5, "damage": 30, "hitstun": 20,
+				"kb": Vector2(4, 0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+			},
+			"cutin_pose": {"arm_f": 168, "elb_f": 14, "arm_b": 174, "elb_b": 10, "lean": -20, "head": -26},
+			"keys": [
+				[0, {"arm_f": 20, "elb_f": 120, "arm_b": 165, "elb_b": 20, "lean": -16}, 0.5],
+				[18, {"arm_f": 98, "elb_f": 0, "arm_b": 98, "elb_b": 0, "lean": 22}, 0.95],
+				[52, {"arm_f": 42, "elb_f": 88, "arm_b": 47, "elb_b": 93, "lean": 6}, 0.4],
+			],
+			"contact_pose": {"arm_f": 112, "elb_f": 0, "arm_b": 112, "elb_b": 0, "lean": 28},
+		}),
 	}
 
 	# If you changed `size` above, uncomment this so hitboxes match the body:

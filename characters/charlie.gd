@@ -204,6 +204,69 @@ func _init() -> void:
 				"leg_f": 50, "knee_f": 8, "leg_b": -14, "knee_b": 12},
 			"events": {16: [["shake", {"amount": 5.0}]]},
 		}),
+		# MAX version of CRYBABY FLOOD — same input, all three bars. The water comes
+		# up past his head and keeps going.
+		"hyper_max": MoveData.make({
+			"id": "sobbing fit", "display": "SOBBING FIT!", "level": 3, "startup": 20,
+			"active": 1, "recovery": 52, "invuln": 47, "prop": "tears", "sfx": "hyper",
+			"meter_cost": 300,
+			"projectile": {
+				"kind": "tears", "anchored": true, "size": Vector2(390, 230), "offset": Vector2(55, -115),
+				"life": 76, "hits": 20, "interval": 4, "damage": 21, "hitstun": 18,
+				"kb": Vector2(1.0, -2.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+			},
+			# Chin down, eyes screwed shut, arms clamped to his ribs: he is bracing
+			# for the biggest sob of his life rather than throwing one.
+			"cutin_pose": {"lean": 34, "head": 34, "arm_f": 150, "elb_f": 158, "arm_b": 140, "elb_b": 158,
+				"leg_f": 34, "knee_f": 40, "leg_b": -28, "knee_b": 36},
+			"keys": [
+				# Hunched over his own knees, shaking...
+				[0, {"lean": 32, "head": 32, "arm_f": 148, "elb_f": 160, "arm_b": 138, "elb_b": 160,
+					"leg_f": 32, "knee_f": 38, "leg_b": -26, "knee_b": 34}, 0.5],
+				# ...then he comes apart: head back, arms out, straight up.
+				[19, {"lean": -24, "head": -40, "arm_f": 186, "elb_f": 0, "arm_b": 182, "elb_b": 0,
+					"leg_f": 40, "knee_f": 8, "leg_b": -18, "knee_b": 10}, 0.95],
+				[52, {"lean": -18, "head": -34, "arm_f": 178, "elb_f": 6, "arm_b": 174, "elb_b": 6,
+					"leg_f": 36, "knee_f": 12, "leg_b": -20, "knee_b": 14}, 0.4],
+				[68, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+			],
+			# Still going, arms wide, head thrown all the way back.
+			"contact_pose": {"lean": -32, "head": -46, "arm_f": 190, "elb_f": 0, "arm_b": 188, "elb_b": 0,
+				"leg_f": 48, "knee_f": 6, "leg_b": -16, "knee_b": 8},
+			"events": {19: [["shake", {"amount": 6.0}]]},
+		}),
+		# MAX version of TEAR GEYSER! — the column is so tall it comes off the top
+		# of the screen, and nothing at ground level is out of it.
+		"hyper2_max": MoveData.make({
+			"id": "absolute deluge", "display": "ABSOLUTE DELUGE!", "level": 3, "startup": 19,
+			"active": 1, "recovery": 50, "invuln": 47, "prop": "tears", "sfx": "hyper",
+			"meter_cost": 300,
+			"projectile": {
+				"kind": "tears", "anchored": true, "size": Vector2(300, 390), "offset": Vector2(52, -195),
+				"life": 70, "hits": 17, "interval": 4, "damage": 22, "hitstun": 18,
+				"kb": Vector2(1.0, -6.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+			},
+			# Folded almost double, face down, holding it in.
+			"cutin_pose": {"lean": 40, "head": 40, "arm_f": 156, "elb_f": 164, "arm_b": 146, "elb_b": 164,
+				"leg_f": 38, "knee_f": 46, "leg_b": -30, "knee_b": 40},
+			"keys": [
+				# Hunched, arms in tight, head down...
+				[0, {"lean": 38, "head": 38, "arm_f": 154, "elb_f": 166, "arm_b": 144, "elb_b": 166,
+					"leg_f": 36, "knee_f": 44, "leg_b": -28, "knee_b": 38}, 0.5],
+				# ...then straight up, on his toes, everything out.
+				[18, {"lean": -4, "head": -38, "arm_f": 188, "elb_f": 0, "arm_b": 184, "elb_b": 0,
+					"leg_f": 52, "knee_f": 6, "leg_b": -14, "knee_b": 8}, 0.95],
+				[48, {"lean": -8, "head": -32, "arm_f": 182, "elb_f": 4, "arm_b": 178, "elb_b": 4,
+					"leg_f": 46, "knee_f": 10, "leg_b": -18, "knee_b": 12}, 0.4],
+				[64, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+			],
+			# The column is past the top of the screen and he is still pushing.
+			"contact_pose": {"lean": 0, "head": -46, "arm_f": 192, "elb_f": 0, "arm_b": 190, "elb_b": 0,
+				"leg_f": 58, "knee_f": 4, "leg_b": -12, "knee_b": 6},
+			"events": {18: [["shake", {"amount": 6.0}]]},
+		}),
 	}
 	size = 1.12  # the tall one
 	scale_moves()

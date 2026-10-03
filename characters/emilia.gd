@@ -154,6 +154,53 @@ func _init() -> void:
 			# The bar is through them and she shoves it further out.
 			"contact_pose": {"lean": 20, "head": 8, "arm_f": 96, "elb_f": 0, "arm_b": 84, "elb_b": 88,
 				"leg_f": 54, "knee_f": 30, "leg_b": -46, "knee_b": 50, "ground": 0, "hip": -46}}),
+		# MAX version of SKETCHBOOK SUMMON — same input, all three bars. She tears
+		# out the last page in the book and the thing on it is enormous. Slower than
+		# the base version so it can still cross the opponent and land every hit.
+		"hyper_max": MoveData.make({"id": "page one hundred", "display": "PAGE ONE HUNDRED!", "level": 3,
+			"startup": 22, "active": 1, "recovery": 46, "invuln": 49, "prop": "sketch",
+			"meter_cost": 300, "sfx": "magic",
+			"projectile": {"kind": "dragon", "speed": 2.6, "size": Vector2(200, 180), "offset": Vector2(65, -92), "life": 200,
+				"hits": 15, "interval": 5, "damage": 34, "hitstun": 20, "kb": Vector2(4, -2), "chip": 0.2, "hitstop": 4,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper"},
+			# Both arms wide and high, back arched, floating well off the floor.
+			"cutin_pose": {"lean": -16, "head": -32, "arm_f": 186, "elb_f": 4, "arm_b": 170, "elb_b": 14,
+				"leg_f": 12, "knee_f": 18, "leg_b": -12, "knee_b": 18, "ground": 0, "hip": -72},
+			"keys": [
+				[0, {"lean": -14, "head": -30, "arm_f": 182, "elb_f": 8, "arm_b": 166, "elb_b": 18,
+					"leg_f": 10, "knee_f": 16, "leg_b": -10, "knee_b": 16, "ground": 0, "hip": -68}, 0.5],
+				[20, {"lean": 10, "head": 4, "arm_f": 128, "elb_f": 0, "arm_b": 150, "elb_b": 4,
+					"leg_f": 40, "knee_f": 24, "leg_b": -36, "knee_b": 40, "ground": 0, "hip": -54}, 0.95],
+				[50, {"lean": 4, "head": 0, "arm_f": 116, "elb_f": 14, "arm_b": 138, "elb_b": 18,
+					"leg_f": 32, "knee_f": 26, "leg_b": -30, "knee_b": 38, "ground": 0, "hip": -58}, 0.4],
+				[66, {"lean": 2, "head": -2, "arm_f": 44, "elb_f": 80, "arm_b": 46, "elb_b": 96}, 0.35],
+			],
+			# Throwing the page after it, both arms out.
+			"contact_pose": {"lean": 18, "head": 8, "arm_f": 140, "elb_f": 0, "arm_b": 160, "elb_b": 0,
+				"leg_f": 52, "knee_f": 28, "leg_b": -48, "knee_b": 46, "ground": 0, "hip": -50}}),
+		# MAX version of WAND BLITZ! — the entire chapter of the book, fired at
+		# once as one bar of light.
+		"hyper2_max": MoveData.make({"id": "the whole chapter", "display": "THE WHOLE CHAPTER!", "level": 3,
+			"startup": 17, "active": 1, "recovery": 48, "invuln": 47, "prop": "sketch",
+			"meter_cost": 300, "sfx": "magic",
+			"projectile": {"kind": "beam", "speed": 4.5, "size": Vector2(420, 190), "offset": Vector2(60, -86), "life": 100,
+				"hits": 13, "interval": 4, "damage": 30, "hitstun": 20, "kb": Vector2(4, -1), "chip": 0.2,
+				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper"},
+			# Arms up and out, both heels down, chin up: the whole book overhead.
+			"cutin_pose": {"lean": -12, "head": -28, "arm_f": 180, "elb_f": 8, "arm_b": 166, "elb_b": 20,
+				"leg_f": 16, "knee_f": 20, "leg_b": -14, "knee_b": 20, "ground": 0, "hip": -66},
+			"keys": [
+				[0, {"lean": -10, "head": -26, "arm_f": 176, "elb_f": 12, "arm_b": 162, "elb_b": 24,
+					"leg_f": 14, "knee_f": 18, "leg_b": -12, "knee_b": 18, "ground": 0, "hip": -62}, 0.5],
+				[16, {"lean": 14, "head": 6, "arm_f": 84, "elb_f": 0, "arm_b": 96, "elb_b": 60,
+					"leg_f": 50, "knee_f": 28, "leg_b": -44, "knee_b": 48, "ground": 0, "hip": -50}, 0.95],
+				[46, {"lean": 10, "head": 4, "arm_f": 80, "elb_f": 6, "arm_b": 92, "elb_b": 64,
+					"leg_f": 42, "knee_f": 30, "leg_b": -38, "knee_b": 46, "ground": 0, "hip": -52}, 0.4],
+				[62, {"lean": 2, "head": -2, "arm_f": 44, "elb_f": 80, "arm_b": 46, "elb_b": 96}, 0.35],
+			],
+			# Shoving the whole chapter through them.
+			"contact_pose": {"lean": 22, "head": 10, "arm_f": 96, "elb_f": 0, "arm_b": 108, "elb_b": 52,
+				"leg_f": 60, "knee_f": 32, "leg_b": -52, "knee_b": 54, "ground": 0, "hip": -48}}),
 	}
 
 
@@ -231,9 +278,13 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	var top: Vector2 = hip + up * FighterRenderer.TORSO
 	var trim: Color = r.colors["trim"]
 	# The blouse front, inset from the torso so the puff sleeves read as separate.
+	# The corners go clockwise from the top right: top right, top left, bottom
+	# left, bottom right. Listing the bottom pair in the other order makes a
+	# bowtie, which Godot triangulates only when it feels like it — it was
+	# reporting "triangulation failed" on some frames and drawing nothing else.
 	r.draw_colored_polygon(PackedVector2Array([
 		top + perp * 4.2 - up * 2.2, top - perp * 3.6 - up * 2.2,
-		hip + perp * 3.4 + up * 11.0, hip - perp * 2.4 + up * 11.0,
+		hip - perp * 2.4 + up * 11.0, hip + perp * 3.4 + up * 11.0,
 	]), r.colors["blouse"])
 	# Robe lapels and gold trim.
 	r.draw_line(top + perp * 5.0 - up * 1.0, hip + perp * 6.0 + up * 12.0, trim, 1.8, true)

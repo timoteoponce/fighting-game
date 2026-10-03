@@ -22,6 +22,10 @@ var hitstop := 5
 var flash := 0  # full-screen white flash frames on hit (0 = none)
 var shake := 0.0  # extra screen shake on hit (added to the level-derived base)
 var meter := 5.0
+## What a level 3 move costs. 0 means "the default" (`Fighter.HYPER_COST`), so
+## only the 3-bar EX versions set it and nobody has to restate the price on
+## every super. See `Fighter.hyper_cost`.
+var meter_cost := 0
 var hits := 1
 var hit_interval := 0
 var air := false

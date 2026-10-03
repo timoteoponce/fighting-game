@@ -41,6 +41,7 @@ func _ready() -> void:
 	_test_ulises_chain_pose()
 	_test_hyper_cutin()
 	_test_hyper_landing()
+	_test_hyper_max()
 	_test_roster_faces()
 	_test_air_block()
 	_test_quick_rise()
@@ -130,6 +131,10 @@ func _test_character_def(id: String) -> void:
 	# fighter a second super: it is UP+L+H, and it is what makes the direction
 	# choice on the meter gauge mean something.
 	check(d.moves.has("hyper2"), "%s has a second hyper on UP+L+H" % id)
+	# Three meter bars had no way to be spent — both supers cost one — so each
+	# fighter also needs a MAX version of each, reachable on the same inputs.
+	check(d.moves.has("hyper_max"), "%s has a MAX version of its first hyper" % id)
+	check(d.moves.has("hyper2_max"), "%s has a MAX version of its second hyper" % id)
 	_test_hyper_spec(d)
 	check(d.specials_text.size() >= 4, "%s lists its specials for the move list" % id)
 	check(d.throw_data() != null, "%s has a throw" % id)
@@ -144,12 +149,24 @@ func _test_character_def(id: String) -> void:
 ## cannot advance while the world is stopped — so the body sat on the clip's
 ## first key for all 56 frames.
 func _test_hyper_spec(d: CharacterDef) -> void:
+	var id := d.id
 	_check_hyper_spec(d, d.moves["hyper"], "hyper")
 	# `hyper2` is optional — it is the UP+L+H answer, not part of the ten-key
 	# contract — but a fighter that has one is held to the same bar, and the
 	# roster is expected to give all of them one.
 	if d.moves.has("hyper2"):
 		_check_hyper_spec(d, d.moves["hyper2"], "hyper2")
+	# The 3-bar MAX versions are optional too, and `<key>_max` is what the input
+	# routes to when the meter is full, so a half-authored one would either be
+	# unreachable or cheaper than it looks.
+	for base: String in ["hyper", "hyper2"]:
+		if not d.moves.has(base + "_max"):
+			continue
+		var mx: MoveData = d.moves[base + "_max"]
+		check(int(mx.meter_cost) == int(Fighter.EX_COST),
+			"%s's %s_max costs the whole meter (%d)" % [id, base, int(mx.meter_cost)])
+		check(mx.id != d.moves[base].id, "%s's %s_max is a different move from %s" % [id, base, base])
+		_check_hyper_spec(d, mx, base + "_max")
 
 
 func _check_hyper_spec(d: CharacterDef, h: MoveData, key: String) -> void:
@@ -248,6 +265,63 @@ func _test_hyper_landing() -> void:
 				"%s's hyper flashes only on the finishing hit (running %d, finishing %d)" % [id,
 					int(hyper_m.flash), int(hyper_final.flash) if hyper_final != null else -1])
 		f.free()
+
+
+## Three meter bars had no way to be spent: both supers cost one bar, so banking
+## the third was pointless. Each fighter now has a MAX version of each super,
+## reachable on the same inputs but only with the whole meter, and it must cost
+## the whole meter when it fires.
+func _test_hyper_max() -> void:
+	print("[hyper max]")
+	for id: String in GameState.CHARACTERS:
+		var d: CharacterDef = GameState.make_character(id)
+		for base: String in ["hyper", "hyper2"]:
+			if not d.moves.has(base + "_max"):
+				continue
+			var held: int = Lf if base == "hyper" else U
+			_max_one(id, base, held)
+
+
+## Drives one super at one bar and again at three, and checks the meter decides
+## which move comes out and what it charges.
+func _max_one(id: String, base: String, held: int) -> void:
+	var max_id: String = GameState.make_character(id).moves[base + "_max"].id
+	# One bar: the ordinary super.
+	var f := _new_fight(id, "emilia")
+	_start(f)
+	var p1 := f.fighters[0]
+	f.fighters[1].position.x = p1.position.x + 220.0
+	p1.meter = Fighter.HYPER_COST
+	_script(p1, [[held, 3], [held | LI | HE, 2], [0, 60]])
+	var seen := _watch_move(f, p1, 90)
+	var want := _expected(p1, base)
+	check(seen.has(want) and not seen.has(max_id),
+		"%s: one bar gives the ordinary %s, not the MAX (%s)" % [id, base, str(seen)])
+	check(p1.meter < 1.0, "%s: the ordinary %s still costs one bar" % [id, base])
+	f.free()
+	# Three bars: the MAX version, and it costs all three.
+	f = _new_fight(id, "emilia")
+	_start(f)
+	p1 = f.fighters[0]
+	f.fighters[1].position.x = p1.position.x + 220.0
+	p1.meter = Fighter.EX_COST
+	_script(p1, [[held, 3], [held | LI | HE, 2], [0, 60]])
+	seen = _watch_move(f, p1, 90)
+	check(seen.has(max_id), "%s: three bars give %s_max (%s)" % [id, base, str(seen)])
+	check(p1.meter <= 1.0, "%s: %s_max spends the whole meter (%.0f left)" % [id, base, p1.meter])
+	check(p1.meter >= 0.0, "%s: the meter never goes negative (%.0f)" % [id, p1.meter])
+	# Two bars is neither: too little for the MAX, and `_try_special` must fall
+	# through to the ordinary super rather than swallowing the input.
+	f = _new_fight(id, "emilia")
+	_start(f)
+	p1 = f.fighters[0]
+	f.fighters[1].position.x = p1.position.x + 220.0
+	p1.meter = Fighter.HYPER_COST * 2.0
+	_script(p1, [[held, 3], [held | LI | HE, 2], [0, 60]])
+	seen = _watch_move(f, p1, 90)
+	check(seen.has(_expected(p1, base)) and not seen.has(max_id),
+		"%s: two bars falls back to the ordinary %s (%s)" % [id, base, str(seen)])
+	f.free()
 
 
 func _new_fight(p1: String, p2: String) -> Fight:
