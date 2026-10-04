@@ -203,10 +203,10 @@ func _check_hyper_spec(d: CharacterDef, h: MoveData, key: String) -> void:
 
 
 ## A hyper used to land as ten to fourteen identical chip hits that each slammed
-## the post-FX white mix to its 0.8 ceiling, so the whole super read as a washed
-## out smear rather than one heavy blow. This drives a real hyper and watches the
-## screen effect per frame: the running hits should only breathe, and the
-## finishing hit should be the one that flashes, slows the world and punches.
+## the screen white, so the whole super read as a washed out smear rather than
+## one heavy blow. This drives a real hyper and watches the screen effect per
+## frame: the running hits should only breathe, and the finishing hit should be
+## the one that flashes, slows the world and pushes the camera in.
 func _test_hyper_landing() -> void:
 	print("[hyper landing]")
 	for id: String in GameState.CHARACTERS:
@@ -226,10 +226,6 @@ func _test_hyper_landing() -> void:
 		# the node, because the node is freed with the fight.
 		var hyper_m: MoveData = null
 		var hyper_final: MoveData = null
-		# Sampled *before* each step, because `impact` decays at the top of
-		# `_physics_process` — reading it afterwards would only ever show the
-		# decayed value and would miss the peak.
-		var peak := 0.0
 		var slowmo_seen := 0
 		var flash_seen := 0
 		var zoom_seen := 0.0
@@ -240,16 +236,11 @@ func _test_hyper_landing() -> void:
 						hyper_m = p.m
 						hyper_final = p.m_final
 						break
-			peak = maxf(peak, f.impact)
 			slowmo_seen = maxi(slowmo_seen, f.slowmo)
 			flash_seen = maxi(flash_seen, f.flash)
 			zoom_seen = maxf(zoom_seen, f.cam_z)
 			f._physics_process(1.0 / 60.0)
-		peak = maxf(peak, f.impact)
 		flash_seen = maxi(flash_seen, f.flash)
-		check(peak <= 0.7, "%s's hyper never pins the post-FX white mix (peak %.2f)" % [id, peak])
-		check(peak >= Fight.HYPER_HIT_IMPACT - 0.01,
-			"%s's hyper finishing hit still punches (peak %.2f)" % [id, peak])
 		check(slowmo_seen > 0, "%s's hyper slows the world down on the finishing hit" % id)
 		check(flash_seen > 0, "%s's hyper flashes the screen on the finishing hit" % id)
 		check(zoom_seen >= Fight.HYPER_ZOOM - 0.06,

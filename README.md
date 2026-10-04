@@ -1,8 +1,9 @@
 # PJ's Clash
 
 A 2D fighting game in the style of Marvel vs Capcom. The stage and the
-fighters in a match are drawn in code, so the body can move every frame.
-The paintings in `art/portraits/` are the title and character-select portraits.
+fighters in a match are drawn in code into a 320x180 buffer and scaled up, so
+the game has a chunky KOF-era pixel look and the body can still move every
+frame. The menus draw the same fighters, live.
 
 Music is synthesized in code too: a mellow track for the menus and a driving
 one for the fight, with a short fanfare when a match is won. Drop `.ogg`,
@@ -145,7 +146,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 
 ## For developers
 
-- Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code, so a body can move every frame. `art/portraits/` is only the title and character-select paintings. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
+- Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. There are no image files in the game at all. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
 - Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
 - Jump to one screen: `godot --path . -- --screen=select` (`title`, `select`, `fight`, `setup`, `howto`). `--full-meter` starts the hyper bar full.
@@ -165,7 +166,7 @@ Code map:
 - `scripts/fight/`: the match (rounds, collisions, camera), projectiles, stages and the HUD.
 - `scripts/fight/effects.gd`: inked hits, blocks and dust, plus a small additive halo.
 - `scripts/input/cpu_input.gd`: the CPU opponent (it sends the same button presses a player would).
-- `scripts/ui/`: title, character select, how to play and controller setup screens. Portraits come from `scripts/ui/portrait.gd`.
+- `scripts/ui/`: title, character select, how to play and controller setup screens. The title and select screens draw live `FighterRenderer`s, the same as a match.
 
 ## Adding a character
 
@@ -197,6 +198,28 @@ handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
 
+### The pixel look is back
+
+- **The arena is pixelated again.** The world renders into a **320x180** buffer
+  and is scaled up by an exact integer factor, instead of drawing at 640x360.
+  Anti-aliasing is off (`Fight.world.msaa_2d = MSAA_DISABLED`) because it
+  softens exactly the pixels this look is built on, and the ink line weight is
+  back up to `INK = 2.4` — thin lines vanish at that resolution. This is the
+  chunky KOF-era look the game had before the high-res pass.
+- **The post-FX pass is gone.** A fullscreen bloom sampled the screen with
+  *linear* filtering, which undid the pixels no matter what resolution it ran
+  at, so `shaders/post_fx.gdshader` and its wiring were deleted. What you lose:
+  the bloom halo, the chromatic-aberration shake cue, the full-screen impact
+  frame and the vignette. What stays: the flat white screen flash (the HUD
+  draws it as a plain rect), the victim's own white-out, camera shake, the ink
+  hit sparks, the comic words and the slow-motion catch on a super's last hit.
+- **The menus draw the fighters again.** The title and character-select screens
+  build live `FighterRenderer`s and pose them every frame, the way they did
+  before the painted portraits landed. The paintings in `art/portraits/` were
+  only used by those two screens and the HUD, so they have been deleted —
+  **the game now contains no image files at all**, and the menus and the match
+  are unmistakably the same art.
+
 ### The fighters are back on the shared body
 
 - **The portrait-matching pass is reverted.** For a while each fighter was drawn
@@ -204,22 +227,14 @@ handles blinking, X eyes on a knockout and the squint on an attack.
   shoes and a fully hand-written face. That is gone. All four are the same
   shared figure again — circle head, wedge torso, mitten hands, slipper — and
   they are told apart by the kit drawn on top of it, which is how they looked
-  before that pass. The portraits in `art/portraits/` are unchanged and are
-  still the title and character-select art.
+  before that pass.
 - **What did not change:** everything else from that period stayed. Two supers
   per fighter plus their MAX versions, the hyper cut-ins, the ball machinery
-  (dormant), the ink hit effects, ground shadows, the post-FX shader, MSAA, the
-  foreground occluders, the HUD polish, four new stages, the synthesized music,
-  and the KOF limb-swap on connected strings.
+  (dormant), the ink hit effects, ground shadows, the foreground occluders, the
+  HUD polish, four new stages, the synthesized music, and the KOF limb-swap on
+  connected strings.
 
 Graphics uplift pass — making the game look and feel like a real release.
-
-### Phase 0 — Anti-aliasing
-
-- Enabled 4x MSAA on the arena `SubViewport` (`scripts/fight/fight.gd`). Every
-  limb, stage polygon, spark and the F1 debug overlay is now anti-aliased
-  instead of hard-jagged. Texture filtering stays nearest-neighbour, so the
-  640x360 buffer still upscales crisply to 1080p.
 
 ### Phase 1 — Ground shadows
 
@@ -230,23 +245,7 @@ Graphics uplift pass — making the game look and feel like a real release.
   lifts it off the floor. It is compensated for the renderer's `base_scale`
   so it stays a true world-space ellipse.
 - Wired from `Fighter._update_visual()`: `renderer.ground_y = GROUND_Y - position.y`.
-- Afterimage ghosts (`copy_from`) and head-only portraits skip the shadow.
-
-### Phase 2 — Post-processing
-
-- Added a full-screen post-FX pass (`shaders/post_fx.gdshader`) on a `CanvasLayer`
-  between the world and the comic/HUD layers, so it never touches the lettering.
-- **Bloom**: bright-pass + 16-tap golden-angle spiral blur. This is what makes
-  the already-additive hit sparks, projectiles and hyper glow actually glow
-  instead of reading flat.
-- **Impact frame**: a 1-2 frame white push on heavy/special connects, driven by
-  a new `impact` value set in `_apply_hit` and decayed each frame.
-- **Chromatic aberration**: radial, scaled by screen shake.
-- **Vignette**: unified, replacing the per-stage hand-drawn one.
-- The shader samples the screen with linear filtering even though the world
-  upscales nearest-neighbour, so the bloom stays smooth.
-- CanvasLayers now use explicit `.layer` values (post 10, comic 20, HUD 30)
-  instead of relying on tree order at the default layer 1.
+- Afterimage ghosts (`copy_from`) and the HUD cut-in portrait skip the shadow.
 
 ### Phase 3 — Foreground occluders
 
@@ -265,10 +264,6 @@ Graphics uplift pass — making the game look and feel like a real release.
   reads, and flashes a bright leading edge for a few frames after each hit.
 - **Combo counter**: pops (scales up) on every hit, then settles. Its colour
   climbs with the count — yellow, then orange, then hot red at 10+.
-- Fixed a regression where the bloom threshold sat below the skin luminance,
-  so the bloom bled a haze into the dark eye lines and the faces read wrong.
-  Raised it to 0.90 so only genuinely bright things (white spark cores, the
-  hyper flash) bloom.
 
 ### Phase 5 — Clothes, ink hits, and the shared body
 
@@ -276,9 +271,7 @@ Graphics uplift pass — making the game look and feel like a real release.
   figure — a circle head with a chin blob, a straight wedge torso, mitten hands
   and a five-point slipper — and they differ by what each one draws on top:
   Ulises' headband and jersey trim, Emilia's cape, robe lapels and star clip,
-  Charlie's jug-handle ears and unibrow, Silvan's curls and floppy ears. They
-  are deliberately *not* the painted portraits in `art/portraits/`, which are
-  still what the title and character-select screens show.
+  Charlie's jug-handle ears and unibrow, Silvan's curls and floppy ears.
 - **Everyone blinks and reacts.** The face is shared and carries the whole
   vocabulary: a blink on a timer (6 frames of every 190, calm only), X eyes on
   a knockout, a pupil sliding a ring when dizzy, closed arcs when winning, and a
@@ -291,10 +284,9 @@ Graphics uplift pass — making the game look and feel like a real release.
 - **Hits are a white core, a thick black outline and a few spikes along the
   knockback** (`Effects._draw_impact`). Lights are small, heavies bigger, hypers
   a short burst. Blocks are an outlined blue shard. Dust is a few soft clumps
-  with an edge. The additive glow is only a small halo, and the bloom threshold
-  stays at 0.90 so it does not fog the eyes. Whites on a fighter are an
-  off-white `"white"` colour key rather than pure white, so they stay under the
-  bloom threshold and keep their ink edge.
+  with an edge. The additive glow is only a small halo, because there is no
+  bloom pass to catch it. Whites on a fighter are an off-white `"white"` colour
+  key rather than pure white, so the thick ink keeps its edge around them.
 - **Everyone has a victory.** Ulises holds up the book he was reading, Emilia
   raises her wand, Charlie bawls whether he wins or loses, and Silvan cheers
   with the bone overhead.
@@ -400,10 +392,8 @@ Nothing about frame data, damage or balance changed.
   the loser stays down. The KO camera punches in on the loser first.
 - **Four new stages**, bringing the roster of arenas to six: rooftop, dojo,
   beach and snow (alongside the original field and library).
-- **Full-resolution graphics and no sprites.** Fighters, stages and the HUD are
-  all drawn in code at 640x360 and upscaled to the window, so a body can move
-  every frame; the painted portraits in `art/portraits/` are the only images in
-  a match's menus.
+- **No sprites.** Fighters, stages and the HUD are all drawn in code, so a body
+  can move every frame, and there are no image files in the game at all.
 - **Synthesized music.** A mellow track for the menus, a driving one for the
   fight and a short win fanfare, all generated in code — or drop your own files
   in `music/`.

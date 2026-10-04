@@ -73,22 +73,22 @@ bite you.
   autoloads: `Controls` (input polling + joypad remap), `GameState` (match setup, screen
   switching, `make_character`), `Sfx` (synthesized audio, plus optional files in
   `voices/` and `music/`). Adding a `preload` would be off-style.
-- **The match is drawn in code; a few pictures and recordings are files.** Fighters,
-  stages, the HUD and synthesized SFX are generated in code. Title and select portraits
-  are `art/portraits/<id>.png` (`scripts/ui/portrait.gd`). `design/` is a scratch
-  directory kept out of the import via `design/.gdignore`; nothing in the game reads it.
-  Optional voice clips load
+- **The match is drawn in code; a few recordings are files.** Fighters, stages, the
+  HUD, the menus and synthesized SFX are all generated in code — there are no image
+  files in the game at all. `design/` is a scratch directory kept out of the import via
+  `design/.gdignore`; nothing in the game reads it. Optional voice clips load
   from `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd`).
   Optional music is the same idea for `music/` (`.ogg`, `.wav`, `.mp3`). Leave other
   people's tracks out of the build.
 - **The body is clothing on the pose skeleton.** `FighterRenderer.cloth()`, `_arm()` and
   `_leg()` draw one outlined ribbon when a limb is a single colour, and two overlapping
   pieces when it changes colour at the elbow or knee (a hem). Pose springs, squash and
-  hitstop stay in `Fighter`. Hits, blocks and dust are ink in `Effects._draw`. The
-  additive `glow` child is only a small halo, because `shaders/post_fx.gdshader` blooms
-  anything above luminance 0.90, and a hyper is a short burst. Menu portraits come from
-  `art/portraits/<id>.png` (`scripts/ui/portrait.gd`); they are painted, and they are
-  **not** what the fighter looks like in a match.
+  hitstop stay in `Fighter`. Hits, blocks and dust are ink in `Effects._draw`, and the
+  additive `glow` child is only a small halo, because there is no bloom pass to catch
+  and a hyper is a short burst. **The title and character-select screens draw live
+  `FighterRenderer`s, not images** (`title_screen.gd:_ready` and `char_select.gd:_ready`
+  both build a `chibis` array and pose it every frame), so the menus and the match are
+  the same art. There are no image files in the game at all.
 - **The head, torso, hands and shoes are shared shapes, not hooks.** A circle head with
   a chin blob, a straight wedge torso, mitten hands and a five-point slipper, all in
   `FighterRenderer` (`head_shape`, `torso`, `fist` / `open_hand`, `shoe`). There is no
@@ -111,20 +111,24 @@ bite you.
 - **Generic behaviour lives on `CharacterDef`.** One shared default exists because more
   than one character needed it: `cross_limbs(p)`, the KOF limb swap a connected string
   uses. A character file should contain only what is genuinely its own.
-- **Never fill with `Color.WHITE` on a fighter.** The bloom threshold means a true
-  white fill glows, and the ink edge around it dissolves, so the shape reads as a
-  pale smear instead of white fabric or a sclera. A character that needs white
-  paints it in a `"white"` colour key under the threshold: Ulises uses `e6e0d2`
-  (luminance 0.879) for the shirt number and the sock stripes, Emilia for the blouse and
-  the scarf, Charlie for his snaggletooth. Tiny specular dots are the exception — a
-  catchlight *should* sparkle, and so should Emilia's wand tip, so those two keep
-  `Color.WHITE`.
-- **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
-  `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
-  `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and
-  `Fight.camera.zoom` already has `PIXEL` baked in. Nearest filtering is set on
-  both the SubViewport and the TextureRect. Anything that must
-  stay sharp (HUD, menus) belongs on a `CanvasLayer`, not in `world` — that's why `Hud` is
+- **Never fill with `Color.WHITE` on a fighter.** The ink is `INK = 2.4` at this
+  resolution, and a true white fill swallows its own outline, so the shape reads as a
+  gap rather than as white fabric or a sclera. A character that needs white paints it
+  in a `"white"` colour key: Ulises uses `e6e0d2` for the shirt number and the sock
+  stripes, Emilia for the blouse and the scarf, Charlie for his snaggletooth. Tiny
+  specular dots are the exception — a catchlight *should* sparkle, and so should
+  Emilia's wand tip, so those two keep `Color.WHITE`.
+- **Pixel pipeline**: the arena renders into a **`320x180` `SubViewport`**
+  (`Fight.world`, `Fight.BUFFER_SIZE`, `Fight.PIXEL = 0.5`) shown at an exact integer
+  scale on a `640x360` logical screen (window override `1920x1080`). This chunky
+  look is the point, so three things protect it and must not be "improved" away:
+  `Fight.PIXEL` must stay `0.5`, `Fight.world.msaa_2d` must stay `MSAA_DISABLED`
+  (anti-aliasing softens exactly the pixels the look is built on), and
+  `FighterRenderer.INK` must stay `2.4` (thin lines vanish at 320x180). **There is no
+  post-FX shader pass** — it was removed because a fullscreen bloom resamples the
+  buffer with linear filtering and undoes the pixels. Nearest filtering is set on
+  both the SubViewport and the TextureRect. Anything that must stay sharp (HUD,
+  menus, comic words) belongs on a `CanvasLayer`, not in `world` — that's why `Hud` is
   parented to a `CanvasLayer` in `Fight._ready`.
 - **The frame loop lives in `Fight._physics_process`** (60 Hz fixed, `physics_ticks_per_second=60`).
   `hitstop` / `freeze` / `slowmo` return *before* fighters step, so those frames intentionally
@@ -245,12 +249,12 @@ so existing moves keep working untouched:
   visual-only counter — `sf` must not advance, that is the whole point of a freeze.
   Every hyper is required to have one, a `contact_pose`, and a >=3-key clip that is
   still moving at `startup`; `_test_hyper_spec` (roster-wide) checks all three.
-- **Only the finishing hit is allowed to punch the screen.** The post-FX shader clamps
-  the white `impact` mix at 0.8, and a level 3 move used to ask for `0.35 + 0.25 * 3 =
-  1.1` — on all ten to fourteen hits — so the whole super sat pinned at the ceiling and
-  read as a washed-out smear. Now `HYPER_TICK_IMPACT` (0.16) on the running hits and
-  `HYPER_HIT_IMPACT` (0.62) on the last one, which is also where `HYPER_CATCH_SLOWMO`
-  fires. `slowmo` skips every other sim frame, so it is about a sixth of a second.
+- **Only the finishing hit is allowed to punch the screen.** `Fight.flash` is a frame
+  count the HUD draws as a flat white rect, and a level 3 move used to set it on all
+  ten to fourteen hits, so the whole super sat white and read as a washed-out smear.
+  Now the running hits leave it alone and `final_knockdown` supplies it on the last
+  one, which is also where `HYPER_CATCH_SLOWMO` fires. `slowmo` skips every other sim
+  frame, so it is about a sixth of a second.
 - **A hyper is the only thing that moves the camera other than a KO or a win.**
   `_hyper_focus()` checks the fighter's move and then the live projectiles, because the
   two cover different halves of a super: the body is in its recovery while the beam is
@@ -263,7 +267,8 @@ so existing moves keep working untouched:
   that is the one `Projectile.setup` builds from the spec — so a `"flash": 5` on
   the hyper *move* does nothing at all, which is exactly where all four used to
   sit. `final_knockdown` supplies the screen flash on the finishing hit; leave
-  `flash` alone and use `shake` as the per-hit rumble.
+  `flash` alone and use `shake` as the per-hit rumble. `flash` is a flat rect drawn
+  by the HUD, not a shader uniform, so it survives the removal of post-FX.
 - **A multi-hit hyper has to be able to finish.** `hits_left` reaching 0 is what
   triggers the finishing hit, and `_apply_hit` keys the screen punch, the flash
   and the slow-motion catch on it. Six of the eight hypers are `anchored: true`
@@ -340,12 +345,10 @@ input did nothing. Move the opponent out of range before scripting another super
   pass vacuously against an unbuilt move. `_test_hyper_cutin` is the runtime half: it
   drives a real hyper, then asserts `sf` is held while `hyper_t` advances and the pose on
   screen is the cut-in pose.
-- `_test_hyper_landing` watches the screen effect per frame and samples **`impact` before
-  each step**, not after: it decays `-0.2` at the top of `_physics_process`, so reading it
-  once the frame is done only ever shows the decayed value and misses the peak entirely.
-  It also snaps the projectile's `MoveData` the moment it spawns, because by the end of the
-  run `_cleanup_projectiles` has dropped it from `fight.projectiles` and the node is freed
-  with the fight.
+- `_test_hyper_landing` watches the screen effect per frame — `flash`, `slowmo` and the
+  camera push — and snaps the projectile's `MoveData` the moment it spawns, because by the
+  end of the run `_cleanup_projectiles` has dropped it from `fight.projectiles` and the
+  node is freed with the fight.
 - `_test_specials` resolves what a move *should* be through `def.choose_move(key, f)`
   (`_expected`), because a character may swap in a variant of an input. A hard-coded
   `moves["proj"].id` is wrong the moment a character has two answers for one button.

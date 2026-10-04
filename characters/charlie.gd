@@ -22,9 +22,9 @@ func _init() -> void:
 		"sleeve": Color("e6d163"), "forearm": Color("e6d163"), "hands": Color("e6d163"),
 		"pants": Color("7a3fbf"), "legs": Color("e6d163"), "shoes": Color("e8453a"),
 		"eyes": Color("4f7a2a"), "accent": Color("ffb400"), "trim": Color("ffb400"),
-		# "white" is a warm off-white, not Color.WHITE: the post-FX shader blooms
-		# anything above luminance 0.90, and his snaggletooth was fff8cc at 0.961,
-		# so one tooth glowed and lost its ink edge.
+		# "white" is a warm off-white, not Color.WHITE: against the thick ink at
+		# 320x180 a true white fill loses its own outline, and his snaggletooth
+		# was fff8cc, so one tooth read as a gap rather than a tooth.
 		"white": Color("e6e0d2"),
 	}
 	alt_colors = colors.duplicate()
@@ -285,8 +285,8 @@ func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
 # slipper. What is drawn here is what is specific to him — the jug-handle ears,
 # the eye bags, the unibrow, the lumpy nose, the snaggletooth and the tears.
 # The tooth is the off-white `"white"` key rather than a true white: the post-FX
-# shader blooms anything above luminance 0.90, so a real white tooth glowed and
-# lost its ink edge.
+# against thick ink a real white tooth loses its outline, so the tooth is the
+# off-white key.
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:

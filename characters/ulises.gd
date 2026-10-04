@@ -11,11 +11,10 @@ func _init() -> void:
 	gag_items = ["ball", "tooth", "star"]
 	taunt_lines = ["TOO SLOW!", "GOOOAL!", "NICE TRY!"]
 	hurt_lines = ["OOF!", "MY BALL!", "HEY!"]
-	# "white" is a warm off-white, not Color.WHITE. shaders/post_fx.gdshader blooms
-	# anything above luminance 0.90, so a true white fill blooms, glows and loses
-	# its ink edge — the eyes, the shirt number and the sock cuffs all read as
-	# washed-out blobs. Everything that needs to look like white fabric or a
-	# sclera uses this instead.
+	# "white" is a warm off-white, not Color.WHITE. Against the thick ink at
+	# 320x180 a true white fill dissolves its own outline, so the shirt number and
+	# the sock cuffs read as washed-out gaps. Everything that needs to look like
+	# white fabric or a sclera uses this instead.
 	colors = {
 		"skin": Color("f2c29b"), "hair": Color("2b1a12"), "shirt": Color("2f6fe0"), "sleeve": Color("2f6fe0"),
 		"forearm": Color("f2c29b"), "hands": Color("f2c29b"), "pants": Color("f2c29b"), "shorts": Color("e6e0d2"),
@@ -23,8 +22,8 @@ func _init() -> void:
 		"band": Color("e8322e"), "white": Color("e6e0d2"),
 	}
 	# P2's kit is the red one with white trim. The trim and the shorts were true
-	# white before the post-FX shader landed; at luminance 0.96 they bloomed and
-	# lost their ink edge, so they are the off-white `"white"` key now.
+	# white once; against the thick ink at 320x180 they lost their own outline, so
+	# they are the off-white `"white"` key now.
 	alt_colors = colors.duplicate()
 	alt_colors.merge({"shirt": Color("e0402f"), "sleeve": Color("e0402f"), "accent": Color("e6e0d2"), "legs": Color("e0402f"),
 		"shoes": Color("ffd23f"), "band": Color("2f6fe0"), "shorts": Color("2a2a38"), "white": Color("e6e0d2")}, true)
@@ -298,8 +297,7 @@ func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
 # slipper. What is drawn here is what is specific to him — the headband on its
 # chain, the jersey trim, the sock stripes, the spikes and the props he holds.
 # Every white is the off-white `"white"` colour key rather than `Color.WHITE`:
-# the post-FX shader blooms anything above luminance 0.90, so a true white fill
-# glows and loses its ink edge.
+# against the thick ink at 320x180 a true white fill loses its own outline.
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:

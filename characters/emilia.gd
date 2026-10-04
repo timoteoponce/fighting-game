@@ -11,11 +11,11 @@ func _init() -> void:
 	gag_items = ["pencil", "star", "note"]
 	taunt_lines = ["ABRACADABRA!", "SPARKLE!", "DRAW THIS!"]
 	hurt_lines = ["EEK!", "MY PENCIL!", "RUDE!"]
-	# "white" is a warm off-white, not Color.WHITE. shaders/post_fx.gdshader blooms
-	# anything above luminance 0.90, so a true white fill blooms, glows and loses
-	# its ink edge. The old blouse was fff4fa at 0.972, a large fill, and it read
-	# as a glowing hole in her chest. The wand tip keeps pure white on purpose:
-	# it is a magic spark and should sparkle, like a catchlight.
+	# "white" is a warm off-white, not Color.WHITE. Against the thick ink at
+	# 320x180 a true white fill dissolves its own outline and the shape reads as
+	# a hole rather than as fabric. The old blouse was fff4fa, a large fill, and
+	# it had exactly that problem. The wand tip keeps pure white on purpose: it
+	# is a magic spark and should sparkle, like a catchlight.
 	colors = {
 		"skin": Color("f5cfb0"), "hair": Color("2e1a2a"), "shirt": Color("7b3fd1"), "sleeve": Color("7b3fd1"),
 		"forearm": Color("7b3fd1"), "hands": Color("f5cfb0"), "pants": Color("4b2a8a"), "legs": Color("4b2a8a"),
@@ -210,8 +210,8 @@ func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
 # slipper. What is drawn here is what is specific to her — the cape on its chain,
 # the robe lapels, the skirt flare, the boot cuffs, the star clip and the wand.
 # The blouse, the scarf beads and the scarf highlight are the off-white
-# `"white"` key rather than true white: the post-FX shader blooms anything above
-# luminance 0.90, so a real white fill glows and loses its ink edge. The wand tip
+# `"white"` key rather than true white: against thick ink a real white fill loses
+# its own outline. The wand tip
 # keeps pure white on purpose — it is a magic spark and should sparkle, like a
 # catchlight.
 

@@ -20,8 +20,9 @@ const WRIST := 4.0
 const ANKLE := 3.5
 const HEAD := 11.0
 const HEAD_SCALE := 1.45  # default head size; each character sets its own in `CharacterDef.head_scale`
-## Ink line weight around every limb and shape. Thinner at full resolution.
-const INK := 1.2
+## Ink line weight around every limb and shape. Thick lines are what make it
+## read as a cartoon rather than a painted figure at 320x180.
+const INK := 2.4
 
 const POSES := {
 	"idle": {"lean": 6, "head": 0, "arm_f": 30, "elb_f": 80, "arm_b": 45, "elb_b": 95,

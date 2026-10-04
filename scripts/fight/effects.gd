@@ -170,7 +170,7 @@ func _draw_glow() -> void:
 		match kind:
 			"hit", "heavy", "super":
 				# A small halo only. The spikes themselves are ink, in `_draw_impact`,
-				# so bloom catches the core and does not fog the eyes.
+				# so the core stays a hard white dot instead of washing out.
 				var big: float = {"hit": 0.65, "heavy": 1.0, "super": 1.35}[kind] * ck
 				var col: Color = {"hit": Color(1, 0.85, 0.45), "heavy": Color(1, 0.7, 0.3), "super": Color(1, 0.55, 0.85)}[kind]
 				glow.draw_circle(p, 8.0 * big * fade, Color(col, 0.45 * fade), true, -1.0, true)

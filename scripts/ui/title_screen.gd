@@ -5,14 +5,30 @@ const ITEMS := ["VS PLAYER", "VS CPU", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"
 
 var idx := 0
 var t := 0.0
+var chibis: Array[FighterRenderer] = []
 
 
 func _ready() -> void:
-	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	# Live FighterRenderers, the same ones a match draws, so the title screen and
+	# the fight are the same art. They animate, which a portrait cannot.
+	for i in 2:
+		var r := FighterRenderer.new()
+		r.setup(GameState.make_character(GameState.CHARACTERS[i]))
+		r.base_scale = 1.75 * r.def.size
+		r.facing = 1 if i == 0 else -1
+		r.position = Vector2(105 if i == 0 else 535, 318)
+		add_child(r)
+		chibis.append(r)
 
 
 func _process(delta: float) -> void:
 	t += delta
+	for i in chibis.size():
+		var r := chibis[i]
+		r.t = t * 60.0
+		var intro := int(t * 0.4 + i * 0.5) % 2 == 0
+		r.prop = r.def.intro_prop if intro else ""
+		r.update_pose(r.def.pose("intro" if intro else "idle", {"lean": 6 + sin(t * 3.0 + i) * 3.0}), 0.1)
 	if Controls.any_just_pressed(Controls.UP) != Controls.NONE:
 		idx = posmod(idx - 1, ITEMS.size())
 		Sfx.play("select")
@@ -48,8 +64,6 @@ func _draw() -> void:
 		if i % 2 == 0:
 			draw_colored_polygon(PackedVector2Array([p1, p2, p3]), Color(1, 1, 1, 0.06))
 	var bob := sin(t * 2.5) * 3.0
-	Portrait.draw(self, "ulises", Rect2(6, 118 + bob, 156, 216), false)
-	Portrait.draw(self, "emilia", Rect2(478, 118 - bob, 156, 216), true)
 	UI.text(self, Vector2(210, 64 + bob), "ULISES", 44, Color("5ab0ff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("0b1a4a"))
 	UI.text(self, Vector2(320, 70 - bob), "VS", 34, Color("ffd23f"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("7a1030"))
 	UI.text(self, Vector2(430, 64 + bob), "EMILIA", 44, Color("d19bff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("3a0d5a"))

@@ -4,11 +4,10 @@ extends Node2D
 
 const STAGE_W := 1000.0
 const ZOOM := 1.2
-## The world draws at full logical resolution (640x360) into a SubViewport that
-## is then upscaled to the window, so nothing is pixelated at source.
-## PIXEL = buffer size / logical screen size.
-const PIXEL := 1.0
-const BUFFER_SIZE := Vector2i(640, 360)
+## The world renders into a low-res buffer (KOF-98 style pixels), shown at an
+## exact integer scale. PIXEL = buffer size / logical 640x360 screen.
+const PIXEL := 0.5
+const BUFFER_SIZE := Vector2i(320, 180)
 const HALF_VIEW := 320.0 / ZOOM
 const BASE_CAM_Y := 342.0 - 180.0 / ZOOM  # ground sits near the bottom of the screen
 const WALL := 24.0
@@ -26,7 +25,6 @@ var projectiles: Array[Projectile] = []
 var stage: Stage
 var effects: Effects
 var foreground: Foreground
-var post_mat: ShaderMaterial
 var camera: Camera2D
 var hud: Hud
 var debug_draw: Node2D
@@ -41,10 +39,6 @@ var cutin_color := Color.WHITE
 ## How long the world stops for a hyper. The HUD reads this to work out how far
 ## through the cut-in animation it is.
 const HYPER_FREEZE := 56
-## Post-FX white mix for one of a hyper's running hits, and for its finishing hit.
-## The shader clamps at 0.8, so anything at or above that is a flat white frame.
-const HYPER_TICK_IMPACT := 0.16
-const HYPER_HIT_IMPACT := 0.62
 ## Frames of half-speed on the last hit of a super. `slowmo` skips every other
 ## sim frame, so this is about a sixth of a second.
 const HYPER_CATCH_SLOWMO := 20
@@ -56,10 +50,7 @@ const KO_ZOOM := 1.75
 const KO_CAM_FRAMES := 80
 var slowmo := 0
 var shake := 0.0
-var flash := 0  # full-screen white flash frames
-## Impact-frame strength for the post-FX shader. Set hard on a heavy/special
-## connect and decays over a few frames, giving that 1-2 frame white punch.
-var impact := 0.0
+var flash := 0  # full-screen white flash frames, drawn as a flat rect by the HUD
 
 var round_num := 1
 var wins := [0, 0]
@@ -82,7 +73,8 @@ func _ready() -> void:
 	world = SubViewport.new()
 	world.size = BUFFER_SIZE
 	world.canvas_item_default_texture_filter = Viewport.DEFAULT_CANVAS_ITEM_TEXTURE_FILTER_NEAREST
-	world.msaa_2d = Viewport.MSAA_4X
+	# No MSAA: anti-aliasing softens the chunky pixels this look depends on.
+	world.msaa_2d = Viewport.MSAA_DISABLED
 	add_child(world)
 	var screen := TextureRect.new()
 	screen.texture = world.get_texture()
@@ -128,23 +120,12 @@ func _ready() -> void:
 	world.add_child(camera)
 	camera.make_current()
 	effects.cam = camera
-	# Post-FX: bloom, impact frame, chromatic aberration, vignette. Above the
-	# world, below the comic/HUD layers so it never touches the lettering.
-	var post := CanvasLayer.new()
-	post.layer = 10
-	add_child(post)
-	post_mat = ShaderMaterial.new()
-	post_mat.shader = load("res://shaders/post_fx.gdshader")
-	var post_rect := ColorRect.new()
-	post_rect.color = Color(1, 1, 1, 1)
-	post_rect.anchor_right = 1.0
-	post_rect.anchor_bottom = 1.0
-	post_rect.material = post_mat
-	post.add_child(post_rect)
 	# Comic words and speech bubbles: above the arena, below the HUD, and at
-	# screen resolution so the lettering stays crisp.
+	# screen resolution so the lettering stays crisp. There is no post-FX pass:
+	# a fullscreen bloom resamples the 320x180 buffer with linear filtering and
+	# softens exactly the pixels this look is built on.
 	var comic := CanvasLayer.new()
-	comic.layer = 20
+	comic.layer = 10
 	add_child(comic)
 	comic.add_child(effects.ink)
 	var layer := CanvasLayer.new()
@@ -213,14 +194,8 @@ func _physics_process(_delta: float) -> void:
 	effects.step()
 	banner_t += 1
 	shake = maxf(0.0, shake - 0.5)
-	impact = maxf(0.0, impact - 0.2)
 	if flash > 0:
 		flash -= 1
-	# Feed the post-FX shader. `flash` is a frame count, so normalise it.
-	if post_mat != null:
-		post_mat.set_shader_parameter("shake", shake)
-		post_mat.set_shader_parameter("impact", impact)
-		post_mat.set_shader_parameter("flash", clampf(float(flash) / 8.0, 0.0, 1.0))
 	camera.offset = Vector2(randf_range(-shake, shake), randf_range(-shake, shake))
 	debug_draw.queue_redraw()
 	if freeze > 0:
@@ -475,14 +450,6 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
 		shake = maxf(shake, 3.0 + m.level + m.shake)
-		# The post-FX white mix tops out at 0.8. A level 3 asks for 1.1, so a hyper
-		# was pinning it there on all ten to fourteen of its hits and the whole super
-		# read as a washed-out smear. Now the running hits only breathe and the
-		# finishing hit is the one that punches.
-		if m.level == 3:
-			impact = maxf(impact, HYPER_HIT_IMPACT if last_hit else HYPER_TICK_IMPACT)
-		else:
-			impact = maxf(impact, 0.35 + 0.25 * m.level)
 	# The payoff beat: the last hit of a super slows the world down for a moment,
 	# so a dozen small hits resolve into one heavy landing.
 	if m.level == 3 and last_hit:
