@@ -42,7 +42,6 @@ func _ready() -> void:
 	_test_hyper_cutin()
 	_test_hyper_landing()
 	_test_hyper_max()
-	_test_roster_faces()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -758,49 +757,17 @@ func _cutin_one(id: String, key: String, held: int) -> void:
 	f.free()
 
 
-## Every fighter owns its own head, torso, hand and face, and that face carries
-## the whole expression vocabulary rather than a fixed shape.
-##
-## Two things are being defended here. First, `FighterRenderer.safe` silently
-## replaces a self-intersecting polygon with its convex hull, so a bad outline
-## turns into a blob with no error at all; the triangulation checks are the only
-## way to catch it. Second, owning an eye *shape* without honouring `expr` is
-## invisible in a screenshot and obvious in a match: Ulises stood through a whole
-## match with a permanent stare because his rewrite had dropped blink, X eyes
-## and the squint. `eye_style` is a pure function precisely so this is testable
-## headlessly, since a pixel comparison cannot run under --headless.
-func _test_roster_faces() -> void:
-	print("[roster faces]")
-	for id: String in GameState.CHARACTERS:
-		var c: CharacterDef = GameState.make_character(id)
-		if not c.has_method("head_outline"):
-			check(false, "%s owns a head" % id)
-			continue
-		if not c.has_method("torso_outline"):
-			check(false, "%s owns a torso" % id)
-			continue
-		var head: PackedVector2Array = c.head_outline()
-		var chest: PackedVector2Array = c.torso_outline(null, {"up": Vector2.UP, "perp": Vector2.RIGHT, "hip": Vector2.ZERO})
-		check(head.size() >= 8, "%s has a real head outline (%d points)" % [id, head.size()])
-		check(not Geometry2D.triangulate_polygon(head).is_empty(), "%s's head outline triangulates" % id)
-		check(chest.size() >= 6, "%s has a real torso outline (%d points)" % [id, chest.size()])
-		check(not Geometry2D.triangulate_polygon(chest).is_empty(), "%s's torso outline triangulates" % id)
-		var styles := {}
-		for e: String in ["normal", "attack", "hurt", "smug", "win", "ko", "dizzy", "shock"]:
-			styles[e] = c.eye_style(e, 40.0)
-		check(styles["win"] == "happy", "%s closes the eyes when winning (got %s)" % [id, styles["win"]])
-		check(styles["ko"] == "ko", "%s gets X eyes on a KO (got %s)" % [id, styles["ko"]])
-		check(styles["dizzy"] == "dizzy", "%s slides the pupil when dizzy (got %s)" % [id, styles["dizzy"]])
-		var blinked := 0
-		for f in 190:
-			if c.eye_style("normal", float(f)) == "blink":
-				blinked += 1
-		check(blinked == 6, "%s blinks 6 frames per 190-frame cycle (%d)" % [id, blinked])
-
-
 ## Ulises' signature mechanic: a real ball on the floor, and the fact that it
 ## decides which special he gets. This is the pilot for per-character mechanics,
 ## so it also proves the hooks in `CharacterDef` actually fire.
+##
+## NOT CALLED, and currently failing if you do. Commit e220275 ("fixes
+## ball-kick") switched the loose field ball off: `has_ball` returns a hardcoded
+## false, `on_round_start` no longer spawns one, and `choose_move` always answers
+## "proj". Power Shot became an ordinary projectile. These two checks describe
+## the mechanic as it was before that commit, so they are kept for reference
+## rather than run. Either restore the ball and call them, or delete them and the
+## design docs that still describe it.
 func _test_ulises_ball() -> void:
 	print("[ulises ball]")
 	var f := _new_fight("ulises", "emilia")

@@ -255,13 +255,17 @@ func _init() -> void:
 #func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 #	pass
 
-## Optional. Replace the shared circle head with your own, in head space. A
-## character that owns its head must also draw its own jaw and ear shading in
-## draw_face, because the shared ones are positioned for the circle.
-#func head_outline() -> PackedVector2Array:
-#	return PackedVector2Array()
+## Optional. The face. The renderer already draws the shared one — call
+## `r.face(r.colors["eyes"])` to keep it and then draw what is specific to your
+## fighter on top (a nose, a unibrow, a snaggletooth). Pass `true` as the second
+## argument for the bigger lash-and-blush eyes. Position those extras against the
+## shared eye line, which sits at y = 0.9 and y = 0.6 in head space.
+#func draw_face(r: FighterRenderer) -> void:
+#	r.face(r.colors["eyes"])
 
-## Optional. Replace the shared wedge torso with your own, in torso space. `up`
-## is shoulder-ward and `perp` points forward, i.e. the belly side.
-#func torso_outline(_r: FighterRenderer, s: Dictionary) -> PackedVector2Array:
-#	return PackedVector2Array()
+## The head, torso, hands and shoes are NOT hooks. They are the shared shapes in
+## `FighterRenderer`: a circle head with a chin blob, a straight wedge torso,
+## mitten hands and a five-point slipper. To give your fighter real footwear or
+## claws, paint them on in `draw_over_legs` or `draw_props` rather than trying to
+## replace the shared shape.
+

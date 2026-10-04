@@ -10,7 +10,7 @@ func _init() -> void:
 	id = "charlie"
 	display = "CHARLIE"
 	likes = "Basketball, crying, crying about basketball"
-	win_quote = "Don't cry, it's just a game!"
+	win_quote = "I won! ...WAAAAH! These are happy tears!"
 	gag_items = ["ball", "tissue", "tooth"]
 	taunt_lines = ["NYEH NYEH!", "SWISH!", "CRY ABOUT IT!"]
 	hurt_lines = ["WAAAH!", "MOMMY!", "SNIFF..."]
@@ -41,7 +41,7 @@ func _init() -> void:
 	voice_pitch = 290.0  # whiny
 	head_scale = 1.9  # enormous, egg-shaped, bald
 	build = 0.62  # noodle limbs
-	win_prop = "tears_win"
+	win_prop = "tears"
 	intro_prop = "ball"
 	specials_text = [
 		["L + H", "Chest Pass"],
@@ -52,10 +52,7 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 70, "elb_f": 60, "arm_b": 30, "elb_b": 90, "lean": 4, "head": 6},
-		# Both hands up over his head, bawling. He cries whether he wins or
-		# loses, and the win pose finally admits it.
-		"win": {"arm_f": 168, "elb_f": 18, "arm_b": 172, "elb_b": 14, "head": -20, "lean": -6,
-			"leg_f": 26, "knee_f": 14, "leg_b": -24, "knee_b": 16},
+		"win": {"arm_f": 150, "elb_f": 60, "arm_b": 150, "elb_b": 60, "head": -14, "lean": -3},
 	}
 	moves = {
 		# Slower than everyone else's light, but those noodle arms reach.
@@ -283,30 +280,13 @@ func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
 
 ## A true bald egg, nose to the right: a wide round cranium narrowing to a small
 ## low chin, with no jaw at all. The shared circle plus a chin blob passes for a
-## dome but he does have a skull, and at head_scale 1.9 the difference is the
-## whole silhouette. Wide at the top, widest just above the eyes.
-func head_outline() -> PackedVector2Array:
-	return PackedVector2Array([
-		Vector2(-1.0, -13.4), Vector2(4.0, -12.6), Vector2(7.6, -9.6), Vector2(9.4, -5.2),
-		Vector2(9.8, -0.6), Vector2(8.8, 3.8), Vector2(6.6, 6.8), Vector2(3.6, 8.8),
-		Vector2(0.4, 9.4), Vector2(-3.0, 8.4), Vector2(-6.0, 6.0), Vector2(-8.4, 2.2),
-		Vector2(-9.8, -2.4), Vector2(-9.4, -7.2), Vector2(-6.6, -11.6),
-	])
-
-
-## A tank top, so this is *narrower* than the shared wedge, with the shoulder
-## cut in where the straps sit. He is a beanpole, and the wide shared torso was
-## fighting the joke.
-func torso_outline(_r: FighterRenderer, s: Dictionary) -> PackedVector2Array:
-	var up: Vector2 = s["up"]
-	var perp: Vector2 = s["perp"]
-	var hip: Vector2 = s["hip"]
-	var b := build
-	var pts := PackedVector2Array()
-	for f in [[0.0, 4.6], [0.36, 5.0], [0.70, 6.2], [0.90, 6.6], [1.0, 4.6],
-			[1.0, -5.0], [0.88, -6.4], [0.54, -5.2], [0.0, -4.2]]:
-		pts.append(hip + up * FighterRenderer.TORSO * float(f[0]) + perp * float(f[1]) * b)
-	return pts
+# --- The look -------------------------------------------------------------------
+# The shared body does the work: a circle head, a wedge torso, mitten hands and a
+# slipper. What is drawn here is what is specific to him — the jug-handle ears,
+# the eye bags, the unibrow, the lumpy nose, the snaggletooth and the tears.
+# The tooth is the off-white `"white"` key rather than a true white: the post-FX
+# shader blooms anything above luminance 0.90, so a real white tooth glowed and
+# lost its ink edge.
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:
@@ -321,254 +301,53 @@ func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	var hip: Vector2 = s["hip"]
 	var top: Vector2 = hip + up * FighterRenderer.TORSO
 	var trim: Color = r.colors["trim"]
-	# Tank-top trim: round the neck, and round both armholes the way the
-	# portrait has it. The old version trimmed the neck and put a stripe at the
-	# hem and two ring "00"s, none of which the painting has.
-	r.draw_line(top + perp * 3.4 - up * 1.4, top - perp * 3.4 - up * 1.4, trim, 2.0, true)
-	# Shoulder straps, the giveaway that it is a vest and not a tee.
-	for side in [4.6, -5.0]:
-		r.draw_line(top + perp * side - up * 0.4, top + perp * (side * 0.55) - up * 5.0, trim, 1.6, true)
-	# Gold side stripe down the jersey.
-	r.draw_line(hip + perp * 3.6 + up * 2.0, top - perp * 3.0 - up * 1.0, trim, 1.5, true)
-	# Hem trim.
-	r.draw_line(hip + perp * 4.6 + up * 2.0, hip - perp * 4.2 + up * 2.0, trim, 1.6, true)
-
-
-## The white ankle socks above his red sneakers, which did not exist at all
-## before: he had no draw_over_legs override, so the portrait's socks were
-## simply missing. A band of sock over the shin, then the sneaker below it.
-func draw_over_legs(r: FighterRenderer, s: Dictionary) -> void:
-	var sock: Color = r.colors["white"]
-	for leg in [["knee_f", "foot_f", 1.0], ["knee_b", "foot_b", 0.84]]:
-		var knee: Vector2 = s[leg[0]]
-		var foot: Vector2 = s[leg[1]]
-		var d: Vector2 = foot - knee
-		if d.length() < 1.0:
-			continue
-		var depth: float = float(leg[2])
-		var u := d.normalized()
-		var n := Vector2(-u.y, u.x)
-		# A short ankle sock, not a knee-high: the painting's white stops just
-		# above the sneaker.
-		var top: Vector2 = foot - u * 5.0
-		r.limb(top, foot - u * 1.0, 6.4 * depth, 6.0 * depth, sock)
-		r.draw_line(top - n * (3.2 * depth), top + n * (3.2 * depth), sock.darkened(0.18), 1.1, true)
-
-
-## A red sneaker with a white sole and laces. The shared slipper is not a shoe
-## the portrait would recognise.
-func draw_shoe(r: FighterRenderer, foot: Vector2, fwd: Vector2, col: Color) -> void:
-	if fwd.length_squared() < 0.001:
-		fwd = Vector2.RIGHT
-	fwd = fwd.normalized()
-	var up := Vector2(fwd.y, -fwd.x)
-	# Chunky upper, wider than the shared slipper.
-	r.shaded_poly(PackedVector2Array([
-		foot - fwd * 3.4 + up * 2.4, foot + fwd * 0.4 + up * 3.0, foot + fwd * 4.6 + up * 2.4,
-		foot + fwd * 7.0 - up * 0.4, foot + fwd * 6.6 - up * 1.8, foot - fwd * 3.6 - up * 1.8,
-	]), col, 1.1, 0.82)
-	# White sole slab, which is what makes it a sneaker.
-	r.draw_line(foot - fwd * 3.4 - up * 1.2, foot + fwd * 7.0 - up * 1.2, r.colors["white"], 1.8, true)
-	r.draw_line(foot - fwd * 3.4 - up * 0.2, foot + fwd * 6.8 - up * 0.2, col.darkened(0.24), 0.8, true)
-	# Laces.
-	for li in 3:
-		var lp := foot + fwd * (0.6 + float(li) * 1.5) + up * 1.6
-		r.draw_line(lp - fwd * 0.4, lp + fwd * 0.4, r.colors["white"], 0.7, true)
+	# Tank-top trim round the neck and a jersey stripe at the hem.
+	r.draw_line(top + perp * 4.0 - up * 1.5, top - perp * 4.0 - up * 1.5, trim, 2.0, true)
+	r.draw_line(hip + perp * 5.0 + up * 3.0, hip - perp * 5.0 + up * 3.0, trim, 2.0, true)
+	# Jersey number 00, drawn as two rings so it survives the pixel buffer.
+	var mid := hip + up * (FighterRenderer.TORSO * 0.55)
+	for k in [-1.6, 1.6]:
+		r.draw_arc(mid + perp * k, 1.6, 0.0, TAU, 10, trim, 1.0, true)
 
 
 func draw_hair_back(r: FighterRenderer) -> void:
-	# Jug-handle ears, one bigger than the other, on the back edge of the new egg.
-	# These sat on the shared circle at x -6.5 and -5.0, which on a head this wide
-	# put the second one on the cheek in front of the eye; they moved out to -9.4
-	# and -8.2 so both straddle the silhouette instead.
-	for e: Array in [[Vector2(-9.4, 1.6), 4.0], [Vector2(-8.2, -0.4), 3.0]]:
+	# Jug-handle ears, one bigger than the other.
+	for e in [[Vector2(-6.5, 1.5), 4.2], [Vector2(-5.0, 0.5), 3.2]]:
 		var c: Vector2 = e[0]
 		var rr: float = e[1]
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(-1.6, 0), rr + 0.9, rr * 1.3 + 0.9, 0.2, 14), FighterRenderer.OUT)
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(-1.6, 0), rr, rr * 1.3, 0.2, 14), r.colors["skin"])
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(-1.2, 0.3), rr * 0.5, rr * 0.8, 0.2, 10), warm_shade(r.colors["skin"], 0.18))
-
-
-## Eye centres in head space, nose to the right, low on the big egg.
-func eye_spots() -> Array:
-	return [Vector2(3.8, 1.4), Vector2(8.4, 1.0)]
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(-2.0, 0), rr + 0.9, rr * 1.3 + 0.9, 0.2, 14), FighterRenderer.OUT)
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(-2.0, 0), rr, rr * 1.3, 0.2, 14), r.colors["skin"])
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(c + Vector2(-1.6, 0.3), rr * 0.5, rr * 0.8, 0.2, 10), FighterRenderer.shade(r.colors["skin"]))
 
 
 func draw_face(r: FighterRenderer) -> void:
 	var skin: Color = r.colors["skin"]
 	var ink := FighterRenderer.OUT
 	# Eye bags first, so the eyes sit in them.
-	for spot: Vector2 in eye_spots():
-		r.draw_arc(spot + Vector2(0, 1.6), 2.4, 0.15, PI - 0.15, 8, warm_shade(skin, 0.16), 1.25, true)
-	_eyes(r)
-	# A big lumpy nose, drooping over the mouth, with the old shade() swapped for
-	# the warm one — purple toward his sallow yellow read as olive.
-	var nose := FighterRenderer.ellipse_pts(Vector2(9.4, 4.0), 2.5, 2.0, 0.3, 12)
-	r.draw_colored_polygon(nose, warm_shade(skin, 0.2).lerp(Color(0.9, 0.45, 0.35), 0.3))
+	for e in [Vector2(4.8, 3.6), Vector2(10.7, 3.2)]:
+		r.draw_arc(e, 2.6, 0.2, PI - 0.2, 8, FighterRenderer.shade(skin), 1.2, true)
+	r.face(r.colors["eyes"])
+	# One thick unibrow over both eyes, scowling.
+	r.draw_polyline(PackedVector2Array([Vector2(2.0, -5.6), Vector2(5.5, -4.4), Vector2(8.0, -4.9), Vector2(12.6, -6.2)]), ink, 1.3, true)
+	# A big lumpy nose, drooping over the mouth.
+	var nose := FighterRenderer.ellipse_pts(Vector2(11.6, 4.2), 2.6, 2.1, 0.3, 12)
+	r.draw_colored_polygon(nose, FighterRenderer.shade(skin).lerp(Color(0.9, 0.45, 0.35), 0.3))
 	r.draw_polyline(Stage._closed(nose), ink, 1.0, true)
 	# The sniffle: a drip that swells and drops, over and over.
 	var drip := fmod(r.t * 0.04, 1.0)
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(8.8, 6.2 + drip * 2.0), 0.9, 1.0 + drip * 1.2), Color(0.7, 0.95, 0.6, 0.9))
-	_tooth(r)
-	# Pimples on the cheeks and brow, not scattered over the bald dome where the
-	# old coordinates used to put them.
-	for pp: Vector2 in [Vector2(1.0, 3.2), Vector2(-0.4, -1.6), Vector2(6.0, 3.0)]:
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(11.0, 6.5 + drip * 2.0), 0.9, 1.0 + drip * 1.2), Color(0.7, 0.95, 0.6, 0.9))
+	# Snaggletooth poking out over the lip.
+	r.draw_colored_polygon(PackedVector2Array([Vector2(7.2, 7.0), Vector2(8.6, 7.0), Vector2(8.2, 9.2)]), r.colors["white"])
+	r.draw_polyline(PackedVector2Array([Vector2(7.2, 7.0), Vector2(8.2, 9.2), Vector2(8.6, 7.0)]), ink, 0.7, true)
+	# Pimples.
+	for pp in [Vector2(2.0, 5.2), Vector2(-1.0, -6.0), Vector2(6.5, -8.5)]:
 		r.draw_circle(pp, 0.8, Color(0.95, 0.4, 0.35), true, -1.0, true)
-	# Cheek blush, which the portrait has and he did not.
-	var blush := Color(0.95, 0.45, 0.4, 0.45)
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(0.6, 4.4), 2.4, 1.5), blush)
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(6.2, 4.0), 2.2, 1.4), blush)
 	# He likes crying. When it goes badly, the taps open.
 	if r.expr in ["hurt", "ko", "shock", "dizzy"] or r.prop == "tears":
-		for spot: Vector2 in eye_spots():
-			var k := fmod(r.t * 0.12 + spot.x, 1.0)
-			r.draw_line(spot, spot + Vector2(-0.6, 6.0), Color(0.55, 0.8, 1.0, 0.85), 1.4, true)
-			r.draw_colored_polygon(FighterRenderer.ellipse_pts(spot + Vector2(-0.6, 3.0 + k * 5.0), 0.9, 1.3), Color(0.6, 0.85, 1.0))
-
-
-## Two snaggletooth pointing up over the lower lip, the way the portrait has
-## them. He had one before, which is a detail the painting never agreed to.
-func _tooth(r: FighterRenderer) -> void:
-	var ink := FighterRenderer.OUT
-	var tooth: Color = r.colors["white"]
-	if r.expr == "ko" or r.expr == "dizzy":
-		return
-	for tx: float in [5.6, 7.6]:
-		r.draw_colored_polygon(PackedVector2Array([
-			Vector2(tx, 6.8), Vector2(tx + 1.3, 6.8), Vector2(tx + 0.65, 8.7),
-		]), tooth)
-		r.draw_polyline(PackedVector2Array([Vector2(tx, 6.8), Vector2(tx + 0.65, 8.7), Vector2(tx + 1.3, 6.8)]), ink, 0.7, true)
-
-
-## His eyes: small and green under the unibrow, but carrying the whole
-## expression vocabulary through eye_style. Without that he would stand through a
-## match with a permanent stare.
-func _eyes(r: FighterRenderer) -> void:
-	var spots: Array[Vector2] = [Vector2(3.8, 1.4), Vector2(8.4, 1.0)]
-	var ink := FighterRenderer.OUT
-	var sclera: Color = r.colors["white"]
-	var style := eye_style(r.expr, r.t)
-	var pop := 1.0 + 0.6 * (float(r.eye_pop) / 9.0)
-	var g := Vector2.ZERO if r.expr in ["ko", "dizzy", "hurt"] else r.gaze.limit_length(1.0)
-	for i in 2:
-		var e: Vector2 = spots[i]
-		var near := 0.8 if i == 1 else 1.0
-		if style == "happy":
-			r.draw_arc(e + Vector2(0, 0.8), 2.0 * near, PI, TAU, 8, ink, 1.5, true)
-			continue
-		if style == "ko":
-			var rad := 2.0 * near
-			r.draw_line(e + Vector2(-rad, -rad * 0.8), e + Vector2(rad, rad * 0.8), ink, 1.6, true)
-			r.draw_line(e + Vector2(rad, -rad * 0.8), e + Vector2(-rad, rad * 0.8), ink, 1.6, true)
-			continue
-		if style == "dizzy":
-			r.draw_colored_polygon(FighterRenderer.ellipse_pts(e, 2.0 * near, 1.7 * near, 0.0, 10), sclera)
-			r.draw_arc(e, 2.0 * near, 0.0, TAU, 10, ink, 0.9, true)
-			r.draw_circle(e + Vector2.from_angle(r.t * 0.15 + float(i)) * 0.7 * near, 0.55, ink)
-			continue
-		var sc := near * pop
-		if style == "blink":
-			r.draw_line(e + Vector2(-2.4 * sc, 0.3), e + Vector2(2.3 * sc, 0.15), ink, 1.3, true)
-			continue
-		# Small, but big enough that the green iris survives the unibrow above it.
-		var squint := 1.0
-		var pupil := 0.32
-		match r.expr:
-			"attack":
-				squint = 0.6
-			"hurt":
-				squint = 0.55
-				pupil = 0.2
-			"shock":
-				squint = 1.15
-				pupil = 0.18
-			"smug":
-				squint = 0.45 if i == 1 else 0.7
-		var ry := maxf(0.9, 2.1 * sc * clampf(squint, 0.4, 1.15))
-		var rx := 2.6 * sc
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(e, rx, ry, 0.0, 10), sclera)
-		var ir := minf(rx * 0.5, ry * 0.95)
-		var ic := e + g * rx * 0.16
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(ic, ir, ir * 0.9, 0.0, 8), r.colors["eyes"])
-		r.draw_circle(ic + g * 0.1, maxf(0.4, ir * pupil * 1.3), ink)
-		r.draw_circle(ic + Vector2(-ir * 0.34, -ir * 0.36), 0.28, Color.WHITE)
-		r.draw_arc(e + Vector2(0, -ry * 0.15), rx * 0.94, PI + 0.35, TAU - 0.35, 8, ink, 0.9, true)
-
-
-## The heavy black unibrow. The scowl is the whole character, so it stays
-## through every expression, but it lifts and drops rather than sitting frozen.
-func _brows(r: FighterRenderer) -> void:
-	var a: Vector2 = eye_spots()[0]
-	var b: Vector2 = eye_spots()[1]
-	var lift := -6.0
-	var tilt := 0.7
-	match r.expr:
-		"attack", "smug":
-			tilt = 1.4
-		"hurt", "shock":
-			lift = -7.0
-			tilt = -0.4
-		"ko", "dizzy":
-			lift = -7.2
-			tilt = -0.6
-		"win", "happy":
-			lift = -5.4
-			tilt = 0.0
-	r.draw_polyline(PackedVector2Array([
-		a + Vector2(-2.6, lift + tilt), a + Vector2(1.0, lift),
-		(a + b) * 0.5 + Vector2(0, lift - 0.5),
-		b + Vector2(-0.4, lift), b + Vector2(2.6, lift + tilt),
-	]), FighterRenderer.OUT, 2.2, true)
-
-
-## The mouth. A small scowl, a cry on the losing expressions, and a squiggle
-## when dizzy so it is not frozen in one shape all match.
-func _mouth(r: FighterRenderer) -> void:
-	var m := Vector2(5.2, 4.4)
-	var ink := Color(0.45, 0.16, 0.10)
-	if r.expr == "dizzy":
-		var w := PackedVector2Array()
-		for wi in 5:
-			w.append(m + Vector2(-2.0 + float(wi) * 1.0, 0.4 + (0.7 if wi % 2 == 0 else -0.7)))
-		r.draw_polyline(w, ink, 1.1, true)
-		return
-	if r.expr == "hurt" or r.expr == "ko":
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(m + Vector2(0, 0.6), 1.4, 1.9, 0.0, 10), ink)
-		return
-	if r.expr == "happy" or r.expr == "win":
-		r.draw_arc(m + Vector2(0.1, -0.4), 2.1, 0.2, PI - 0.2, 8, ink, 1.3, true)
-		return
-	if r.expr == "smug":
-		r.draw_line(m + Vector2(-1.5, 0.3), m + Vector2(1.6, -0.5), ink, 1.1, true)
-		return
-	# Rest: the scowl, and it deepens when he is going for it.
-	var drop := 1.2 if r.expr == "attack" else 0.0
-	r.draw_line(m + Vector2(-2.2, -0.2), m + Vector2(0, 0.6 + drop), FighterRenderer.OUT, 1.4, true)
-	r.draw_line(m + Vector2(0, 0.6 + drop), m + Vector2(2.2, -0.4), FighterRenderer.OUT, 1.4, true)
-
-
-## His long noodle-arm fist, with knuckles.
-func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, _front: bool, open: bool) -> void:
-	if open:
-		r.open_hand(p, col, d)
-	else:
-		_fist(r, p, col, d)
-
-
-func _fist(r: FighterRenderer, p: Vector2, col: Color, d: Vector2) -> void:
-	if d.length_squared() < 0.001:
-		d = Vector2.DOWN
-	d = d.normalized()
-	var n := Vector2(-d.y, d.x)
-	var sh := FighterRenderer.shade(col)
-	r.shaded_poly(PackedVector2Array([
-		p - n * 2.4 - d * 0.8, p + n * 2.4 - d * 0.8, p + n * 2.2 + d * 1.5,
-		p + n * 1.4 + d * 3.1, p - n * 1.4 + d * 3.1, p - n * 2.2 + d * 1.5,
-	]), col, 1.0, 0.82)
-	for k: float in [-1.4, -0.5, 0.5, 1.4]:
-		r.draw_line(p + n * k + d * 1.5, p + n * k + d * 2.9, sh, 0.55, true)
-	r.part(p + n * 1.9 - d * 0.2, p + n * 0.4 + d * 2.3, 1.4, 1.2, col)
-	r.draw_line(p - n * 2.0 + d * 1.5, p + n * 2.0 + d * 1.5, FighterRenderer.hl(col), 0.5, true)
+		for e in [Vector2(4.8, 3.2), Vector2(10.7, 2.8)]:
+			var k := fmod(r.t * 0.12 + e.x, 1.0)
+			r.draw_line(e, e + Vector2(-0.6, 6.0), Color(0.55, 0.8, 1.0, 0.85), 1.4, true)
+			r.draw_colored_polygon(FighterRenderer.ellipse_pts(e + Vector2(-0.6, 3.0 + k * 5.0), 0.9, 1.3), Color(0.6, 0.85, 1.0))
 
 
 func draw_hair_front(r: FighterRenderer) -> void:
@@ -591,22 +370,12 @@ func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 			_basketball(r, Vector2(hand.x + 4.0, lerpf(floor_y - 7.0, hand.y + 6.0, k)), 7.0, r.t * 0.2)
 		"tears":
 			# Two fountains of tears arcing out of his eyes.
-			for e: Vector2 in eye_spots():
+			for e in [Vector2(4.8, 2.0), Vector2(10.7, 1.6)]:
 				var src := FighterRenderer.head_point(s, e)
 				for j in 6:
 					var k := fmod(r.t * 0.08 + j / 6.0, 1.0)
 					var p := src + Vector2(k * 46.0 * (1.0 if e.x > 6.0 else -0.6), -14.0 * sin(k * PI) + k * 30.0)
 					r.draw_colored_polygon(FighterRenderer.ellipse_pts(p, 2.2 - k, 2.8 - k), Color(0.6, 0.85, 1.0, 1.0 - k * 0.6))
-		"tears_win":
-			# His celebration: he wins and immediately starts bawling, hands up,
-			# tears streaming. He cried about basketball either way, so winning
-			# does not surprise him in the slightest.
-			for e: Vector2 in eye_spots():
-				var src := FighterRenderer.head_point(s, e)
-				for j in 7:
-					var k := fmod(r.t * 0.10 + j / 7.0, 1.0)
-					var p := src + Vector2(k * 30.0 * (1.0 if e.x > 6.0 else -0.7), -10.0 * sin(k * PI) + k * 44.0)
-					r.draw_colored_polygon(FighterRenderer.ellipse_pts(p, 2.0 - k * 0.8, 2.6 - k), Color(0.6, 0.85, 1.0, 0.95 - k * 0.5))
 
 
 ## Orange ball with black seams. Static so the projectile can share it.

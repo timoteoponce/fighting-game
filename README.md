@@ -158,7 +158,7 @@ Code map:
 - `autoload/controls.gd`: per-device input reading, joypad remapping and axis calibration.
 - `autoload/game_state.gd`: match setup, screen switching, and the roster scanned from `characters/`.
 - `scripts/fighter/fighter.gd`: fighter state machine, cancels, hits and blocking. It also aims the pupils at the opponent.
-- `scripts/fighter/fighter_renderer.gd`: flat clothing on the posable skeleton, and a different face for each kid.
+- `scripts/fighter/fighter_renderer.gd`: flat clothing on the posable skeleton, and the shared head, face, hands and shoes every fighter wears.
 - `scripts/fighter/move_data.gd`: frame data, animation clips and the per-frame FX event track.
 - `characters/*.gd`: each character's stats, frame data, poses, colours and the bits drawn on top of the body.
 - `characters/_template.gd`: a complete, commented starting point for a new fighter.
@@ -187,7 +187,30 @@ match statement to edit.
 first), and `voice_pitch` is the only thing the synthesized shouts need — around
 250 Hz reads as a boy, 330 Hz as a girl, 430 Hz as a toddler.
 
+The head, torso, hands and shoes are **not** per-character — they are the shared
+shapes in `FighterRenderer`, and a new fighter gets them for free. What makes a
+fighter different is what its file draws on top: the kit in `draw_torso` and
+`draw_over_legs`, the hair in `draw_hair_back` / `draw_hair_front`, and its
+`draw_face`, which should call `r.face(r.colors["eyes"])` and then add only what
+is specific to it — a nose, a unibrow, a snaggletooth. The shared face already
+handles blinking, X eyes on a knockout and the squint on an attack.
+
 ## Changelog
+
+### The fighters are back on the shared body
+
+- **The portrait-matching pass is reverted.** For a while each fighter was drawn
+  to match their painted portrait, with their own head outline, torso, hands,
+  shoes and a fully hand-written face. That is gone. All four are the same
+  shared figure again — circle head, wedge torso, mitten hands, slipper — and
+  they are told apart by the kit drawn on top of it, which is how they looked
+  before that pass. The portraits in `art/portraits/` are unchanged and are
+  still the title and character-select art.
+- **What did not change:** everything else from that period stayed. Two supers
+  per fighter plus their MAX versions, the hyper cut-ins, the ball machinery
+  (dormant), the ink hit effects, ground shadows, the post-FX shader, MSAA, the
+  foreground occluders, the HUD polish, four new stages, the synthesized music,
+  and the KOF limb-swap on connected strings.
 
 Graphics uplift pass — making the game look and feel like a real release.
 
@@ -247,51 +270,34 @@ Graphics uplift pass — making the game look and feel like a real release.
   Raised it to 0.90 so only genuinely bright things (white spark cores, the
   hyper flash) bloom.
 
-### Phase 5 — Faces, clothes, ink hits
+### Phase 5 — Clothes, ink hits, and the shared body
 
-- **Every fighter in the match is their own character now.** Each one owns its
-  head, torso, hands, shoes and face, and is drawn to match their painted
-  portrait in `art/portraits/`: Ulises in the football kit with his trailing
-  red band and a two-finger victory sign, Emilia in wide trousers with the gold
-  star clip and the page she drew, Charlie as a bald egg with white socks, red
-  sneakers and his snaggletooths, Silvan in the star tee with his tongue out and
-  the bone held overhead. Every one of them blinks, squints into an attack and
-  gets X eyes on a knockout.
-- Limbs are one outlined ribbon of clothing (`cloth()`, `_arm()`, `_leg()`) on
-  the same pose skeleton. A same-coloured thigh and shin is a single shape. A
-  sleeve over a bare forearm, or a sock under shorts, is two pieces overlapping
-  at the joint, so the colour break is a hem. Emilia's forearms are skin and
-  her irises are brown, matching her portrait. Charlie's arms are bare. Hair,
-  cape, ears and tail stay on their chains. Pose springs are unchanged.
-- Hits are a white core, a thick black outline and a few spikes along the
-  knockback (`Effects._draw_impact`). Lights are small, heavies bigger, hypers
+- **The fighters are back on the shared body.** Every kid in a match is the same
+  figure — a circle head with a chin blob, a straight wedge torso, mitten hands
+  and a five-point slipper — and they differ by what each one draws on top:
+  Ulises' headband and jersey trim, Emilia's cape, robe lapels and star clip,
+  Charlie's jug-handle ears and unibrow, Silvan's curls and floppy ears. They
+  are deliberately *not* the painted portraits in `art/portraits/`, which are
+  still what the title and character-select screens show.
+- **Everyone blinks and reacts.** The face is shared and carries the whole
+  vocabulary: a blink on a timer (6 frames of every 190, calm only), X eyes on
+  a knockout, a pupil sliding a ring when dizzy, closed arcs when winning, and a
+  squint on an attack and when hit. Pupils drift toward the opponent.
+- **Limbs are one outlined ribbon of clothing** (`cloth()`, `_arm()`, `_leg()`)
+  on the same pose skeleton. A same-coloured thigh and shin is a single shape.
+  A sleeve over a bare forearm, or a sock under shorts, is two pieces
+  overlapping at the joint, so the colour break is a hem. Hair, cape, ears and
+  tail stay on their chains. Pose springs are unchanged.
+- **Hits are a white core, a thick black outline and a few spikes along the
+  knockback** (`Effects._draw_impact`). Lights are small, heavies bigger, hypers
   a short burst. Blocks are an outlined blue shard. Dust is a few soft clumps
   with an edge. The additive glow is only a small halo, and the bloom threshold
-  stays at 0.90 so it does not fog the eyes.
-- **Ulises matches his portrait in the fight.** The in-match body is a lean kid
-  in the painted football kit, not the chibi mascot the old head suggested:
-  spiked hair, the red headband still trailing on its chain, an open grin with
-  one tooth and two blush strokes, a blue jersey with a white V and green
-  shoulder flashes, white shorts with a green side stripe, solid blue socks and
-  lime cleats. The menus still use `art/portraits/ulises.png`. Every white on
-  him is the off-white `"white"` colour key, never `Color.WHITE`, so it stays
-  under the bloom threshold and keeps its ink edge.
-- **Every fighter owns its head, torso, hands and shoes.** The shared body is a
-  circle head with a chin blob, a straight wedge torso, mitten hands and a
-  five-point slipper. All four characters replace all four, via `head_outline()`,
-  `torso_outline(r, s)`, `draw_hand(...)` and `draw_shoe(...)`, so nobody in a
-  match is wearing the defaults.
-- **Every fighter blinks and reacts.** Each one blinks on a timer (6 frames of
-  every 190, calm only), shows X eyes on a knockout, a pupil sliding a ring when
-  dizzy, closed arcs when winning, and a squints on an attack and when hit, via
-  `CharacterDef.eye_style`. A character that overrides only the eye *shape*
-  keeps the shared *vocabulary* and stands through a match with a permanent
-  stare, so a character that owns its face owns all of that too.
-- **Everyone has a victory.** Ulises raises a two-finger V and says "Reading is
-  for winners!", Emilia holds up the page she just drew — "Page forty-one: you
-  lose!", Charlie wins and immediately starts bawling — "Don't cry, it's just a
-  game!", and Silvan cheers with both arms up and the bone overhead — "Good dog!
-  ...I am a good dog!"
+  stays at 0.90 so it does not fog the eyes. Whites on a fighter are an
+  off-white `"white"` colour key rather than pure white, so they stay under the
+  bloom threshold and keep their ink edge.
+- **Everyone has a victory.** Ulises holds up the book he was reading, Emilia
+  raises her wand, Charlie bawls whether he wins or loses, and Silvan cheers
+  with the bone overhead.
 - **A connected string alternates limbs, for all four.** Any light-light chain
   reads like a KOF one-two: the first hit leads with the front limb, a cancel out
   of it leads with the back one while the first comes back to guard, and the

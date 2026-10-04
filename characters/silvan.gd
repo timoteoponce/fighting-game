@@ -9,7 +9,7 @@ func _init() -> void:
 	id = "silvan"
 	display = "SILVAN"
 	likes = "Jumping, running, puppies, snack time"
-	win_quote = "Good dog! ...I am a good dog!"
+	win_quote = "Woof! Again! Again!"
 	gag_items = ["pacifier", "bone", "star"]
 	taunt_lines = ["WOOF WOOF!", "BORK!", "CHASE ME!"]
 	hurt_lines = ["YIPE!", "AWOOO?", "WAAAH!"]
@@ -20,9 +20,7 @@ func _init() -> void:
 		"pants": Color("3a78c4"), "legs": Color("3a78c4"), "shoes": Color("6e4630"),
 		"eyes": Color("5b7f3a"), "accent": Color("6fc4ff"),
 		"fur": Color("a8703f"), "nose": Color("3a2a22"), "tongue": Color("ff7f9e"),
-		# The star on his tee. The portrait has a big orange one and the game
-		# never drew it.
-		"star": Color("f08a3c"), "white": Color("e6e0d2"),
+		"white": Color("e6e0d2"),
 	}
 	# Player 2 is the "were-puppy" palette: darker fur, green shirt.
 	alt_colors = colors.duplicate()
@@ -30,7 +28,7 @@ func _init() -> void:
 		"shirt": Color("b6e36f"), "sleeve": Color("b6e36f"), "hair": Color("3a2a22"),
 		"fur": Color("54402f"), "accent": Color("ff8ac4"), "eyes": Color("c8a13a"),
 		"pants": Color("2a4e86"), "legs": Color("2a4e86"), "shoes": Color("3a2a22"),
-		"star": Color("ffd24a"), "white": Color("dcd6c6"),
+		"white": Color("dcd6c6"),
 	}, true)
 	# Fastest walk and highest jump on the roster; everything else is a trade
 	# against that. He is meant to be hard to pin down, not hard to survive.
@@ -39,7 +37,7 @@ func _init() -> void:
 	jump_vel = -12.4
 	jump_x = 4.5
 	voice_pitch = 430.0  # a two-year-old's shriek
-	win_prop = "bone_win"
+	win_prop = "bone"
 	intro_prop = "bone"
 	specials_text = [
 		["L + H", "Bark Blast"],
@@ -50,10 +48,7 @@ func _init() -> void:
 	]
 	poses = {
 		"intro": {"arm_f": 140, "elb_f": 60, "arm_b": 140, "elb_b": 60, "head": 12, "lean": -4},
-		# Both arms straight up, hands open, exactly the pose the portrait
-		# catches him in. The `bone_win` prop keeps the bone in one hand.
-		"win": {"arm_f": 172, "elb_f": 8, "arm_b": 168, "elb_b": 14, "head": 14,
-			"leg_f": 30, "knee_f": 20, "leg_b": -26, "knee_b": 22, "lean": -5},
+		"win": {"arm_f": 160, "elb_f": 30, "arm_b": 160, "elb_b": 30, "head": 18, "leg_f": 70, "knee_f": 60, "lean": -6},
 	}
 	moves = {
 		# Three-frame light: the fastest button in the game, and the weakest.
@@ -316,31 +311,11 @@ func adjust_attack_pose(f: Fighter, m: MoveData, p: Dictionary) -> Dictionary:
 		return p
 	return cross_limbs(p)
 
-
-## A very round toddler skull, nose to the right: wide cheeks, a low soft chin,
-## and everything sitting low because he is two. The shared circle reads as a
-## generic head, not a baby's.
-func head_outline() -> PackedVector2Array:
-	return PackedVector2Array([
-		Vector2(-1.6, -12.4), Vector2(3.4, -11.6), Vector2(7.4, -8.8), Vector2(9.6, -4.6),
-		Vector2(10.2, 0.4), Vector2(9.2, 4.6), Vector2(6.8, 7.4), Vector2(3.2, 8.8),
-		Vector2(-0.4, 9.0), Vector2(-3.8, 7.8), Vector2(-6.8, 5.2), Vector2(-9.0, 1.4),
-		Vector2(-10.0, -2.8), Vector2(-9.0, -7.4), Vector2(-6.0, -11.4),
-	])
-
-
-## A loose tee on a toddler, so this is soft and barely tapered — no waist, no
-## shoulder line. Width follows the roundedness of the frame.
-func torso_outline(_r: FighterRenderer, s: Dictionary) -> PackedVector2Array:
-	var up: Vector2 = s["up"]
-	var perp: Vector2 = s["perp"]
-	var hip: Vector2 = s["hip"]
-	var b := build
-	var pts := PackedVector2Array()
-	for f in [[0.0, 5.4], [0.34, 6.0], [0.68, 7.4], [0.90, 7.6], [1.0, 5.8],
-			[1.0, -5.4], [0.88, -7.2], [0.56, -5.8], [0.0, -5.0]]:
-		pts.append(hip + up * FighterRenderer.TORSO * float(f[0]) + perp * float(f[1]) * b)
-	return pts
+# --- The look -------------------------------------------------------------------
+# The shared body does the work: a circle head, a wedge torso, mitten hands and a
+# slipper. What is drawn here is what is specific to him — the curls, the floppy
+# ears and the curly tail on their chains, the puppy nose, the blush, and the
+# bone and moon he holds.
 
 
 func update_chains(r: FighterRenderer, s: Dictionary) -> void:
@@ -349,11 +324,8 @@ func update_chains(r: FighterRenderer, s: Dictionary) -> void:
 	# A curly tail that trails behind him, and two floppy ears that swing off
 	# the head. The springs do all the animation work for free.
 	r.chain("tail", s["hip"] - perp * 5.0 + up * 2.0, 6, 4.0, -0.22, 0.86, 0.22)
-	# Hanging *below* the skull, not anchored inside it. At (6,-9) and (-7,-8) the
-	# roots sat on the crown and the ribbons then fell straight across his face;
-	# these start at the temples so the ears hang beside the cheeks.
-	r.chain("ear_f", FighterRenderer.head_point(s, Vector2(9.0, -2.0)), 5, 4.2, 0.5, 0.82, 0.3)
-	r.chain("ear_b", FighterRenderer.head_point(s, Vector2(-9.4, -1.0)), 5, 4.2, 0.5, 0.82, 0.3)
+	r.chain("ear_f", FighterRenderer.head_point(s, Vector2(6.0, -9.0)), 5, 4.0, 0.42, 0.82, 0.3)
+	r.chain("ear_b", FighterRenderer.head_point(s, Vector2(-7.0, -8.0)), 5, 4.0, 0.42, 0.82, 0.3)
 
 
 func draw_behind(r: FighterRenderer, _s: Dictionary) -> void:
@@ -383,222 +355,31 @@ func draw_hair_front(r: FighterRenderer) -> void:
 		Vector2(12, -10), Vector2(13, -2), Vector2(10, -6), Vector2(6, -1),
 		Vector2(2, -7), Vector2(-3, -1.5), Vector2(-7, -7),
 	]), hc, 2.0, 0.85)
-	# The one stubborn sprout on top, which the portrait has.
+	# The one stubborn sprout on top.
 	r.draw_line(Vector2(1, -15), Vector2(3, -21), hc, 1.6, true)
 	r.draw_line(Vector2(3, -21), Vector2(6, -19), hc, 1.4, true)
 
 
-## Brown calf boots, the way the portrait has them, in place of the shared
-## slipper. He is two and standing in grown-up boots, which is the joke.
-func draw_shoe(r: FighterRenderer, foot: Vector2, fwd: Vector2, col: Color) -> void:
-	if fwd.length_squared() < 0.001:
-		fwd = Vector2.RIGHT
-	fwd = fwd.normalized()
-	var up := Vector2(fwd.y, -fwd.x)
-	r.shaded_poly(PackedVector2Array([
-		foot - fwd * 2.8 + up * 5.0, foot + fwd * 0.8 + up * 5.0, foot + fwd * 4.6 + up * 4.4,
-		foot + fwd * 6.8 - up * 0.2, foot + fwd * 6.4 - up * 1.6, foot - fwd * 3.0 - up * 1.6,
-	]), col, 1.0, 0.8)
-	# Sole, then the fold at the top of the boot shaft.
-	r.draw_line(foot - fwd * 2.8 - up * 1.2, foot + fwd * 6.6 - up * 1.2, col.darkened(0.3), 1.2, true)
-	r.draw_line(foot - fwd * 2.6 + up * 4.6, foot + fwd * 0.6 + up * 4.6, col.darkened(0.2), 1.3, true)
-
-
-## Tiny hands. He cheers with them open, and a toddler's fist is mostly a
-## rounded mitt anyway, so both shapes stay soft.
-##
-## The shared hand selection is `open := expr == "happy" or expr == "smug"`, so
-## a win expression would draw a closed fist — which is why the win prop forces
-## the open hand here. The portrait catches him with both arms up and his
-## fingers spread.
-func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, front: bool, open: bool) -> void:
-	if r.prop == "bone_win":
-		# The bone is held in the front hand, so that one stays a paw around it.
-		if not front:
-			r.open_hand(p, col, d)
-		else:
-			_paw(r, p, col, d)
-		return
-	if open:
-		r.open_hand(p, col, d)
-	else:
-		_paw(r, p, col, d)
-
-
-func _paw(r: FighterRenderer, p: Vector2, col: Color, d: Vector2) -> void:
-	if d.length_squared() < 0.001:
-		d = Vector2.DOWN
-	d = d.normalized()
-	var n := Vector2(-d.y, d.x)
-	var sh := FighterRenderer.shade(col)
-	r.shaded_poly(PackedVector2Array([
-		p - n * 2.2 - d * 0.6, p + n * 2.2 - d * 0.6, p + n * 2.0 + d * 1.3,
-		p + n * 1.3 + d * 2.7, p - n * 1.3 + d * 2.7, p - n * 2.0 + d * 1.3,
-	]), col, 1.0, 0.82)
-	# Three soft knuckle bumps, enough to read as fingers and not as a stone.
-	for k: float in [-1.2, 0.0, 1.2]:
-		r.draw_line(p + n * k + d * 1.4, p + n * k + d * 2.5, sh, 0.5, true)
-	r.part(p + n * 1.7 - d * 0.2, p + n * 0.4 + d * 2.0, 1.3, 1.1, col)
-
-
-func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
-	var up: Vector2 = s["up"]
-	var perp: Vector2 = s["perp"]
-	var hip: Vector2 = s["hip"]
-	# The orange star on the tee, which the portrait has and the game never drew.
-	# Kept small and flat: at 4.6 it read as a second emblem on his chest.
-	r.poly(FighterRenderer.star_pts(hip + up * (FighterRenderer.TORSO * 0.48) + perp * 1.0, 3.2, 1.4), r.colors["star"], 0.9)
-	# Neckline, so the tee reads as a garment and not a painted torso.
-	r.draw_line(hip + up * FighterRenderer.TORSO + perp * 3.6 - up * 0.8,
-		hip + up * FighterRenderer.TORSO - perp * 3.6 - up * 0.8, r.colors["skin"], 1.4, true)
-	# A soft fold at the hem, the only wrinkle a two-year-old's tee has.
-	r.draw_line(hip + perp * 4.4 + up * 1.8, hip - perp * 4.4 + up * 1.8, r.colors["shirt"].darkened(0.16), 1.3, true)
-
-
-## The big anime eyes, kept: the round dot eye is exactly right for a two-year
-## old and the portrait confirms it. Scaled up, and carrying the whole expression
-## vocabulary through eye_style so he is not a permanent stare.
 func draw_face(r: FighterRenderer) -> void:
-	_eyes(r)
-	_brows(r)
-	_nose(r)
-	_mouth(r)
-
-
-## Eye centres in head space, low and wide, because he is two.
-func eye_spots() -> Array:
-	return [Vector2(2.2, 1.4), Vector2(7.6, 1.0)]
-
-
-func _eyes(r: FighterRenderer) -> void:
-	var spots: Array[Vector2] = [Vector2(2.2, 1.4), Vector2(7.6, 1.0)]
-	var ink := FighterRenderer.OUT
-	var style := eye_style(r.expr, r.t)
-	var pop := 1.0 + 0.6 * (float(r.eye_pop) / 9.0)
-	var g := Vector2.ZERO if r.expr in ["ko", "dizzy", "hurt"] else r.gaze.limit_length(1.0)
-	for i in 2:
-		var e: Vector2 = spots[i]
-		var near := 0.86 if i == 1 else 1.0
-		if style == "happy":
-			r.draw_arc(e + Vector2(0, 0.9), 2.4 * near, PI, TAU, 8, ink, 1.6, true)
-			continue
-		if style == "ko":
-			var rad := 2.2 * near
-			r.draw_line(e + Vector2(-rad, -rad * 0.8), e + Vector2(rad, rad * 0.8), ink, 1.6, true)
-			r.draw_line(e + Vector2(rad, -rad * 0.8), e + Vector2(-rad, rad * 0.8), ink, 1.6, true)
-			continue
-		if style == "dizzy":
-			r.draw_colored_polygon(FighterRenderer.ellipse_pts(e, 2.4 * near, 2.0 * near, 0.0, 10), r.colors["white"])
-			r.draw_arc(e, 2.4 * near, 0.0, TAU, 10, ink, 0.9, true)
-			r.draw_circle(e + Vector2.from_angle(r.t * 0.15 + float(i)) * 0.8 * near, 0.6, ink)
-			continue
-		var sc := near * pop
-		if style == "blink":
-			r.draw_line(e + Vector2(-3.0 * sc, 0.3), e + Vector2(2.9 * sc, 0.15), ink, 1.4, true)
-			continue
-		# A toddler eye: big round white, a big dark iris, one catchlight.
-		# The squint barely registers on a baby, so it stays high.
-		var squint := 1.0
-		var iris := 1.9
-		match r.expr:
-			"attack":
-				squint = 0.7
-			"hurt":
-				squint = 0.75
-			"shock":
-				squint = 1.1
-				iris = 2.1
-			"smug":
-				squint = 0.55 if i == 1 else 0.8
-		var rr := maxf(1.1, 3.2 * sc * clampf(squint, 0.55, 1.15))
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(e, rr, rr * 1.02, 0.0, 12), r.colors["white"])
-		r.draw_polyline(Stage._closed(FighterRenderer.ellipse_pts(e, rr, rr * 1.02, 0.0, 12)), ink, 1.3, true)
-		var p := e + g * rr * 0.4
-		r.draw_circle(p, iris * sc, r.colors["eyes"])
-		r.draw_circle(p + g * 0.2, iris * 0.52 * sc, ink)
-		r.draw_circle(p + Vector2(-iris * 0.36, -iris * 0.36) * sc, 0.34, Color.WHITE)
-
-
-## Light brows, because he is a happy two-year-old until he isn't.
-func _brows(r: FighterRenderer) -> void:
-	var spots: Array[Vector2] = [Vector2(2.2, 1.4), Vector2(7.6, 1.0)]
-	for i in 2:
-		var e: Vector2 = spots[i]
-		var y := -4.4
-		var inner := 0.4
-		match r.expr:
-			"attack":
-				inner = 1.2
-			"hurt", "shock", "ko", "dizzy":
-				y = -5.2
-				inner = -0.4
-		var rx := 2.3
-		var a := e + Vector2(-rx, y - inner)
-		var b := e + Vector2(rx * 0.85, y)
-		if i == 1:
-			a = e + Vector2(-rx * 0.85, y)
-			b = e + Vector2(rx, y - inner)
-		r.draw_line(a, b, FighterRenderer.OUT, 1.2, true)
-
-
-## The puppy nose and two dots of blush, which is most of the character.
-func _nose(r: FighterRenderer) -> void:
-	var sh: Color = warm_shade(r.colors["skin"], 0.16)
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(5.2, 4.2), 1.7, 1.2), r.colors["nose"])
-	r.draw_arc(Vector2(5.2, 4.6), 0.8, 0.3, PI - 0.3, 6, sh, 0.5, true)
-	for cx: float in [-3.0, 7.4]:
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(cx, 4.6), 1.9, 1.1), Color(1, 0.55, 0.6, 0.4))
-	# The floppy front ear hangs over the face, like the portrait.
+	r.face(r.colors["eyes"])
+	# Puppy nose and two dots of blush: this is the whole character in 3 shapes.
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(9.0, 3.0), 2.2, 1.7), r.colors["nose"])
+	for cx in [-2.0, 11.0]:
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(cx, 5.5), 2.6, 1.6), Color(1, 0.55, 0.6, 0.45))
 	var ear := r.chain_local("ear_f")
 	if ear.size() > 1:
 		r.ribbon(ear, 7.0, 4.0, r.colors["fur"])
 
 
-## The open grin with the tongue out, which the portrait has and the game
-## declared a colour for and then never drew. A squiggle when dizzy and a lopsided
-## line when smug, so it is not one shape all match.
-func _mouth(r: FighterRenderer) -> void:
-	var m := Vector2(3.4, 6.2)
-	var ink := Color(0.45, 0.12, 0.12)
-	if r.expr == "dizzy":
-		var w := PackedVector2Array()
-		for wi in 5:
-			w.append(m + Vector2(-2.0 + float(wi) * 1.0, 0.5 + (0.7 if wi % 2 == 0 else -0.7)))
-		r.draw_polyline(w, ink, 1.1, true)
-		return
-	if r.expr == "smug":
-		r.draw_line(m + Vector2(-1.5, 0.35), m + Vector2(1.6, -0.5), ink, 1.1, true)
-		return
-	# The open happy mouth, with the tongue, on everything warm.
-	r.draw_colored_polygon(PackedVector2Array([
-		m + Vector2(-1.9, -0.6), m + Vector2(1.9, -0.7), m + Vector2(1.4, 1.8), m + Vector2(-1.4, 1.7),
-	]), ink)
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(m + Vector2(0.1, 1.3), 1.0, 0.8), r.colors["tongue"])
-
-
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:
 	match r.prop:
 		"bone":
-			# Held up in the right hand like a trophy.
-			var c: Vector2 = s["hand_f"] + Vector2(0, -3)
+			var c: Vector2 = (s["hand_f"] + s["hand_b"]) * 0.5 + Vector2(2, -4)
 			var bone := Color("fff3d8")
 			r.part(c + Vector2(-8, 0), c + Vector2(8, 0), 4.0, 4.0, bone)
 			for e in [-9.0, 9.0]:
 				r.ball(c + Vector2(e, -3), 2.6, bone)
 				r.ball(c + Vector2(e, 3), 2.6, bone)
-		"bone_win":
-			# His celebration: the portrait's pose, both arms up, and the bone
-			# held high in one hand as a trophy.
-			var wc: Vector2 = s["hand_f"] + Vector2(0, -3)
-			var wbone := Color("fff3d8")
-			r.part(wc + Vector2(-8, 0), wc + Vector2(8, 0), 4.0, 4.0, wbone)
-			for e: float in [-9.0, 9.0]:
-				r.ball(wc + Vector2(e, -3), 2.6, wbone)
-				r.ball(wc + Vector2(e, 3), 2.6, wbone)
-			# A happy waggle of the tail, because the portrait is mid-wag.
-			var tail := r.chain_local("tail")
-			if tail.size() > 1:
-				r.ribbon(tail, 7.0, 3.0, r.colors["fur"].lightened(0.12))
 		"moon":
 			# A low moon rises behind him while he howls.
 			var m: Vector2 = s["head"] + Vector2(-26, -34)

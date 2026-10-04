@@ -35,32 +35,32 @@ godot --path . -- --screen=select                               # jump straight 
   outline), hitbox (filled red) and a `STATE f<frame> <move id>` label. It does
   **not** show inputs or full frame data. Read-only; great for tuning frame data.
 
-## Where the character redesign stands
+## Where the character roster stands
 
-The roster is being rebuilt so each fighter owns a mechanic, not just numbers.
-Full design in `design/characters_redesign.md`; this is the status.
+The roster is *not* differentiated by mechanic: all four fighters share one
+archetype (jab / launcher / low jab / sweep / air light / air spike / fireball /
+dash / DP / hyper) with only the numbers changed. Making each fighter own a
+mechanic was designed and prototyped once, then abandoned — see the two
+paragraphs below, because the code and this file disagree in a way that will
+bite you.
 
-- **Done — phase A, Ulises (the pilot).** He has a contested ball. The pattern
-  to copy: the whole mechanic lives in `characters/<id>.gd` using the
-  `CharacterDef` behaviour hooks; only the generic support is in the engine.
-- **Next — phase B.** Emilia, Charlie and Silvan mechanics (sketched in the
-  design doc), then command normals, air specials and EX variants on top.
-- **Then — phase C.** A character-aware `CpuInput`, then real balance tuning.
-
-To read the phase-A code in the order it runs:
-
-1. `UlisesDef.on_round_start` → `_spawn_ball` → `Fight.spawn_projectile` — the
-   ball is created, resting, and opts out of the projectile slot.
-2. `Projectile.setup` / `_roll` / `rest` / `launch` — the persistent lifecycle.
-3. `Fight._resolve_hits` → `_kicks` — who is allowed to boot it.
-4. `UlisesDef.tick` — dribbling and re-possession (possession is *derived*).
-5. `UlisesDef.choose_move` / `on_move_frame` — the kit swap and hyper sizing.
-6. `tests/sim_test.gd:_test_ulises_ball` — the spec, written as assertions.
-
-Things that were true of the *old* roster and are now the point of the work:
-all four fighters shared one archetype (jab / launcher / low jab / sweep / air
-light / air spike / fireball / dash / DP / hyper) with only numbers changed.
-Phase B is where that actually gets broken up.
+- **The `CharacterDef` behaviour hooks are real and still in use:**
+  `tick`, `on_round_start`, `choose_move` and `adjust_attack_pose`. All four
+  fighters use `adjust_attack_pose` for the alternating combo limbs; nothing
+  uses the first three.
+- **Ulises' contested ball is switched off.** `has_ball` returns a hardcoded
+  `false`, `on_round_start` never spawns the ball and `tick` does nothing
+  (commit `e220275`, "fixes ball-kick"). Power Shot is an ordinary projectile
+  and `choose_move` always answers `"proj"`. `_spawn_ball`, `BALL_PICKUP`,
+  `BALL_DRIBBLE`, `Fight._kicks` and the persistent `Projectile` lifecycle are
+  all still in the tree and still work; nothing calls them. The supporting
+  checks `tests/sim_test.gd:_test_ulises_ball` and `_test_ulises_ball_hyper`
+  are **not called** and fail if you call them. Restoring the mechanic means
+  un-stubbing those four functions and turning the two tests back on.
+- **Next, if the roster work restarts:** per-character mechanics first (one
+  resource or rule each, in that character's own file), then a character-aware
+  `CpuInput`, then balance tuning. Asymmetric kits — taking moves *away* — are
+  the cheapest first lever and need no engine work at all.
 
 ## Architecture (the parts filenames don't tell you)
 
@@ -75,74 +75,50 @@ Phase B is where that actually gets broken up.
   `voices/` and `music/`). Adding a `preload` would be off-style.
 - **The match is drawn in code; a few pictures and recordings are files.** Fighters,
   stages, the HUD and synthesized SFX are generated in code. Title and select portraits
-  are `art/portraits/<id>.png` (`scripts/ui/portrait.gd`). Sheets in `design/` stay out
-  of the import via `design/.gdignore` and are not game art. Optional voice clips load
+  are `art/portraits/<id>.png` (`scripts/ui/portrait.gd`). `design/` is a scratch
+  directory kept out of the import via `design/.gdignore`; nothing in the game reads it.
+  Optional voice clips load
   from `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd`).
   Optional music is the same idea for `music/` (`.ogg`, `.wav`, `.mp3`). Leave other
   people's tracks out of the build.
 - **The body is clothing on the pose skeleton.** `FighterRenderer.cloth()`, `_arm()` and
   `_leg()` draw one outlined ribbon when a limb is a single colour, and two overlapping
   pieces when it changes colour at the elbow or knee (a hem). Pose springs, squash and
-  hitstop stay in `Fighter`. Each kid's eyes are `face()`, keyed by `def.id`; pupils
-  follow `renderer.gaze`, which `Fighter._update_visual` points at the opponent. Hits,
-  blocks and dust are ink in `Effects._draw`. The additive `glow` child is only a small
-  halo, because `shaders/post_fx.gdshader` blooms anything above luminance 0.90, and a
-  hyper is a short burst. Menu portraits come from `art/portraits/<id>.png`
-  (`scripts/ui/portrait.gd`); they are painted, and they are not the in-match body.
-- **A character can replace the shared shapes.** Three optional hooks, detected with
-  `has_method` so an absent one changes nothing: `head_outline()` (a head in head space,
-  replacing the circle-plus-chin), `torso_outline(r, s)` (a torso in torso space,
-  replacing the straight wedge) and `draw_hand(r, p, col, d, front, open)`. A fourth,
-  `draw_shoe(r, foot, fwd, col)`, is a normal override rather than a `has_method`
-  branch, because both its defaults *are* the shared shapes. All four are in use.
-  **Owning the head also means owning its shading**: `_draw_head` only draws the shared
-  jaw blob on the shared head, so a character with its own outline must shade the face
-  in `draw_face` instead. `front` is false for the back hand.
-- **Every fighter owns its face, and the renderer no longer has a switchboard.**
-  `FighterRenderer.face()` was once 18 `who == ` branches for the four roster members
-  plus a `match` in `eye_spots()`. That hardcoded the whole cast into the shared
-  renderer, and it caused the worst bug of the redesign: a character could override its
-  eye *shape* and silently keep the shared *vocabulary*, which is how Ulises stood
-  through a whole match with a permanent stare. All four now draw their own
-  `draw_face`, and `face()` is a generic default that `_template.gd` inherits. Do not
-  add an `id ==` branch there; add a hook instead.
-- **Generic behaviour lives on `CharacterDef`, art lives in the file.** Four defaults
-  exist because more than one character needed them: `eye_style(expr, t)` (the
-  expression vocabulary as a pure function), `cross_limbs(p)` (the KOF limb swap),
-  `warm_shade(col, amount)` (skin shadow on the skin's own hue) and the two shape hooks
-  above. A character file should contain only what is genuinely its own.
-- **Owning a face means owning the whole expression vocabulary, not just the
-  static shape.** The shared `face()` picks from: blink (6 frames of every 190,
-  calm only), X on `ko`, a pupil sliding a ring on `dizzy`, closed arcs on
-  `happy`/`win`, and a squint per expression, plus `eye_pop` on a big hit. A
-  character that overrides only the eye *shape* and ignores `expr` ends up with
-  a permanently open stare, which is easy to miss in a screenshot and obvious in
-  a match. Ulises' `eye_style(expr, t)` is a pure function returning
-  `happy` / `ko` / `dizzy` / `blink` / `open`, kept separate from the drawing so
-  it is testable headlessly — pixel comparison is not, and the same rule applies
-  to any character's mouth: give it the `dizzy` and `smug` variants or it will
-  grin through a knockdown.
-- **Owning a face means owning the whole expression vocabulary, not just the
-  static shape.** `CharacterDef.eye_style(expr, t)` is the shared default and
-  returns `happy` / `ko` / `dizzy` / `blink` / `open`: blink is 6 frames of
-  every 190 and calm only, `ko` is X, `dizzy` slides a pupil around a ring,
-  `happy`/`win` are closed arcs. A character that overrides only the eye *shape*
-  and ignores `expr` ends up with a permanently open stare, which is easy to
-  miss in a screenshot and obvious in a match. The same applies to the mouth:
-  give it the `dizzy` and `smug` variants or it will grin through a knockdown.
-  `eye_style` is a pure function so it is testable headlessly — pixel comparison
-  is not, since the suite runs `--headless` where a SubViewport renders nothing.
+  hitstop stay in `Fighter`. Hits, blocks and dust are ink in `Effects._draw`. The
+  additive `glow` child is only a small halo, because `shaders/post_fx.gdshader` blooms
+  anything above luminance 0.90, and a hyper is a short burst. Menu portraits come from
+  `art/portraits/<id>.png` (`scripts/ui/portrait.gd`); they are painted, and they are
+  **not** what the fighter looks like in a match.
+- **The head, torso, hands and shoes are shared shapes, not hooks.** A circle head with
+  a chin blob, a straight wedge torso, mitten hands and a five-point slipper, all in
+  `FighterRenderer` (`head_shape`, `torso`, `fist` / `open_hand`, `shoe`). There is no
+  `head_outline`, `torso_outline`, `draw_hand` or `draw_shoe` override — those were added
+  for a portrait-matching pass and removed again. A character that wants real footwear or
+  claws paints them on in `draw_over_legs` or `draw_props`. Every kid in a match is the
+  same body, which is deliberate.
+- **The face is shared too, and it carries the whole expression vocabulary.**
+  `FighterRenderer.face(iris, girl)` is one function for all four, with `girl = true`
+  giving Emilia the bigger lash-and-blush eyes. It switches on `expr`: blink (6 frames
+  of every 190, calm only), X eyes on `ko`, a spiral on `dizzy`, pinprick pupils on
+  `shock`, a raised lid on `smug`, closed arcs on `happy`/`win`, a squint per
+  expression, plus `eye_pop` on a big hit. Pupils drift toward whoever is being looked
+  at, via `renderer.gaze`, which `Fighter._update_visual` points at the opponent.
+  **A character's `draw_face` should call `r.face(...)` first and then draw only what is
+  specific to it** — a nose, a unibrow, a snaggletooth. Do not reimplement the eyes: a
+  face that overrides the eye *shape* and drops `expr` ends up as a permanent stare,
+  which is easy to miss in a screenshot and obvious in a match. If a new fighter does
+  need its own eyes, copy the whole `match expr` block rather than one case.
+- **Generic behaviour lives on `CharacterDef`.** One shared default exists because more
+  than one character needed it: `cross_limbs(p)`, the KOF limb swap a connected string
+  uses. A character file should contain only what is genuinely its own.
 - **Never fill with `Color.WHITE` on a fighter.** The bloom threshold means a true
   white fill glows, and the ink edge around it dissolves, so the shape reads as a
   pale smear instead of white fabric or a sclera. A character that needs white
   paints it in a `"white"` colour key under the threshold: Ulises uses `e6e0d2`
-  (luminance 0.879) for the shirt number, the sock and shoe ticks, the V-neck and
-  his tooth. Tiny specular dots are the exception — a catchlight *should* sparkle,
-  so `FighterRenderer._almond` still uses `Color.WHITE` for that.
-- **Shading skin: do not use the shared `shade()`.** `FighterRenderer.shade` lerps toward
-  a purple, which on warm skin at this size reads as a grey scar rather than as form, and
-  on Charlie's sallow yellow it reads as olive. Use `CharacterDef.warm_shade`, and keep
-  it light: on a head 20 units wide anything stronger than ~0.2 reads as a hollow.
+  (luminance 0.879) for the shirt number and the sock stripes, Emilia for the blouse and
+  the scarf, Charlie for his snaggletooth. Tiny specular dots are the exception — a
+  catchlight *should* sparkle, and so should Emilia's wand tip, so those two keep
+  `Color.WHITE`.
 - **Pixel pipeline**: the arena renders into a `640x360` `SubViewport` (`Fight.world`,
   `Fight.PIXEL = 1.0`) shown 1:1 on a `640x360` logical screen (window override
   `1920x1080`). All gameplay/arena coordinates are 640x360 logical space, and
@@ -210,19 +186,11 @@ Phase B is where that actually gets broken up.
   `tick(f)` (once per step, after the state machine), `on_round_start(f)` (from
   `Fighter.reset_for_round`), `on_move_frame(f, m, sf)` (every attack frame, *just
   before the move's projectile spawns*, so a move can be re-scaled on the way out),
-  `choose_move(key, f)` (swap in a variant of an input — this is how Ulises gets a
-  carrying tackle only while he has the ball), `adjust_attack_pose(f, m, p)` (rewrite
-  the pose a move is animating toward — this is how Ulises alternates limbs across a
-  combo), and `throw_data()`. The ten-key
+  `choose_move(key, f)` (swap in a variant of an input), `adjust_attack_pose(f, m, p)`
+  (rewrite the pose a move is animating toward — this is how all four fighters
+  alternate limbs across a combo), and `throw_data()`. The ten-key
   contract still holds:
-  `choose_move` may only return keys the character actually defines. Design doc:
-  `design/characters_redesign.md`.
-- **A character can also own its hand.** `CharacterDef.draw_hand(r, p, col, d,
-  front, open)` is the *default* too: it calls `r.open_hand` or `r.fist`, so
-  overriding can draw its own hand or fall back to those two. `front` is false
-  for the back hand, which is how Ulises flashes a V with one hand only. Note the
-  shared hand selection is `open := expr == "happy" or expr == "smug"`, so a
-  `win` expression draws a **fist** unless the character overrides this.
+  `choose_move` may only return keys the character actually defines.
 - **Combo animation is per character, and it is pose-only.** `Fighter._pose_target`
   calls `def.adjust_attack_pose(self, move, p)` on every attack frame, so a character
   can vary how a move *looks* per hit of a string without touching frame data. The
@@ -231,19 +199,16 @@ Phase B is where that actually gets broken up.
   hits and leaves `level > 1` alone, because the bicycle kick already poses both legs.
   A chain cancel also forces a faster pose spring (`speed >= 0.85`), or the new limb
   still looks like the old one for several frames.
-- **Ulises' ball is the reference mechanic.** It is a `Projectile` with the
+- **Ulises' ball machinery is dormant, not absent.** A `Projectile` has the
   `persistent` lifecycle: it outlives its `life`, sheds speed in `_roll()`, and
   `rest()` leaves it on the floor. It opts out of the "one projectile in flight"
-  slot with `"slot": false`, and of every other character's clash rules. Possession
-  is *derived* (`absf(ball.x - f.x) <= BALL_PICKUP` while `rested`), never a flag.
-  The ball is kept inside `Fight.view_bounds()` so it can never rest somewhere
-  the camera has left behind and be unreachable for the rest of the round.
-- **A ball is booted, not punched.** `Fight._kicks(m)` decides: either the move
-  sets `"kicks": true`, or its hitbox reaches within 22px of the ground — which
-  gives every character's crouching heavy for free. So combos are never broken by
-  losing the ball, and a sweep is the universal way to steal it. A resting ball
-  has `can_hit() == false` on purpose: a static damage box on the floor is a trap,
-  not a toy.
+  slot with `"slot": false`. Possession was *derived*
+  (`absf(ball.x - f.x) <= BALL_PICKUP` while `rested`), never a flag, and a
+  ball would be kept inside `Fight.view_bounds()` so it could never rest where
+  the camera had left behind. `Fight._kicks(m)` decides who may boot it: either
+  the move sets `"kicks": true`, or its hitbox reaches within 22px of the ground.
+  All of this still works; `e220275` just stopped calling it (see the roster
+  section at the top).
 - **Adding a stage is one `match` branch.** `Stage.KINDS` (`scripts/fight/stage.gd`) is the
   registry — add the name there and a `_draw_<name>()` method, then add a branch in
   `Stage._draw`. `Fight._ready` picks from `Stage.KINDS` when `--stage` is empty. Every
@@ -388,10 +353,14 @@ input did nothing. Move the opponent out of range before scripting another super
   `UP` held a few frames before `L+H` (the airborne path, `_try_air_special`) and
   `UP+L+H` on one frame (the ground path, `_try_special`). Both are separate code and the
   second one is the one that proves the hyper did not swallow the jump first.
-- A fighter that owns an object in the arena puts it in `fight.projectiles`, so assertions
-  like "no projectile came out of the throw" must filter `not p.persistent`.
+- `_test_roster_faces` is gone: it asserted that every character owns a `head_outline`,
+  a `torso_outline` and the `eye_style` vocabulary, and none of those exist. Nothing
+  checks the shared face any more, because a shared face cannot be checked headlessly.
 - `_test_character_def` checks **every** move a character defines, not just the required ten,
   so extra moves (Ulises' Slide Kick) are held to the same bar.
+- `_test_ulises_ball` and `_test_ulises_ball_hyper` exist but are **not called**, and they
+  fail if you call them: they describe the contested ball, which `e220275` switched off.
+  See the roster section at the top.
 - The harness builds a `Fight`, calls `set_physics_process(false)` / `set_process(false)` and
   steps it by hand with `f._physics_process(1.0 / 60.0)`. **Logic placed only in `_process`
   never runs under test** — put testable per-frame work in `_physics_process`.

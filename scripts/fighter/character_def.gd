@@ -86,8 +86,8 @@ func throw_data() -> MoveData:
 # --- Behaviour hooks -------------------------------------------------------------
 # These are what let a character own a *rule* instead of a number. They are all
 # no-ops here, so a fighter that does not use them behaves exactly as before and
-# `characters/<id>.gd` still holds the whole mechanic — see
-# design/characters_redesign.md.
+# `characters/<id>.gd` still holds the whole mechanic — Ulises' ball is the one
+# that is implemented.
 
 ## Called from `Fighter.step()` once per physics frame, after the state machine
 ## has run. This is where a character keeps its own state: Ulises' ball is
@@ -167,43 +167,11 @@ func cross_limbs(p: Dictionary) -> Dictionary:
 	return out
 
 
-## A shadow on the skin's own hue. `FighterRenderer.shade` lerps toward a purple,
-## which on warm skin at this size reads as a grey scar rather than as form, and
-## on Charlie's sallow yellow it goes olive. Keep it light: on a head 20 units
-## wide anything stronger than about 0.2 reads as a hollow.
-static func warm_shade(col: Color, amount := 0.18) -> Color:
-	return col.darkened(amount).lerp(Color(0.42, 0.22, 0.26), 0.10)
-
-
-## Which eye to draw, as a pure function of the expression so it is testable
-## without a renderer: a pixel comparison cannot run under `--headless`.
-##
-## This is the whole vocabulary a character that owns its face has to honour.
-## The shared `face()` has always had it — blink on a timer, X on a KO, a pupil
-## sliding a ring when dizzy, closed arcs when happy or winning, and a squint
-## per expression. A character that overrides only the eye *shape* and ignores
-## this ends up with a permanently open stare, which is easy to miss in a
-## screenshot and obvious in a match.
-func eye_style(expr: String, t: float) -> String:
-	if expr in ["happy", "win"]:
-		return "happy"
-	if expr == "ko":
-		return "ko"
-	if expr == "dizzy":
-		return "dizzy"
-	# The blink timer is the shared one: 6 frames of every 190, calm only.
-	if expr == "normal" and int(t) % 190 < 6:
-		return "blink"
-	return "open"
-
-
-# Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points.
-# Optional, detected with has_method so a character that does not define them
-# is unchanged: head_outline(), torso_outline(r, s). Those replace the shared
-# circle-head and wedge torso. A character that owns its head also owns the jaw
-# shading, so it should draw that in draw_face.
-# `draw_hand` and `draw_shoe` are normal overrides rather than has_method
-# branches, because their defaults here *are* the shared shapes.
+# Drawing hooks. `r` is the FighterRenderer, `s` its skeleton points. All of
+# these are optional and default to a no-op, so a character only writes the ones
+# it needs. The head, torso, hands and shoes are NOT hooks: they are the shared
+# shapes in `FighterRenderer`, and a character that wants to change how its face
+# reads does it by drawing on top in `draw_face`.
 
 ## Called once per animation step to advance hair / cape chains (see FighterRenderer.chain).
 func update_chains(_r: FighterRenderer, _s: Dictionary) -> void:
@@ -226,6 +194,14 @@ func draw_hair_back(_r: FighterRenderer) -> void:
 	pass
 
 
+## Small ear, for characters whose hair doesn't cover it (head space).
+static func draw_ear(r: FighterRenderer) -> void:
+	var col: Color = r.colors["skin"]
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(-5.5, 2.0), 2.0, 2.8, 0.0, 12), FighterRenderer.OUT)
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(-5.5, 2.0), 1.3, 2.1, 0.0, 12), col)
+	r.draw_line(Vector2(-5.2, 1.0), Vector2(-5.0, 3.0), FighterRenderer.shade(col), 0.8, true)
+
+
 func draw_face(r: FighterRenderer) -> void:
 	r.face(colors.get("eyes", Color("3b2a20")))
 
@@ -236,23 +212,3 @@ func draw_hair_front(_r: FighterRenderer) -> void:
 
 func draw_props(_r: FighterRenderer, _s: Dictionary) -> void:
 	pass
-
-
-## Draws a hand at `p`, with `d` the forearm direction. `open` is true in a
-## happy or smug expression, which is the shared spread-finger hand. `front` is
-## false for the back hand. The default here *is* the shared fist, so overriding
-## can either draw something else or fall back to these two calls.
-## Draws a shoe at `foot`, with `fwd` the direction the toe points. The default
-## here *is* the shared slipper, so overriding can either draw real footwear or
-## fall back to this one call. A character's own `draw_shoe` is where studs,
-## soles and laces go, rather than painting them over the shared shape from
-## `draw_over_legs`.
-func draw_shoe(r: FighterRenderer, foot: Vector2, fwd: Vector2, col: Color) -> void:
-	r.shoe(foot, fwd, col)
-
-
-func draw_hand(r: FighterRenderer, p: Vector2, col: Color, d: Vector2, _front: bool, open: bool) -> void:
-	if open:
-		r.open_hand(p, col, d)
-	else:
-		r.fist(p, col, d)
