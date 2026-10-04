@@ -198,6 +198,33 @@ handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
 
+### The supers finally look like sixteen different moves
+
+- **The beams are one solid bar of light, not a rainbow.** The old beam was a
+  grid of 8px squares walked through a hue ramp. At 320x180 that turned into a
+  rainbow checkerboard where no single colour survived, the hitbox edge was
+  unreadable and the pixel text on top was illegible. A beam is now drawn as one
+  shape — a dark ink rim, a body, a hot spine, a muzzle cap and a few chunky
+  energy bars — so you can read both what it is and exactly where it hits.
+- **Every super has its own colour.** Sixteen supers share seven shapes, so the
+  palette moved onto the move: a `"tint"` on the projectile spec, read through
+  `Projectile.pal()`. Ulises' arcade-green GAME OVER beam, his turf-green slide,
+  the white-gold FINAL SCORE and the red THE LAST DITCH are told apart at a
+  glance. Emilia's dragons are violet and her wand light pink; Silvan's wolf is
+  icy blue and his moonlight a warm yellow pillar; Charlie's floods are murky
+  blue and his geysers bright.
+- **Charlie finally has two different water moves.** A wide, low hitbox is the
+  flood that rolls along the ground; a tall one is now a geyser, a column of
+  water climbing off him that throws basketballs up its length. Before this,
+  both of his `tears` supers drew the same horizontal wave.
+- **The word on the beam is legible.** "GAME OVER" and "FINAL SCORE" sit on a
+  dark plate sized to the text and centred on its cap height, instead of
+  disappearing into the beam.
+- **Halos stop swallowing the screen.** They were scaled off the largest
+  dimension and then scaled up again, which painted an opaque disc over half the
+  view on a big projectile; they are now keyed off the smaller dimension and hug
+  the body.
+
 ### The pixel look is back
 
 - **The arena is pixelated again.** The world renders into a **320x180** buffer

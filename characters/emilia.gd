@@ -101,7 +101,11 @@ func _init() -> void:
 			# (`(size.x + hurtbox) / speed`) comfortably longer than `hits * interval`.
 			"projectile": {"kind": "dragon", "speed": 3.2, "size": Vector2(130, 120), "offset": Vector2(65, -78), "life": 170,
 				"hits": 10, "interval": 5, "damage": 32, "hitstun": 18, "kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper"},
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
+				# Deeper violet than the default, so the page-book dragons read
+				# as a bigger version of this one rather than a different spell.
+				"tint": {"core": Color("fff2fb"), "mid": Color("c85ae0"), "edge": Color("4a1266"),
+					"halo": Color("b14ae8")}},
 			# She floats for the cut-in, sketchbook open above her, both feet off
 			# the floor — a wizard summoning, not a kid holding a stance.
 			"cutin_pose": {"lean": -6, "head": -20, "arm_f": 168, "elb_f": 30, "arm_b": 150, "elb_b": 45,
@@ -127,7 +131,10 @@ func _init() -> void:
 			"recovery": 44, "invuln": 43, "prop": "sketch", "sfx": "magic",
 			"projectile": {"kind": "beam", "speed": 5.0, "size": Vector2(300, 130), "offset": Vector2(60, -80), "life": 80,
 				"hits": 8, "interval": 4, "damage": 28, "hitstun": 18, "kb": Vector2(4.5, 0), "chip": 0.2,
-				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "magic"},
+				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "magic",
+				# Raw wand light: hot pink core, the accent off her trim.
+				"tint": {"core": Color("fff5fa"), "mid": Color("ff7eb6"), "edge": Color("8a1f52"),
+					"halo": Color("ff9ec9")}},
 			# Both arms up, wand above her head, floating on the spell.
 			"cutin_pose": {"lean": -10, "head": -24, "arm_f": 176, "elb_f": 16, "arm_b": 152, "elb_b": 30,
 				"leg_f": 20, "knee_f": 28, "leg_b": -18, "knee_b": 26, "ground": 0, "hip": -60},
@@ -154,7 +161,11 @@ func _init() -> void:
 			"meter_cost": 300, "sfx": "magic",
 			"projectile": {"kind": "dragon", "speed": 2.6, "size": Vector2(200, 180), "offset": Vector2(65, -92), "life": 200,
 				"hits": 15, "interval": 5, "damage": 34, "hitstun": 20, "kb": Vector2(4, -2), "chip": 0.2, "hitstop": 4,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper"},
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+				# The same violet, so the two dragons are the same book at two
+				# sizes and not two different summons.
+				"tint": {"core": Color("fff2fb"), "mid": Color("c85ae0"), "edge": Color("4a1266"),
+					"halo": Color("b14ae8")}},
 			# Both arms wide and high, back arched, floating well off the floor.
 			"cutin_pose": {"lean": -16, "head": -32, "arm_f": 186, "elb_f": 4, "arm_b": 170, "elb_b": 14,
 				"leg_f": 12, "knee_f": 18, "leg_b": -12, "knee_b": 18, "ground": 0, "hip": -72},
@@ -177,7 +188,11 @@ func _init() -> void:
 			"meter_cost": 300, "sfx": "magic",
 			"projectile": {"kind": "beam", "speed": 4.5, "size": Vector2(420, 190), "offset": Vector2(60, -86), "life": 100,
 				"hits": 13, "interval": 4, "damage": 30, "hitstun": 20, "kb": Vector2(4, -1), "chip": 0.2,
-				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper"},
+				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+				# Violet rather than pink, so it is unmistakably the page-book
+				# super and not the wand one.
+				"tint": {"core": Color("fff2fb"), "mid": Color("c85ae0"), "edge": Color("4a1266"),
+					"halo": Color("b14ae8")}},
 			# Arms up and out, both heels down, chin up: the whole book overhead.
 			"cutin_pose": {"lean": -12, "head": -28, "arm_f": 180, "elb_f": 8, "arm_b": 166, "elb_b": 20,
 				"leg_f": 16, "knee_f": 20, "leg_b": -14, "knee_b": 20, "ground": 0, "hip": -66},

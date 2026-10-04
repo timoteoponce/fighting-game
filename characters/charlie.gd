@@ -149,6 +149,10 @@ func _init() -> void:
 				"life": 60, "hits": 14, "interval": 4, "damage": 19, "hitstun": 16, "kb": Vector2(1.0, -1.0),
 				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
 				"strength": 99, "shake": 0.8, "sfx": "hyper",
+				# Murky flood water rather than clean blue, so the geyser that
+				# shares this `kind` still has to look different from it.
+				"tint": {"core": Color("e8f6ff"), "mid": Color("4f9fd8"), "edge": Color("1d4a72"),
+					"halo": Color("6fc0f0")},
 			},
 			"keys": [
 				# Fists to the eyes, shoulders shaking...
@@ -180,6 +184,10 @@ func _init() -> void:
 				"life": 60, "hits": 12, "interval": 4, "damage": 20, "hitstun": 16,
 				"kb": Vector2(1.0, -5.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
+				# A colder, brighter column, so the two `tears` supers are told
+				# apart by colour as well as by shape.
+				"tint": {"core": Color("f0fbff"), "mid": Color("6ec6f0"), "edge": Color("205a86"),
+					"halo": Color("9fe0ff")},
 			},
 			# Head thrown right back, eyes shut, cheeks blown out: the inhale before
 			# the geyser, with his whole body arched away from where it will come out.
@@ -212,6 +220,10 @@ func _init() -> void:
 				"life": 76, "hits": 20, "interval": 4, "damage": 21, "hitstun": 18,
 				"kb": Vector2(1.0, -2.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+				# Deeper than the ordinary flood, so the MAX reads as more water
+				# rather than as the same wave scaled up.
+				"tint": {"core": Color("e8f6ff"), "mid": Color("2f7fbe"), "edge": Color("123a5e"),
+					"halo": Color("4f9fd8")},
 			},
 			# Chin down, eyes screwed shut, arms clamped to his ribs: he is bracing
 			# for the biggest sob of his life rather than throwing one.
@@ -244,6 +256,10 @@ func _init() -> void:
 				"life": 70, "hits": 17, "interval": 4, "damage": 22, "hitstun": 18,
 				"kb": Vector2(1.0, -6.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+				# Brighter and whiter than the ordinary geyser, like the pressure
+				# of the whole sky letting go at once.
+				"tint": {"core": Color("ffffff"), "mid": Color("9fe0ff"), "edge": Color("2a6f9e"),
+					"halo": Color("cdefff")},
 			},
 			# Folded almost double, face down, holding it in.
 			"cutin_pose": {"lean": 40, "head": 40, "arm_f": 156, "elb_f": 164, "arm_b": 146, "elb_b": 164,

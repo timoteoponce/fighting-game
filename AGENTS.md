@@ -172,6 +172,32 @@ bite you.
   exemption (`Fight.spawn_projectile`) and the meter spend are both keyed on it, so a
   hyper that forgets it silently occupies the slot and fires for free. `_check_hyper_spec`
   checks this for every hyper the fighter defines.
+- **Sixteen hypers share seven projectile kinds, so the colour is on the move.** A `kind`
+  picks the *shape* (`beam`, `wolf`, `tears`, `dragon`, ...) and `Projectile.pal(key)`
+  picks the *colour*: the spec's `"tint"` dictionary wins key by key, and anything it
+  omits falls back to `Projectile.TINTS` for that kind. Keys are `core` (hot centre),
+  `mid` (body), `edge` (ink-side rim), `halo` (additive glow), and `label` / `label_ink`
+  for a beam's pixel text. `tint` may also carry `text`, the word drawn on a wide beam.
+  A character only needs a `"tint"` when two of its supers would otherwise look alike.
+- **A beam is one shape, drawn as one shape.** `_draw_beam` lays down an ink rim, a
+  `mid` body, a `core` spine and a few chunky 8px energy bars. It used to be a grid of
+  8px cells walked through an HSV hue ramp, which at 320x180 was a rainbow checkerboard:
+  no single colour survived, the hitbox edge was unreadable and the text was illegible.
+  **Do not reintroduce per-cell hue.** The spine runs along the beam's long axis, so a
+  `size` taller than it is wide is a pillar and needs the column branch.
+- **Pixel text on a beam sits on an ink plate.** `draw_string` puts `pos.y` on the
+  *baseline* and the glyphs sit above it, so the plate is sized to the cap height and
+  centred *above* the baseline. Centring it on the origin leaves it hanging under the
+  letters.
+- **`tears` draws two different things.** A wide, low hitbox is the flood that rolls
+  along the floor (`_draw_tears`); a tall one is the geyser, a column climbing off him
+  (`_draw_geyser`). The branch is the same aspect test `_draw_beam` uses. Both read their
+  colours from `tint`, so the flood and the geyser are told apart by palette as well as
+  by shape.
+- **A halo is keyed off the smaller dimension.** It used to scale by `maxf(size) * 0.9`
+  and again by up to 2.35, which on a 200px dragon painted an opaque disc over half the
+  screen. Beam halos also have to use the same orientation test as `_draw_beam`, or a tall
+  pillar gets a wide slab beside it instead of a glow around it.
 - `MoveData.hitbox` is relative to the fighter's **feet, facing right**. `CharacterDef.size`
   (body scale) does *not* rescale hitboxes automatically: the character must call
   `scale_moves()` at the end of `_init()` whenever `size != 1.0`.

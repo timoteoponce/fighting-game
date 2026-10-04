@@ -113,7 +113,12 @@ func _init() -> void:
 			"recovery": 50, "invuln": 45, "prop": "controller", "sfx": "special",
 			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(560, 72), "offset": Vector2(39, -75), "life": 56,
 				"hits": 12, "interval": 4, "damage": 20, "hitstun": 16, "kb": Vector2(1.2, 0), "chip": 0.2, "hitstop": 3,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "special"},
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "special",
+				# A retro arcade beam: phosphor green, the colour a CRT 8-bit
+				# shooter used for its laser. `text` is the pixel word on it.
+				"tint": {"core": Color("f2fff4"), "mid": Color("35e06a"), "edge": Color("0f5f2c"),
+					"halo": Color("2bff77"), "text": "GAME OVER", "label": Color("0b3d1e"),
+					"label_ink": Color("c8ffdb")}},
 			# Through the cut-in freeze he is planted, controller up, both feet
 			# braced — the pose a kid holds before he mashes the final button.
 			"cutin_pose": {"lean": -12, "head": -18, "arm_f": 20, "elb_f": 95, "arm_b": 165, "elb_b": 25,
@@ -143,7 +148,11 @@ func _init() -> void:
 			# ball, so it never steals it).
 			"projectile": {"kind": "beam", "speed": 11.0, "size": Vector2(430, 60), "offset": Vector2(40, -52), "life": 90,
 				"hits": 9, "interval": 5, "damage": 22, "hitstun": 18, "kb": Vector2(1.4, -2.5), "chip": 0.18,
-				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "kick"},
+				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "kick",
+				# The pitch itself: turf green with a chalk-white core, so it
+				# reads as a slide down the grass and not as the other beam.
+				"tint": {"core": Color("f6ffe9"), "mid": Color("63c23c"), "edge": Color("20501f"),
+					"halo": Color("8ce06a")}},
 			"cutin_pose": {"lean": 34, "head": 6, "arm_f": -46, "elb_f": 30, "arm_b": -70, "elb_b": 20,
 				"leg_f": 96, "knee_f": 8, "leg_b": -44, "knee_b": 78},
 			"keys": [
@@ -170,7 +179,11 @@ func _init() -> void:
 			"meter_cost": 300, "sfx": "special",
 			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(900, 190), "offset": Vector2(39, -90), "life": 96,
 				"hits": 18, "interval": 5, "damage": 26, "hitstun": 20, "kb": Vector2(1.2, -1.5), "chip": 0.2, "hitstop": 4,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "special"},
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "special",
+				# Every bar on the gauge, spent at once: white-hot gold.
+				"tint": {"core": Color("fffdf2"), "mid": Color("ffc633"), "edge": Color("8a4a00"),
+					"halo": Color("ffdd66"), "text": "FINAL SCORE", "label": Color("5c2f00"),
+					"label_ink": Color("fff2cc")}},
 			# Arms flung wide and up, head back, both heels off the floor: he is
 			# about to blow the whole game open rather than push a button.
 			"cutin_pose": {"lean": -20, "head": -28, "arm_f": 168, "elb_f": 8, "arm_b": 176, "elb_b": 6,
@@ -194,7 +207,10 @@ func _init() -> void:
 			"meter_cost": 300, "sfx": "kick",
 			"projectile": {"kind": "beam", "speed": 12.0, "size": Vector2(640, 96), "offset": Vector2(40, -56), "life": 110,
 				"hits": 14, "interval": 5, "damage": 28, "hitstun": 20, "kb": Vector2(1.4, -3.0), "chip": 0.18,
-				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "kick"},
+				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "kick",
+				# The red card. Nothing else in the game is this colour.
+				"tint": {"core": Color("fff0ec"), "mid": Color("ff4d4d"), "edge": Color("7a0f18"),
+					"halo": Color("ff6b5e")}},
 			# Down on his side before he has even moved, arms tucked, chin up.
 			"cutin_pose": {"lean": 56, "head": 20, "arm_f": -80, "elb_f": 8, "arm_b": -104, "elb_b": 4,
 				"leg_f": 132, "knee_f": 0, "leg_b": -66, "knee_b": 106},

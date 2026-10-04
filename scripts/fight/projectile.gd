@@ -8,6 +8,10 @@ var owner_f: Fighter
 var m: MoveData
 var m_final: MoveData  # used for the last hit of a multi-hit hyper
 var kind := ""
+## This move's palette, from the projectile spec's `"tint"`. A hyper that shares
+## a `kind` with another fighter still has to look like its own, so the colour
+## lives in the move rather than in the renderer. See `default_tint`.
+var tint := {}
 var vel := Vector2.ZERO
 var size := Vector2(16, 16)
 var offset := Vector2.ZERO
@@ -35,6 +39,7 @@ func setup(owner: Fighter, spec: Dictionary) -> void:
 	owner_f = owner
 	dir = owner.facing
 	kind = spec["kind"]
+	tint = spec.get("tint", {})
 	size = spec["size"]
 	offset = spec.get("offset", Vector2.ZERO)
 	life = spec.get("life", 120)
@@ -172,29 +177,74 @@ func register_hit() -> void:
 
 # --- Drawing (local space faces right; node scale mirrors it) -----------------
 
+## The palette for one move. `"tint"` on the projectile spec wins key by key, so
+## a move can recolour the shared shapes without a new `kind`; anything it leaves
+## out falls back to the per-kind default here. Sixteen hypers share seven kinds,
+## so this is the only thing telling Ulises' beam from Silvan's moonlight.
+const TINTS := {
+	"ball": {"core": Color(1, 0.9, 0.6), "mid": Color(1, 0.8, 0.4), "edge": Color(0.8, 0.5, 0.15)},
+	"spark": {"core": Color(1, 0.97, 0.93), "mid": Color(1, 0.55, 0.85), "edge": Color(0.75, 0.25, 0.6)},
+	"bball": {"core": Color(1, 0.85, 0.6), "mid": Color(1, 0.55, 0.2), "edge": Color(0.6, 0.28, 0.08)},
+	# The default beam is Emilia's wand light: violet-white, so it reads as magic
+	# and not as a generic laser.
+	"beam": {"core": Color(0.98, 0.95, 1.0), "mid": Color(0.78, 0.5, 1.0), "edge": Color(0.42, 0.18, 0.75),
+		"halo": Color(0.6, 0.35, 0.95), "label": Color(0.28, 0.1, 0.55), "label_ink": Color(1, 0.97, 1.0)},
+	"dragon": {"core": Color(1, 0.98, 0.93), "mid": Color(1, 0.6, 0.82), "edge": Color(0.72, 0.3, 0.6)},
+	"tears": {"core": Color(0.88, 0.97, 1.0), "mid": Color(0.42, 0.72, 1.0), "edge": Color(0.16, 0.42, 0.78)},
+	"wolf": {"core": Color(0.95, 0.98, 1.0), "mid": Color(0.72, 0.85, 1.0), "edge": Color(0.36, 0.5, 0.88)},
+}
+
+
+## `core` is the hot centre, `mid` the body, `edge` the ink-side rim, `halo` the
+## additive glow behind, and `label` / `label_ink` the pixel text on a beam.
+func pal(key: String) -> Color:
+	var base: Dictionary = TINTS.get(kind, {})
+	var v: Variant = tint.get(key, base.get(key, Color.WHITE))
+	return v
+
+
 ## Additive glow behind the projectile.
 func _draw_halo(h: Node2D) -> void:
 	if rested:
 		# A ball lying on the grass is not a light source.
 		return
-	var col: Color = {"ball": Color(1, 0.8, 0.4), "spark": Color(1, 0.4, 0.85), "beam": Color(0.5, 0.8, 1.0),
-		"dragon": Color(1, 0.5, 0.9), "tears": Color(0.4, 0.7, 1.0), "bball": Color(1, 0.55, 0.2), "wolf": Color(0.55, 0.75, 1.0)}.get(kind, Color.WHITE)
+	var col: Color = pal("mid")
 	var pulse := 1.0 + 0.15 * sin(t * 0.5)
 	if kind == "tears":
 		h.draw_rect(Rect2(0, -size.y * 0.5, size.x * minf(1.0, t / 6.0), size.y), Color(col, 0.12))
 		return
 	if kind == "wolf":
-		h.draw_circle(Vector2(_wolf_x(), 0), 60.0 * pulse, Color(col, 0.28), true, -1.0, true)
-		h.draw_circle(Vector2(_wolf_x(), 0), 100.0 * pulse, Color(col, 0.12), true, -1.0, true)
+		# A glow behind the head, not a disc the size of the hitbox. Tight and
+		# faint, with the outermost ring barely there, so it fades out instead of
+		# stamping a hard circle over the stage.
+		var hx := _wolf_x()
+		for i in 3:
+			var rr := (30.0 + float(i) * 14.0) * pulse
+			h.draw_circle(Vector2(hx, 0), rr, Color(col, 0.09 - float(i) * 0.026), true, -1.0, true)
 		return
 	if kind == "beam":
-		var w := size.x * minf(1.0, t / 6.0)
+		# A glow hugging the beam on all four sides. It has to use the same
+		# orientation logic as `_draw_beam`, or a tall pillar gets a wide slab
+		# beside it instead of a halo around it.
+		var bw := size.x * minf(1.0, t / 6.0)
+		var bh := size.y * (1.0 if life > 10 else life / 10.0)
+		var pillar := size.y > size.x * 1.2
 		for i in 3:
-			h.draw_rect(Rect2(0, -size.y * (0.6 + i * 0.2), w, size.y * (1.2 + i * 0.4)), Color(col, 0.12))
+			var pad := 2.0 + float(i) * 4.0
+			var alpha := 0.15 - float(i) * 0.042
+			# The bar starts at x = 0, so the glow is nudged in by the same 2px
+			# the body's muzzle cap is, and a pillar is centred on x = 0 instead.
+			var r := Rect2(-2.0 - pad, -bh * 0.5 - pad, bw + pad * 2.0, bh + pad * 2.0) if not pillar \
+				else Rect2(-bw * 0.5 - pad, -bh * 0.5 - pad, bw + pad * 2.0, bh + pad * 2.0)
+			h.draw_rect(r, Color(col, alpha))
 		return
-	var r := maxf(size.x, size.y) * 0.9 * pulse
+	# A glow around the body itself, not around the whole hitbox: the old code
+	# scaled the largest dimension by 0.9 and then again by up to 2.35, which on
+	# a 200px dragon painted an opaque disc over half the screen. Keyed off the
+	# smaller dimension so a big slow projectile does not get a bigger halo.
+	var r := minf(size.x, size.y) * 0.5 * pulse
 	for i in 4:
-		h.draw_circle(Vector2.ZERO, r * (1.0 + i * 0.45), Color(col, 0.22 - i * 0.045), true, -1.0, true)
+		h.draw_circle(Vector2.ZERO, r * (1.0 + float(i) * 0.38), Color(col, 0.13 - float(i) * 0.028), true, -1.0, true)
 
 
 func _draw() -> void:
@@ -252,30 +302,84 @@ func _draw_spark() -> void:
 	draw_colored_polygon(FighterRenderer.star_pts(Vector2.ZERO, 6.0, 2.5, 5, t * 0.3), Color.WHITE)
 
 
+## A beam, drawn as a solid bar of light rather than a field of coloured cells.
+##
+## It used to be a grid of 8px squares walked through an HSV hue ramp, which at
+## 320x180 turned into a rainbow checkerboard: no single colour survived, the
+## hitbox edge was unreadable, and the pixel text on top was illegible. A beam is
+## one shape, so it is drawn as one shape — a dark ink rim, a body, a hot core
+## and a few chunky energy bars — and `tint` decides the colour.
 func _draw_beam() -> void:
 	var w := size.x * minf(1.0, t / 6.0)
 	var h := size.y * (1.0 if life > 10 else life / 10.0)
+	var core: Color = pal("core")
+	var mid: Color = pal("mid")
+	var edge: Color = pal("edge")
+	var out := FighterRenderer.OUT
+	# A beam always leaves the fighter along +x (the node is mirrored by `dir`),
+	# so it grows rightwards whether it is a long low bar or a tall pillar. The
+	# only thing that differs is which axis is the length, and that decides
+	# where the muzzle cap and the travelling bars go.
+	var tall := size.y > size.x * 1.2
+	var rect := Rect2(0.0, -h * 0.5, w, h) if not tall else Rect2(-w * 0.5, -h * 0.5, w, h)
+	draw_rect(rect.grow(2.0), out)
+	draw_rect(rect, edge)
+	var inner := rect.grow(-4.0)
+	draw_rect(inner, mid)
+	# The hot core: a spine along the beam's length. On a narrow pillar it is a
+	# vertical column, on a wide bar a horizontal one, so either orientation has
+	# a bright line up the middle instead of a flat wash.
+	var core_rect := Rect2(inner.position.x, -h * 0.5 + h * 0.30, inner.size.x, h * 0.40) if not tall \
+		else Rect2(-w * 0.20, inner.position.y, w * 0.40, inner.size.y)
+	draw_rect(core_rect, core)
+	var glint := Rect2(core_rect.position.x, core_rect.position.y + core_rect.size.y * 0.24,
+		core_rect.size.x, core_rect.size.y * 0.28) if not tall \
+		else Rect2(core_rect.position.x + core_rect.size.x * 0.30, core_rect.position.y,
+		core_rect.size.x * 0.22, core_rect.size.y)
+	draw_rect(glint, Color(1, 1, 1, 0.75))
+	# Chunky energy bars running outward from the muzzle. These are the only
+	# motion in the shape, and at 8px they stay square. A beam thinner than a
+	# couple of cells has no room for them.
 	var cell := 8.0
-	var cols := int(w / cell)
-	var rows := int(h / cell)
-	for cx in cols:
-		for cy in rows:
-			var hue := fmod((cx + cy) * 0.07 + t * 0.05, 1.0)
-			var edge := absf(cy - rows * 0.5 + 0.5) / (rows * 0.5)
-			var a := 0.95 - edge * 0.5
-			if (cx * 7 + cy * 3 + t) % 5 == 0:
-				a *= 0.4
-			draw_rect(Rect2(cx * cell, -h * 0.5 + cy * cell, cell - 1.0, cell - 1.0), Color.from_hsv(hue, 0.7, 1.0, a))
-	draw_rect(Rect2(0, -h * 0.18, w, h * 0.36), Color(1, 1, 1, 0.85))
-	# Ulises' own touch: 8-bit soccer balls riding the beam like a retro
-	# sports game, bobbing on a sine as they go.
-	for i in 3:
-		var bx := fmod(t * 11.0 + i * size.x / 3.0, maxf(w, 1.0))
-		_pixel_ball(Vector2(bx, sin(t * 0.35 + i * 2.1) * h * 0.22), 5.0)
-	# Pixel text, un-mirrored.
-	if w > 200:
-		draw_set_transform(Vector2(w * 0.5, 7), 0.0, Vector2(dir, 1))
-		UI.text(self, Vector2.ZERO, "GAME OVER", 20, Color(0.2, 0.1, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 4, Color.WHITE)
+	if inner.size.x >= cell * 2.0 and inner.size.y >= cell * 2.0:
+		var along: int = maxi(1, int(w / cell)) if not tall else maxi(1, int(h / cell))
+		var across: int = maxi(1, int(h / cell)) if not tall else maxi(1, int(w / cell))
+		for i in along:
+			var phase := fmod(t * 0.35 - float(i) * 0.22, 1.0)
+			var band := int(phase * float(across))
+			var fade := 0.30 * sin(phase * PI)
+			if fade <= 0.01:
+				continue
+			var r := Rect2(i * cell, -h * 0.5 + float(band) * cell, cell - 2.0, cell - 2.0) if not tall \
+				else Rect2(-w * 0.5 + float(band) * cell, -h * 0.5 + i * cell, cell - 2.0, cell - 2.0)
+			if not inner.intersects(r):
+				continue
+			draw_rect(r, Color(core, fade))
+	# A muzzle cap at the origin end, so the beam reads as leaving the fighter
+	# rather than as a rectangle floating in the arena. On a tall pillar that is
+	# the bottom of the shape, since the pillar rises off him.
+	var cap := Rect2(-6.0, -h * 0.5 - 3.0, 10.0, h + 6.0) if not tall \
+		else Rect2(-w * 0.5 - 3.0, -h * 0.5 - 5.0, w + 6.0, 10.0)
+	draw_rect(cap, Color(edge, 0.9))
+	var cap_in := Rect2(-4.0, -h * 0.5 - 1.0, 6.0, h + 2.0) if not tall \
+		else Rect2(-w * 0.5 - 1.0, -h * 0.5 - 3.0, w + 2.0, 6.0)
+	draw_rect(cap_in, core)
+	# Pixel text, un-mirrored, on an ink plate so it survives any background.
+	var label: String = str(tint.get("text", ""))
+	if label != "" and w > 180.0:
+		var tc: Color = pal("label")
+		var ti: Color = tint.get("label_ink", pal("core"))
+		var at := Vector2(w * 0.5, 4.0) if not tall else Vector2(0.0, -h * 0.5 - 22.0)
+		draw_set_transform(at, 0.0, Vector2(dir, 1) if not tall else Vector2(1, 1))
+		# `draw_string` puts `pos.y` on the *baseline* and the glyphs sit above
+		# it, so the plate is sized to the cap height and centred above the
+		# baseline — centring on the origin leaves it hanging below the letters.
+		var box := ThemeDB.fallback_font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, 20)
+		var cap_h := box.y * 0.74
+		var plate := Rect2(-box.x * 0.5 - 6.0, -cap_h - 5.0, box.x + 12.0, cap_h + 9.0)
+		draw_rect(plate, Color(tc, 0.94))
+		draw_rect(plate, Color(ti, 0.55), false, 1.5)
+		UI.text(self, Vector2.ZERO, label, 20, ti, HORIZONTAL_ALIGNMENT_CENTER, 4, Color(0, 0, 0, 0.85))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 
@@ -329,9 +433,13 @@ func _draw_dragon() -> void:
 		draw_line(Vector2(-60.0 - i * 8.0, y + sin(t * 0.4 + i) * 3.0), Vector2(-90.0 - i * 8.0, y), Color(0.3, 0.3, 0.4, 0.5), 1.5, true)
 
 
-## Charlie: CRYBABY FLOOD. He bawls so hard the tears become a tidal wave that
-## rolls over the hitbox, basketballs bobbing in the surf.
+## Charlie: CRYBABY FLOOD and TEAR GEYSER. He bawls so hard the tears become
+## water. A wide, low hitbox is the flood that rolls over the ground; a tall one
+## is the geyser, a column climbing off him. `tint` colours both.
 func _draw_tears() -> void:
+	if size.y > size.x * 1.2:
+		_draw_geyser()
+		return
 	var out := FighterRenderer.OUT
 	var w := size.x * minf(1.0, t / 6.0)
 	var h := size.y
@@ -352,14 +460,14 @@ func _draw_tears() -> void:
 	var body := top.duplicate()
 	body.append(Vector2(w, bottom))
 	body.append(Vector2(0, bottom))
-	draw_colored_polygon(FighterRenderer.safe(body), Color(0.35, 0.62, 1.0, 0.85 * fade))
+	draw_colored_polygon(FighterRenderer.safe(body), Color(pal("mid"), 0.85 * fade))
 	# Lighter band just under the surface, then the ink line and foam on top.
 	var band := PackedVector2Array()
 	for q in top:
 		band.append(q)
 	for i in range(top.size() - 1, -1, -1):
 		band.append(top[i] + Vector2(0, 10.0))
-	draw_colored_polygon(FighterRenderer.safe(band), Color(0.6, 0.85, 1.0, 0.9 * fade))
+	draw_colored_polygon(FighterRenderer.safe(band), Color(pal("core"), 0.55 * fade))
 	draw_polyline(top, out, 2.5, true)
 	for i in range(0, top.size(), 3):
 		draw_circle(top[i] + Vector2(0, -1.5), 3.0 + fmod(i * 1.7 + t * 0.3, 2.0), Color(1, 1, 1, 0.9 * fade), true, -1.0, true)
@@ -369,12 +477,71 @@ func _draw_tears() -> void:
 		var x0 := w * (0.2 + i * 0.16)
 		var p := Vector2(x0 + k * 20.0, surface - 20.0 - sin(k * PI) * 34.0)
 		var drop := PackedVector2Array([p + Vector2(0, -7), p + Vector2(4.5, 1), p + Vector2(0, 5), p + Vector2(-4.5, 1)])
-		draw_colored_polygon(drop, Color(0.6, 0.85, 1.0, fade))
+		draw_colored_polygon(drop, Color(pal("core"), 0.9 * fade))
 		draw_polyline(Stage._closed(drop), out, 1.4, true)
 	# Basketballs bobbing in the surf.
 	for i in 2:
 		var bx := w * (0.35 + i * 0.35)
 		CharlieDef._basketball(self, Vector2(bx, surface + 6.0 + sin(t * 0.3 + i * 2.0) * 4.0), 9.0, t * 0.15 + i)
+
+
+## Charlie: TEAR GEYSER. The tall one. A column of water climbing straight off
+## him rather than rolling along the floor, so it catches anything above him.
+## Basketballs get thrown up the column instead of bobbing in it.
+func _draw_geyser() -> void:
+	var out := FighterRenderer.OUT
+	var w := size.x * minf(1.0, t / 6.0)
+	var h := size.y
+	var fade := 1.0 if life > 10 else life / 10.0
+	var rise := minf(1.0, t / 10.0) * fade
+	var core: Color = pal("core")
+	var mid: Color = pal("mid")
+	var edge: Color = pal("edge")
+	var left := -w * 0.5
+	var floor_y := h * 0.5
+	# Two ragged edges that wander in and out, so the column is not a rectangle.
+	var steps := 14
+	var lo := PackedVector2Array()
+	var hi := PackedVector2Array()
+	for i in steps + 1:
+		var f := float(i) / float(steps)
+		var y := lerpf(floor_y, floor_y - h * rise, f)
+		var wob := sin(f * 7.0 - t * 0.5) * 5.0 * (0.4 + f)
+		var squeeze := 1.0 - f * 0.35  # it narrows as it climbs
+		lo.append(Vector2(left + w * 0.5 - w * 0.5 * squeeze + wob, y))
+		hi.append(Vector2(left + w * 0.5 + w * 0.5 * squeeze + wob, y))
+	var body := lo.duplicate()
+	for i in range(hi.size() - 1, -1, -1):
+		body.append(hi[i])
+	draw_colored_polygon(FighterRenderer.safe(body), Color(mid, 0.85 * fade))
+	# A bright core up the middle of the column.
+	var spine := PackedVector2Array()
+	for q in lo:
+		spine.append(q.lerp(Vector2(left + w * 0.5, q.y), 0.28))
+	for i in range(hi.size() - 1, -1, -1):
+		spine.append(hi[i].lerp(Vector2(left + w * 0.5, hi[i].y), 0.28))
+	draw_colored_polygon(FighterRenderer.safe(spine), Color(core, 0.5 * fade))
+	# Ink down both edges, then foam where the water breaks.
+	draw_polyline(lo, out, 2.5, true)
+	draw_polyline(hi, out, 2.5, true)
+	for i in range(0, steps, 2):
+		var y := lerpf(floor_y, floor_y - h * rise, float(i) / float(steps))
+		draw_circle(Vector2(left + w * 0.5 + sin(float(i) * 1.7 - t * 0.6) * 6.0, y),
+			2.5 + fmod(float(i) * 0.9 + t * 0.4, 2.0), Color(core, 0.85 * fade), true, -1.0, true)
+	# The plume bursting off the top.
+	for i in 6:
+		var k := fmod(t * 0.07 + float(i) * 0.17, 1.0)
+		var p := Vector2(left + w * 0.5 + sin(float(i) * 2.3) * w * 0.45, floor_y - h * rise - 8.0 - k * 40.0)
+		var drop := PackedVector2Array([p + Vector2(0, -7), p + Vector2(4.5, 1), p + Vector2(0, 5), p + Vector2(-4.5, 1)])
+		draw_colored_polygon(drop, Color(core, (1.0 - k) * fade))
+		draw_polyline(Stage._closed(drop), out, 1.4, true)
+	# Basketballs thrown up it, spinning as they rise.
+	for i in 2:
+		var k := fmod(t * 0.05 + float(i) * 0.5, 1.0)
+		var bx := left + w * 0.5 + sin(float(i) * 2.0 + t * 0.4) * w * 0.22
+		var by := lerpf(floor_y, floor_y - h * rise - 24.0, k)
+		CharlieDef._basketball(self, Vector2(bx, by), 8.0, t * 0.5 + float(i))
+		draw_line(Vector2(bx, by + 8.0), Vector2(bx, by + 16.0), Color(edge, 0.5 * fade * (1.0 - k)), 2.0, true)
 
 
 ## Where Silvan's spirit wolf's head is: it races the length of the hitbox in

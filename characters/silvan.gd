@@ -176,6 +176,10 @@ func _init() -> void:
 				"life": 58, "hits": 13, "interval": 4, "damage": 18, "hitstun": 16, "kb": Vector2(1.1, -0.6),
 				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
 				"strength": 99, "shake": 0.8, "sfx": "hyper",
+				# The pack's own colour: cold blue-white, so the wolf reads as
+				# a spirit and not as one of the beams.
+				"tint": {"core": Color("f4faff"), "mid": Color("8fc4ff"), "edge": Color("2e4f96"),
+					"halo": Color("a8d4ff")},
 			},
 			"keys": [
 				[0, {"head": 10, "lean": 16, "arm_f": 30, "elb_f": 120, "arm_b": 30, "elb_b": 120, "leg_f": 20, "knee_f": 60}, 0.5],
@@ -211,6 +215,9 @@ func _init() -> void:
 				"life": 60, "hits": 11, "interval": 4, "damage": 20, "hitstun": 16,
 				"kb": Vector2(1.2, -3.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
+				# Moonlight, not a laser: a pale yellow column with a warm halo.
+				"tint": {"core": Color("fffdf2"), "mid": Color("ffe9a8"), "edge": Color("8f7423"),
+					"halo": Color("fff3c4")},
 			},
 			# Arms up, chin up, back leg stretched out behind him, reaching for it.
 			"cutin_pose": {"head": -34, "lean": -18, "arm_f": 180, "elb_f": 0, "arm_b": 176, "elb_b": 4,
@@ -245,6 +252,10 @@ func _init() -> void:
 				"life": 76, "hits": 19, "interval": 4, "damage": 20, "hitstun": 18,
 				"kb": Vector2(1.2, -2.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+				# Brighter and icier than the two-wolf howl, so the full pack
+				# reads as more of them rather than the same wolf scaled up.
+				"tint": {"core": Color("ffffff"), "mid": Color("b8dcff"), "edge": Color("1f3a7a"),
+					"halo": Color("d4ecff")},
 			},
 			# Thrown back on one leg, both arms straight up, mouth wide open.
 			"cutin_pose": {"head": -42, "lean": -30, "arm_f": 188, "elb_f": 0, "arm_b": 190, "elb_b": 0,
@@ -276,6 +287,10 @@ func _init() -> void:
 				"life": 70, "hits": 16, "interval": 4, "damage": 22, "hitstun": 18,
 				"kb": Vector2(1.2, -4.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
+				# The moon coming down over the whole stage: near-white, with the
+				# warm rim the smaller pillar keeps.
+				"tint": {"core": Color("ffffff"), "mid": Color("fff4c8"), "edge": Color("a8862b"),
+					"halo": Color("fffbe8")},
 			},
 			# Arms crossed over his eyes, bracing for it to land on him.
 			"cutin_pose": {"head": -38, "lean": -12, "arm_f": 186, "elb_f": 0, "arm_b": 182, "elb_b": 0,
