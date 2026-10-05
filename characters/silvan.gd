@@ -383,7 +383,12 @@ func draw_face(r: FighterRenderer) -> void:
 		r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(cx, 5.5), 2.6, 1.6), Color(1, 0.55, 0.6, 0.45))
 	var ear := r.chain_local("ear_f")
 	if ear.size() > 1:
-		r.ribbon(ear, 7.0, 4.0, r.colors["fur"])
+		# `draw_face` runs inside the head transform, and `chain_local` is node
+		# space, so the ear has to come back before it is drawn. Without this the
+		# head offset lands twice and the ear floats off above his head — which
+		# on the HUD portrait escaped the 27px circle and showed up at the top of
+		# the screen.
+		r.ribbon(r.head_local(ear), 7.0, 4.0, r.colors["fur"])
 
 
 func draw_props(r: FighterRenderer, s: Dictionary) -> void:

@@ -69,6 +69,11 @@ var expr := "normal"
 var prop := ""
 var prop_t := 0
 var head_only := false  # portraits: draw only head and shoulders
+## True while the head transform is active, i.e. inside `_draw_head`. Anything
+## a character draws in that window is in **head space**, but `chain_local`
+## hands back **node** space — so a chain drawn there has to be converted with
+## `head_local` or the head offset is applied twice. Read by the roster test.
+var in_head := false
 var chains := {}  # name -> [points (global), previous points (global)]
 var sk := {}
 var prev_sk := {}  # last frame's skeleton, for motion smears
@@ -197,6 +202,23 @@ func copy_from(src: FighterRenderer) -> void:
 ## A point given in head space (as the hair is drawn), in local space.
 static func head_point(s: Dictionary, p: Vector2) -> Vector2:
 	return s["head"] + (p * float(s.get("hs", HEAD_SCALE))).rotated(s["head_ang"])
+
+
+## The inverse of `head_point`: node space back to head space. A character that
+## draws a chain from `draw_face` or a hair hook is inside the head transform,
+## so it has to convert the chain before drawing it — otherwise the head offset
+## lands on top of it a second time and the piece flies off the head.
+func head_local(pts: PackedVector2Array) -> PackedVector2Array:
+	var s := sk
+	if s.is_empty():
+		s = skeleton()
+	var head: Vector2 = s["head"]
+	var ang: float = s["head_ang"]
+	var hs := float(s.get("hs", HEAD_SCALE))
+	var out := PackedVector2Array()
+	for p in pts:
+		out.append((p - head).rotated(-ang) / hs)
+	return out
 
 
 static func dir(a: float) -> Vector2:
@@ -439,12 +461,15 @@ func _draw_head(s: Dictionary) -> void:
 	var c := colors
 	cloth(PackedVector2Array([s["neck"], s["head"]]), 6.0 * def.build, 4.4 * def.build, c["skin"])
 	draw_set_transform(s["head"], s["head_ang"], Vector2.ONE * hs)
+	# Everything below is drawn in head space. See `in_head`.
+	in_head = true
 	def.draw_hair_back(self)
 	poly(head_shape(), c["skin"], 2.0)
 	# Shadow under the jaw and at the back of the face.
 	draw_colored_polygon(PackedVector2Array([Vector2(-8, 2), Vector2(-3, 7.5), Vector2(3, 10.2), Vector2(0, 5), Vector2(-5, 1)]), shade(c["skin"]))
 	def.draw_face(self)
 	def.draw_hair_front(self)
+	in_head = false
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
 
 

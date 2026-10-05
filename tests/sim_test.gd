@@ -42,6 +42,7 @@ func _ready() -> void:
 	_test_hyper_cutin()
 	_test_hyper_landing()
 	_test_hyper_max()
+	_test_head_local()
 	_test_air_block()
 	_test_quick_rise()
 	_test_block()
@@ -553,6 +554,43 @@ func _test_throw(id: String) -> void:
 	check(broke, "both fighters recover from a broken throw")
 	check(p2.health == hp, "a broken throw does no damage")
 	f.free()
+
+
+## `head_local` is the inverse of `head_point`, and it is what keeps a chain
+## drawn from `draw_face` on the head.
+##
+## `_draw_head` applies `draw_set_transform(s["head"], ...)` *before* it calls
+## `def.draw_face` and the hair hooks, but `chain_local` hands back points in
+## **node** space. A character that draws a chain from one of those hooks
+## therefore gets the head offset applied twice: on the HUD portrait
+## (head_only, base_scale 1.35, inside a 27px circle clip) Silvan's ear landed
+## ~93px above the head instead of on it, escaped the clip, and floated at the
+## top of the screen. A pixel comparison cannot run under --headless, but the
+## geometry can be asserted directly.
+func _test_head_local() -> void:
+	print("[head local]")
+	for id: String in GameState.CHARACTERS:
+		var d := GameState.make_character(id)
+		var r := FighterRenderer.new()
+		r.setup(d)
+		add_child(r)
+		r.sk = r.skeleton()
+		# A point out at the edge of the head, in head space.
+		var p := Vector2(9.0, -2.0)
+		var world: Vector2 = FighterRenderer.head_point(r.sk, p)
+		# What a chain hands back is node space; what the character draws it as is
+		# head space, so the two have to invert exactly.
+		var back := r.head_local(PackedVector2Array([world]))
+		check(back.size() == 1 and back[0].distance_to(p) < 0.01,
+			"%s's head_local inverts head_point (got %s, wanted %s)" % [id, str(back), str(p)])
+		# The property the portrait depends on: a chain anchored at the head comes
+		# back to roughly the origin, not to a point a head's height away. Drawn
+		# without this conversion the offset lands twice and the piece flies off.
+		var at_head := r.head_local(PackedVector2Array([r.sk["head"]]))
+		var off: float = at_head[0].length() / float(r.sk.get("hs", FighterRenderer.HEAD_SCALE))
+		check(off < 1.0, "%s's head_local lands a head-space chain point back on the head (%.1f units out)"
+			% [id, off])
+		r.queue_free()
 
 
 func _test_air_block() -> void:
