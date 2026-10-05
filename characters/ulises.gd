@@ -39,8 +39,8 @@ func _init() -> void:
 		["L + H", "Power Shot"],
 		["FWD + L + H", "Sprint Dash"],
 		["DOWN + L + H", "Bicycle Kick"],
-		["BACK + L + H", "GAME OVER COMBO"],
-		["UP + L + H", "FULL PITCH!"],
+		["BACK + L + H", "GAME THUNDER!"],
+		["UP + L + H", "MURILLO!!"],
 	]
 	poses = {
 		"intro": {"arm_f": 160, "elb_f": 15, "arm_b": 30, "elb_b": 100, "lean": -4},
@@ -109,124 +109,131 @@ func _init() -> void:
 			"flash": 3, "shake": 1.5,
 			"pose_s": {"leg_f": 40, "knee_f": 80, "lean": -5},
 			"pose_a": {"leg_f": 170, "knee_f": 0, "leg_b": 40, "knee_b": 80, "arm_f": -30, "arm_b": -50, "ground": 0, "hip": -46}}),
-		"hyper": MoveData.make({"id": "game over combo", "display": "GAME OVER COMBO!", "level": 3, "startup": 16, "active": 1,
-			"recovery": 50, "invuln": 45, "prop": "controller", "sfx": "special",
-			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(560, 72), "offset": Vector2(39, -75), "life": 56,
-				"hits": 12, "interval": 4, "damage": 20, "hitstun": 16, "kb": Vector2(1.2, 0), "chip": 0.2, "hitstop": 3,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "special",
-				# A retro arcade beam: phosphor green, the colour a CRT 8-bit
-				# shooter used for its laser. `text` is the pixel word on it.
-				"tint": {"core": Color("f2fff4"), "mid": Color("35e06a"), "edge": Color("0f5f2c"),
-					"halo": Color("2bff77"), "text": "GAME OVER", "label": Color("0b3d1e"),
-					"label_ink": Color("c8ffdb")}},
-			# Through the cut-in freeze he is planted, controller up, both feet
-			# braced — the pose a kid holds before he mashes the final button.
-			"cutin_pose": {"lean": -12, "head": -18, "arm_f": 20, "elb_f": 95, "arm_b": 165, "elb_b": 25,
-				"leg_f": -8, "knee_f": 10, "leg_b": 30, "knee_b": 26},
+# Hyper A — GAME THUNDER. A screen-crossing bolt of light along the
+		# ground, in a storm palette: deep blue body, white-hot core, gold forks.
+		"hyper": MoveData.make({"id": "game thunder", "display": "GAME THUNDER!", "level": 3, "startup": 15,
+			"active": 1, "recovery": 48, "invuln": 45, "prop": "controller", "sfx": "special",
+			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(600, 86), "offset": Vector2(39, -72), "life": 54,
+				"hits": 13, "interval": 4, "damage": 21, "hitstun": 16, "kb": Vector2(1.2, -0.4), "chip": 0.2, "hitstop": 3,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.9, "sfx": "special",
+				# A lightning bolt, not an arcade laser: storm blue with a
+				# white-hot core, and the word spelled out on it.
+				"tint": {"core": Color("ffffff"), "mid": Color("3d7dff"), "edge": Color("101c66"),
+					"halo": Color("6f9dff"), "text": "GAME THUNDER", "label": Color("0a1240"),
+					"label_ink": Color("dbe6ff")}},
+			# Controller held overhead, both hands, head back: the last input.
+			"cutin_pose": {"lean": -14, "head": -22, "arm_f": 172, "elb_f": 6, "arm_b": 168, "elb_b": 10,
+				"leg_f": -6, "knee_f": 8, "leg_b": 22, "knee_b": 20},
 			"keys": [
-				# Controller cocked over his head, weight on the back foot...
-				[0, {"lean": -10, "head": -16, "arm_f": 20, "elb_f": 100, "arm_b": 170, "elb_b": 20,
-					"leg_f": -6, "knee_f": 12, "leg_b": 28, "knee_b": 24}, 0.5],
-				# ...then he slams it down and both arms punch straight out.
-				[14, {"lean": 10, "head": 4, "arm_f": 92, "elb_f": 4, "arm_b": 96, "elb_b": 4,
-					"leg_f": 34, "knee_f": 30, "leg_b": -30, "knee_b": 26}, 0.95],
-				# The beam holds; he pushes into it and settles onto the front foot.
-				[40, {"lean": 6, "head": 0, "arm_f": 88, "elb_f": 10, "arm_b": 92, "elb_b": 10,
-					"leg_f": 26, "knee_f": 26, "leg_b": -22, "knee_b": 22}, 0.4],
-				[62, {"lean": 2, "head": 2, "arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95,
-					"leg_f": 16, "knee_f": 18, "leg_b": -14, "knee_b": 16}, 0.35],
+				# Winds up low, controller drawn back behind him...
+				[0, {"lean": 18, "head": 6, "arm_f": -40, "elb_f": 60, "arm_b": -50, "elb_b": 70,
+					"leg_f": 40, "knee_f": 60, "leg_b": 20, "knee_b": 60}, 0.5],
+				# ...then drives it forward and the bolt leaves the yard line.
+				[14, {"lean": -10, "head": -16, "arm_f": 150, "elb_f": 10, "arm_b": 120, "elb_b": 20,
+					"leg_f": 60, "knee_f": 10, "leg_b": -30, "knee_b": 20}, 0.95],
+				# Held out through the beam.
+				[36, {"lean": -6, "head": -12, "arm_f": 142, "elb_f": 16, "arm_b": 112, "elb_b": 26,
+					"leg_f": 54, "knee_f": 14, "leg_b": -26, "knee_b": 22}, 0.4],
+				[50, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95}, 0.35],
 			],
-			# Snapped in while the beam is chewing on them: he drives it forward.
-			"contact_pose": {"lean": 16, "head": 8, "arm_f": 100, "elb_f": 0, "arm_b": 104, "elb_b": 0,
-				"leg_f": 44, "knee_f": 34, "leg_b": -38, "knee_b": 30}}),
-		# Hyper B — UP + L + H. The other Game Over: instead of firing a beam
-		# across the screen he slides the length of the pitch on his side, low
-		# enough to take the legs out from under anything standing.
-		"hyper2": MoveData.make({"id": "full pitch", "display": "FULL PITCH!", "level": 3, "startup": 14, "active": 1,
-			"recovery": 46, "invuln": 43, "prop": "controller", "sfx": "kick",
-			# Not anchored: this one travels, and it rides low (its belly clears the
-			# ball, so it never steals it).
-			"projectile": {"kind": "beam", "speed": 11.0, "size": Vector2(430, 60), "offset": Vector2(40, -52), "life": 90,
-				"hits": 9, "interval": 5, "damage": 22, "hitstun": 18, "kb": Vector2(1.4, -2.5), "chip": 0.18,
-				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "kick",
-				# The pitch itself: turf green with a chalk-white core, so it
-				# reads as a slide down the grass and not as the other beam.
-				"tint": {"core": Color("f6ffe9"), "mid": Color("63c23c"), "edge": Color("20501f"),
-					"halo": Color("8ce06a")}},
-			"cutin_pose": {"lean": 34, "head": 6, "arm_f": -46, "elb_f": 30, "arm_b": -70, "elb_b": 20,
-				"leg_f": 96, "knee_f": 8, "leg_b": -44, "knee_b": 78},
+			# Throwing it down the line.
+			"contact_pose": {"lean": -2, "head": -8, "arm_f": 130, "elb_f": 24, "arm_b": 100, "elb_b": 34,
+				"leg_f": 48, "knee_f": 18, "leg_b": -22, "knee_b": 24}}),
+		# Hyper B — MURILLO. His super is a kick: he sprints in and scissors a
+		# super kick through them. Pure melee, so it paces its own hits and
+		# carries no projectile; the boot streak is a `slash` event, which the
+		# renderer sizes to the hitbox, so the art cannot drift from the hit.
+		"hyper2": MoveData.make({"id": "murillo", "display": "MURILLO!!", "level": 3, "startup": 14,
+			"active": 18, "recovery": 44, "invuln": 43, "prop": "controller", "sfx": "kick",
+			"hits": 5, "hit_interval": 5, "damage": 26, "hitstun": 20,
+			"hitbox": Rect2(6, -132, 128, 112), "kb": Vector2(3.2, -3.0), "chip": 0.2,
+			"hitstop": 6, "meter": 0.0, "shake": 2.2, "hit_sfx": "heavy",
+			"dash_speed": 9.5, "dash_from": 6, "dash_to": 20,
+			"knockdown": true, "strength": 99,
+			"cutin_pose": {"lean": 26, "head": 10, "arm_f": -50, "elb_f": 30, "arm_b": -80, "elb_b": 20,
+				"leg_f": 150, "knee_f": 10, "leg_b": 20, "knee_b": 110},
 			"keys": [
-				# Drops his weight and throws his legs out, head up, still grinning.
-				[0, {"lean": 32, "head": 6, "arm_f": -44, "elb_f": 32, "arm_b": -68, "elb_b": 22,
-					"leg_f": 92, "knee_f": 10, "leg_b": -42, "knee_b": 74}, 0.5],
-				# The slide: front leg thrown right out, trailing leg tucked under.
-				[13, {"lean": 52, "head": 14, "arm_f": -68, "elb_f": 16, "arm_b": -92, "elb_b": 10,
-					"leg_f": 122, "knee_f": 0, "leg_b": -58, "knee_b": 96}, 0.95],
-				# Still travelling: the slide skids and settles lower.
-				[40, {"lean": 46, "head": 10, "arm_f": -58, "elb_f": 22, "arm_b": -80, "elb_b": 14,
-					"leg_f": 112, "knee_f": 4, "leg_b": -52, "knee_b": 88}, 0.4],
-				[58, {"lean": 14, "head": 2, "arm_f": 20, "elb_f": 90, "arm_b": 25, "elb_b": 95,
-					"leg_f": 34, "knee_f": 34, "leg_b": -28, "knee_b": 28}, 0.35],
+				# Crouched coil, both arms back for balance.
+				[0, {"lean": 24, "head": 8, "arm_f": -60, "elb_f": 40, "arm_b": -90, "elb_b": 30,
+					"leg_f": 70, "knee_f": 90, "leg_b": 30, "knee_b": 90}, 0.5],
+				# He is already airborne by the time the boot comes round.
+				[12, {"lean": 34, "head": 14, "arm_f": -110, "elb_f": 10, "arm_b": -140, "elb_b": 6,
+					"leg_f": 165, "knee_f": 0, "leg_b": 10, "knee_b": 118}, 0.95],
+				# Follow-through, scissoring back the other way.
+				[26, {"lean": 12, "head": 6, "arm_f": -70, "elb_f": 40, "arm_b": -90, "elb_b": 30,
+					"leg_f": 120, "knee_f": 20, "leg_b": 60, "knee_b": 80}, 0.5],
+				[42, {"lean": 8, "head": 2, "arm_f": 30, "elb_f": 90, "arm_b": 35, "elb_b": 95,
+					"leg_f": 50, "knee_f": 40, "leg_b": 30, "knee_b": 40}, 0.35],
 			],
-			# The tackle is through them and he skids past, still on his side.
-			"contact_pose": {"lean": 58, "head": 18, "arm_f": -76, "elb_f": 10, "arm_b": -100, "elb_b": 6,
-				"leg_f": 132, "knee_f": 0, "leg_b": -64, "knee_b": 104}}),
-		# MAX version of GAME OVER COMBO — same input, all three bars. The beam is
-		# tall enough to fill the screen instead of cutting across it, and it stays
-		# out twice as long.
+			# A swoosh on the way in and a bigger one on the follow-through, both
+			# sized from the hitbox so they match it exactly.
+			"events": {
+				12: [["voice", {"line": "hyper"}], ["slash", {}], ["shake", {"amount": 2.2}]],
+				20: [["slash", {"r": 90.0}], ["sfx", {"name": "heavy"}]],
+				28: [["slash", {"r": 74.0}]],
+			},
+			# The boot is through them and he is still up.
+			"contact_pose": {"lean": 40, "head": 18, "arm_f": -130, "elb_f": 0, "arm_b": -160, "elb_b": 0,
+				"leg_f": 172, "knee_f": 0, "leg_b": 0, "knee_b": 124}}),
+		# MAX of GAME THUNDER — the whole storm, along the ground and up the
+		# screen, so the bolt is twice as long and no longer a clean rectangle.
 		"hyper_max": MoveData.make({"id": "final score", "display": "FINAL SCORE!!", "level": 3,
-			"startup": 18, "active": 1, "recovery": 56, "invuln": 47, "prop": "controller",
+			"startup": 18, "active": 1, "recovery": 54, "invuln": 47, "prop": "controller",
 			"meter_cost": 300, "sfx": "special",
-			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(900, 190), "offset": Vector2(39, -90), "life": 96,
-				"hits": 18, "interval": 5, "damage": 26, "hitstun": 20, "kb": Vector2(1.2, -1.5), "chip": 0.2, "hitstop": 4,
+			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(940, 210), "offset": Vector2(39, -104), "life": 88,
+				"hits": 19, "interval": 5, "damage": 27, "hitstun": 20, "kb": Vector2(1.2, -1.5), "chip": 0.2, "hitstop": 4,
 				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "special",
-				# Every bar on the gauge, spent at once: white-hot gold.
-				"tint": {"core": Color("fffdf2"), "mid": Color("ffc633"), "edge": Color("8a4a00"),
-					"halo": Color("ffdd66"), "text": "FINAL SCORE", "label": Color("5c2f00"),
-					"label_ink": Color("fff2cc")}},
-			# Arms flung wide and up, head back, both heels off the floor: he is
-			# about to blow the whole game open rather than push a button.
+				# White-hot core so it reads as the same storm at full voltage.
+				"tint": {"core": Color("ffffff"), "mid": Color("6f9dff"), "edge": Color("0a1240"),
+					"halo": Color("a8c0ff"), "text": "FINAL SCORE", "label": Color("0a1240"),
+					"label_ink": Color("ffffff")}},
+			# Arms flung wide, head back, both heels off the floor: he is about to
+			# blow the whole game open rather than push a button.
 			"cutin_pose": {"lean": -20, "head": -28, "arm_f": 168, "elb_f": 8, "arm_b": 176, "elb_b": 6,
-				"leg_f": 6, "knee_f": 4, "leg_b": -6, "knee_b": 6, "ground": 0, "hip": -62},
+				"leg_f": 24, "knee_f": 12, "leg_b": -18, "knee_b": 16},
 			"keys": [
-				[0, {"lean": -18, "head": -26, "arm_f": 162, "elb_f": 14, "arm_b": 170, "elb_b": 12,
-					"leg_f": 4, "knee_f": 6, "leg_b": -4, "knee_b": 8, "ground": 0, "hip": -58}, 0.5],
-				[16, {"lean": 14, "head": 6, "arm_f": 94, "elb_f": 0, "arm_b": 98, "elb_b": 0,
-					"leg_f": 48, "knee_f": 36, "leg_b": -42, "knee_b": 32, "ground": 0, "hip": -50}, 0.95],
-				[48, {"lean": 8, "head": 2, "arm_f": 90, "elb_f": 8, "arm_b": 94, "elb_b": 8,
-					"leg_f": 38, "knee_f": 30, "leg_b": -34, "knee_b": 28, "ground": 0, "hip": -52}, 0.4],
-				[70, {"lean": 2, "head": 2, "arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95}, 0.35],
+				[0, {"lean": 20, "head": 8, "arm_f": -50, "elb_f": 55, "arm_b": -60, "elb_b": 65,
+					"leg_f": 44, "knee_f": 56, "leg_b": 24, "knee_b": 56}, 0.5],
+				[17, {"lean": -14, "head": -22, "arm_f": 164, "elb_f": 4, "arm_b": 172, "elb_b": 4,
+					"leg_f": 30, "knee_f": 6, "leg_b": -14, "knee_b": 12}, 0.95],
+				[62, {"lean": -8, "head": -16, "arm_f": 150, "elb_f": 18, "arm_b": 158, "elb_b": 16,
+					"leg_f": 22, "knee_f": 10, "leg_b": -10, "knee_b": 14}, 0.4],
+				[80, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 90, "arm_b": 45, "elb_b": 95}, 0.35],
 			],
-			# Driving it forward with everything he has.
-			"contact_pose": {"lean": 24, "head": 10, "arm_f": 108, "elb_f": 0, "arm_b": 112, "elb_b": 0,
-				"leg_f": 60, "knee_f": 40, "leg_b": -52, "knee_b": 36, "ground": 0, "hip": -46}}),
-		# MAX version of FULL PITCH! — the slide down the whole pitch, wide enough
-		# and long enough that stepping over it is not an option.
+			"contact_pose": {"lean": -4, "head": -12, "arm_f": 136, "elb_f": 22, "arm_b": 144, "elb_b": 20,
+				"leg_f": 26, "knee_f": 12, "leg_b": -12, "knee_b": 14}}),
+		# MAX of MURILLO — the same scissor kick, but he comes in off a full
+		# sprint and keeps his foot going through them.
 		"hyper2_max": MoveData.make({"id": "the last ditch", "display": "THE LAST DITCH!", "level": 3,
-			"startup": 16, "active": 1, "recovery": 50, "invuln": 45, "prop": "controller",
+			"startup": 15, "active": 22, "recovery": 46, "invuln": 45, "prop": "controller",
 			"meter_cost": 300, "sfx": "kick",
-			"projectile": {"kind": "beam", "speed": 12.0, "size": Vector2(640, 96), "offset": Vector2(40, -56), "life": 110,
-				"hits": 14, "interval": 5, "damage": 28, "hitstun": 20, "kb": Vector2(1.4, -3.0), "chip": 0.18,
-				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "kick",
-				# The red card. Nothing else in the game is this colour.
-				"tint": {"core": Color("fff0ec"), "mid": Color("ff4d4d"), "edge": Color("7a0f18"),
-					"halo": Color("ff6b5e")}},
-			# Down on his side before he has even moved, arms tucked, chin up.
-			"cutin_pose": {"lean": 56, "head": 20, "arm_f": -80, "elb_f": 8, "arm_b": -104, "elb_b": 4,
-				"leg_f": 132, "knee_f": 0, "leg_b": -66, "knee_b": 106},
+			"hits": 7, "hit_interval": 5, "damage": 30, "hitstun": 22,
+			"hitbox": Rect2(4, -140, 168, 128), "kb": Vector2(3.6, -4.0), "chip": 0.2,
+			"hitstop": 6, "meter": 0.0, "shake": 2.6, "hit_sfx": "heavy",
+			"dash_speed": 11.0, "dash_from": 5, "dash_to": 22,
+			"knockdown": true, "strength": 99,
+			"cutin_pose": {"lean": 34, "head": 16, "arm_f": -70, "elb_f": 20, "arm_b": -100, "elb_b": 14,
+				"leg_f": 168, "knee_f": 0, "leg_b": 6, "knee_b": 126},
 			"keys": [
-				[0, {"lean": 54, "head": 18, "arm_f": -78, "elb_f": 10, "arm_b": -102, "elb_b": 6,
-					"leg_f": 128, "knee_f": 0, "leg_b": -64, "knee_b": 102}, 0.5],
-				[15, {"lean": 70, "head": 26, "arm_f": -100, "elb_f": 2, "arm_b": -124, "elb_b": 0,
-					"leg_f": 152, "knee_f": 0, "leg_b": -76, "knee_b": 118}, 0.95],
-				[48, {"lean": 60, "head": 20, "arm_f": -84, "elb_f": 8, "arm_b": -108, "elb_b": 4,
-					"leg_f": 138, "knee_f": 0, "leg_b": -70, "knee_b": 110}, 0.4],
-				[64, {"lean": 14, "head": 2, "arm_f": 20, "elb_f": 90, "arm_b": 25, "elb_b": 95,
-					"leg_f": 34, "knee_f": 34, "leg_b": -28, "knee_b": 28}, 0.35],
+				[0, {"lean": 30, "head": 10, "arm_f": -80, "elb_f": 30, "arm_b": -110, "elb_b": 20,
+					"leg_f": 88, "knee_f": 96, "leg_b": 40, "knee_b": 96}, 0.5],
+				[13, {"lean": 42, "head": 20, "arm_f": -140, "elb_f": 0, "arm_b": -170, "elb_b": 0,
+					"leg_f": 178, "knee_f": 0, "leg_b": -6, "knee_b": 130}, 0.95],
+				[32, {"lean": 16, "head": 8, "arm_f": -80, "elb_f": 36, "arm_b": -100, "elb_b": 26,
+					"leg_f": 130, "knee_f": 16, "leg_b": 50, "knee_b": 86}, 0.5],
+				[52, {"lean": 10, "head": 2, "arm_f": 30, "elb_f": 90, "arm_b": 35, "elb_b": 95,
+					"leg_f": 54, "knee_f": 36, "leg_b": 32, "knee_b": 36}, 0.35],
 			],
+			# More swooshes, all off the bigger hitbox.
+			"events": {
+				13: [["voice", {"line": "hyper"}], ["slash", {}], ["shake", {"amount": 2.6}]],
+				19: [["slash", {"r": 112.0}], ["sfx", {"name": "heavy"}]],
+				25: [["slash", {"r": 96.0}]],
+				31: [["slash", {"r": 88.0}]],
+			},
 			# Straight through them, still horizontal.
-			"contact_pose": {"lean": 78, "head": 30, "arm_f": -112, "elb_f": 0, "arm_b": -136, "elb_b": 0,
-				"leg_f": 164, "knee_f": 0, "leg_b": -82, "knee_b": 124}}),
+			"contact_pose": {"lean": 50, "head": 24, "arm_f": -160, "elb_f": 0, "arm_b": -186, "elb_b": 0,
+				"leg_f": 182, "knee_f": 0, "leg_b": -10, "knee_b": 132}}),
 	}
 	size = 0.9  # Ulises is about 10% shorter than Emilia
 	scale_moves()

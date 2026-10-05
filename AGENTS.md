@@ -172,12 +172,22 @@ bite you.
   exemption (`Fight.spawn_projectile`) and the meter spend are both keyed on it, so a
   hyper that forgets it silently occupies the slot and fires for free. `_check_hyper_spec`
   checks this for every hyper the fighter defines.
+- **A hyper does not have to be a projectile.** Four of the sixteen are *melee* — Ulises'
+  `MURILLO` and Silvan's `SUPER BITE` have no `"projectile"` key at all and carry their
+  damage on the move's own hitbox. `_check_hyper_spec` therefore accepts either form: a
+  projectile hyper needs `"level": 3` plus a `shake`, while a melee hyper needs `hits >= 2`,
+  a positive `hit_interval`, forward reach (`hitbox.x > 0`) and a `dash` or a `shake`. The
+  reason to insist on `hits >= 2` is the same as for a projectile: a super has to be able to
+  finish, and `hits_left` reaching 0 is what triggers the punch, the flash and the catch.
 - **Sixteen hypers share seven projectile kinds, so the colour is on the move.** A `kind`
   picks the *shape* (`beam`, `wolf`, `tears`, `dragon`, ...) and `Projectile.pal(key)`
   picks the *colour*: the spec's `"tint"` dictionary wins key by key, and anything it
   omits falls back to `Projectile.TINTS` for that kind. Keys are `core` (hot centre),
   `mid` (body), `edge` (ink-side rim), `halo` (additive glow), and `label` / `label_ink`
-  for a beam's pixel text. `tint` may also carry `text`, the word drawn on a wide beam.
+  for a beam's pixel text. A `bball` is the exception that proves the halo rule: the ball is
+  a 10px sprite inside a 34x40 hitbox, so its halo is keyed off the ball rather than the
+  box — the shared formula wrapped it in a glow three times its size and it read as a brown
+  ellipse, not a basketball. `tint` may also carry `text`, the word drawn on a wide beam.
   A character only needs a `"tint"` when two of its supers would otherwise look alike.
 - **A beam is one shape, drawn as one shape.** `_draw_beam` lays down an ink rim, a
   `mid` body, a `core` spine and a few chunky 8px energy bars. It used to be a grid of
@@ -304,6 +314,14 @@ so existing moves keep working untouched:
   advertise, and no finishing hit, so no punch and no catch. Her rule of thumb is
   the one to remember: keep `(size.x + hurtbox) / speed` comfortably longer than
   `hits * interval`, or anchor the projectile. `_test_hyper_landing` catches it.
+- **A hyper can be several projectiles instead of several hits on one.** Charlie's
+  `BASKETBALL RAIN` throws four balls over the super's startup: the move's own
+  `"projectile"` fires the first, and `tick` spawns the rest on `RAIN_GAPS`. Each
+  ball is a single-hit projectile, so **the last copy is the one that carries
+  `final_knockdown`** — that is what still triggers the punch and the catch, and
+  `_test_hyper_landing` asserts on the state after the run rather than on one
+  `MoveData`. A character opts in by setting `CharacterDef.volley_count`, which is
+  how `_check_hyper_spec` knows the hyper is allowed to be single-hit per ball.
 - Event kinds (`Fighter._fire_event`): `slash`, `fx`, `dust`, `sfx`, `voice`, `shake`.
   `data.offset` is in the fighter's own space facing right, exactly like a hitbox.
 - Events fire on **exact frames only, and never during hitstop** (`sf` does not advance

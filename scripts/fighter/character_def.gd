@@ -89,9 +89,17 @@ func throw_data() -> MoveData:
 # `characters/<id>.gd` still holds the whole mechanic — Ulises' ball is the one
 # that is implemented.
 
+## How many times a character throws its hyper's projectile instead of firing it
+## once. One `projectile` spec can only spawn a single shot, so a volley (a rain
+## of basketballs, say) is spawned from `tick` and says so here. Only the two
+## `*_rain*` moves use it; everything else leaves it at 1.
+var volley_count := 1
+
+
 ## Called from `Fighter.step()` once per physics frame, after the state machine
-## has run. This is where a character keeps its own state: Ulises' ball is
-## dribbled, re-possessed and launched from here.
+## has run. This is where a character keeps its own state: a character that owns
+## objects in the arena updates them here, and one that throws a volley spawns
+## the extra shots from here (see `volley_count`).
 func tick(_f: Fighter) -> void:
 	pass
 

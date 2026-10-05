@@ -40,8 +40,8 @@ func _init() -> void:
 		["L + H", "Wand Spark"],
 		["FWD + L + H", "Cartwheel Rush"],
 		["DOWN + L + H", "Star Jump"],
-		["BACK + L + H", "SKETCHBOOK SUMMON"],
-		["UP + L + H", "WAND BLITZ!"],
+		["BACK + L + H", "WAND BEAM!"],
+		["UP + L + H", "FELINE ATTACK!"],
 	]
 	poses = {
 		"intro": {"arm_f": 165, "elb_f": 10, "arm_b": 25, "elb_b": 110, "lean": -6},
@@ -90,125 +90,121 @@ func _init() -> void:
 			"pose_s": {"leg_f": 60, "knee_f": 100, "leg_b": 20, "knee_b": 100},
 			"pose_a": {"arm_f": 150, "elb_f": 0, "arm_b": 210, "elb_b": 0, "leg_f": 40, "knee_f": 0, "leg_b": -40, "knee_b": 0,
 				"lean": 0, "ground": 0, "hip": -46}}),
-		"hyper": MoveData.make({"id": "sketchbook summon", "display": "SKETCHBOOK SUMMON!", "level": 3, "startup": 20, "active": 1,
-			"recovery": 40, "invuln": 45, "prop": "sketch", "sfx": "magic",
-			# Both of her supers fly across the arena rather than sitting anchored in
-			# front of her, which is why they are slower than the rest of the roster's.
-			# At the speed this used to be it crossed the opponent in about thirty
-			# frames and could only ever land four of its ten hits, so it delivered a
-			# third of the damage it advertised and never reached the finishing hit.
-			# A hyper that cannot finish is not a hyper. Keep the overlap window
-			# (`(size.x + hurtbox) / speed`) comfortably longer than `hits * interval`.
-			"projectile": {"kind": "dragon", "speed": 3.2, "size": Vector2(130, 120), "offset": Vector2(65, -78), "life": 170,
-				"hits": 10, "interval": 5, "damage": 32, "hitstun": 18, "kb": Vector2(5, 0), "chip": 0.2, "hitstop": 3,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
-				# Deeper violet than the default, so the page-book dragons read
-				# as a bigger version of this one rather than a different spell.
-				"tint": {"core": Color("fff2fb"), "mid": Color("c85ae0"), "edge": Color("4a1266"),
-					"halo": Color("b14ae8")}},
-			# She floats for the cut-in, sketchbook open above her, both feet off
-			# the floor — a wizard summoning, not a kid holding a stance.
-			"cutin_pose": {"lean": -6, "head": -20, "arm_f": 168, "elb_f": 30, "arm_b": 150, "elb_b": 45,
-				"leg_f": 34, "knee_f": 40, "leg_b": -26, "knee_b": 34, "ground": 0, "hip": -58},
+		# Hyper A — WAND BEAM. Her old summons are gone; this is the wand itself,
+		# fired as a bar of raw light: violet body, white core, and a hard edge.
+		"hyper": MoveData.make({"id": "wand beam", "display": "WAND BEAM!", "level": 3, "startup": 15,
+			"active": 1, "recovery": 46, "invuln": 45, "prop": "sketch", "sfx": "magic",
+			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(520, 120), "offset": Vector2(60, -84), "life": 52,
+				"hits": 12, "interval": 4, "damage": 22, "hitstun": 18, "kb": Vector2(3.4, 0), "chip": 0.2, "hitstop": 3,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.9, "sfx": "magic",
+				"tint": {"core": Color("fff8ff"), "mid": Color("b45cf0"), "edge": Color("3a0d5e"),
+					"halo": Color("c98aff"), "text": "WAND BEAM", "label": Color("2a0846"),
+					"label_ink": Color("f6e6ff")}},
+			# Wand held out in both hands, chin up: she is aiming it.
+			"cutin_pose": {"lean": -8, "head": -18, "arm_f": 164, "elb_f": 14, "arm_b": 150, "elb_b": 24,
+				"leg_f": 26, "knee_f": 26, "leg_b": -20, "knee_b": 22},
 			"keys": [
-				# Reaches up and back, heels lifting off the floor...
-				[0, {"lean": -4, "head": -18, "arm_f": 160, "elb_f": 35, "arm_b": 145, "elb_b": 50,
-					"leg_f": 28, "knee_f": 34, "leg_b": -20, "knee_b": 28, "ground": 0, "hip": -52}, 0.5],
-				# ...then throws the page forward and drops back onto one leg.
-				[18, {"lean": 6, "head": 2, "arm_f": 108, "elb_f": 10, "arm_b": 128, "elb_b": 20,
-					"leg_f": 52, "knee_f": 30, "leg_b": -44, "knee_b": 52, "ground": 0, "hip": -50}, 0.95],
-				[44, {"lean": 0, "head": -4, "arm_f": 96, "elb_f": 25, "arm_b": 118, "elb_b": 35,
-					"leg_f": 40, "knee_f": 40, "leg_b": -34, "knee_b": 46, "ground": 0, "hip": -54}, 0.4],
-				[58, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 90, "arm_b": 50, "elb_b": 95}, 0.35],
+				# Both hands come together on the wand...
+				[0, {"lean": 6, "head": 8, "arm_f": 40, "elb_f": 120, "arm_b": 30, "elb_b": 130,
+					"leg_f": 34, "knee_f": 40, "leg_b": -22, "knee_b": 30}, 0.5],
+				# ...then it is out in front of her and the light leaves the tip.
+				[14, {"lean": -8, "head": -14, "arm_f": 150, "elb_f": 8, "arm_b": 138, "elb_b": 14,
+					"leg_f": 40, "knee_f": 18, "leg_b": -26, "knee_b": 24}, 0.95],
+				[36, {"lean": -4, "head": -10, "arm_f": 144, "elb_f": 12, "arm_b": 132, "elb_b": 18,
+					"leg_f": 34, "knee_f": 22, "leg_b": -22, "knee_b": 26}, 0.4],
+				[50, {"lean": 2, "head": 0, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
+					"leg_f": 30, "knee_f": 34, "leg_b": -20, "knee_b": 30}, 0.35],
 			],
-			# The dragon is through them: she flings the page after it.
-			"contact_pose": {"lean": 14, "head": 6, "arm_f": 118, "elb_f": 0, "arm_b": 136, "elb_b": 6,
-				"leg_f": 62, "knee_f": 34, "leg_b": -52, "knee_b": 58, "ground": 0, "hip": -48}}),
-		# Hyper B — UP + L + H. Where her first super sends a doodle creature
-		# across the arena, this one is the wand itself: a solid bar of raw light
-		# fired point blank. It is a block of colour, not a creature.
-		"hyper2": MoveData.make({"id": "wand blitz", "display": "WAND BLITZ!", "level": 3, "startup": 15, "active": 1,
-			"recovery": 44, "invuln": 43, "prop": "sketch", "sfx": "magic",
-			"projectile": {"kind": "beam", "speed": 5.0, "size": Vector2(300, 130), "offset": Vector2(60, -80), "life": 80,
-				"hits": 8, "interval": 4, "damage": 28, "hitstun": 18, "kb": Vector2(4.5, 0), "chip": 0.2,
-				"hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "magic",
-				# Raw wand light: hot pink core, the accent off her trim.
-				"tint": {"core": Color("fff5fa"), "mid": Color("ff7eb6"), "edge": Color("8a1f52"),
-					"halo": Color("ff9ec9")}},
-			# Both arms up, wand above her head, floating on the spell.
-			"cutin_pose": {"lean": -10, "head": -24, "arm_f": 176, "elb_f": 16, "arm_b": 152, "elb_b": 30,
-				"leg_f": 20, "knee_f": 28, "leg_b": -18, "knee_b": 26, "ground": 0, "hip": -60},
+			"events": {14: [["voice", {"line": "hyper"}], ["shake", {"amount": 4.0}]],
+				26: [["shake", {"amount": 2.5}]]},
+			# Shoving the light further out.
+			"contact_pose": {"lean": 12, "head": -6, "arm_f": 136, "elb_f": 20, "arm_b": 124, "elb_b": 26,
+				"leg_f": 34, "knee_f": 26, "leg_b": -22, "knee_b": 28}}),
+		# Hyper B — FELINE ATTACK. The tiger she drew comes off the page and goes
+		# for them. It travels, so it keeps the projectile-slow rule: the overlap
+		# window has to outlast `hits * interval` or it can never finish.
+		"hyper2": MoveData.make({"id": "feline attack", "display": "FELINE ATTACK!", "level": 3,
+			"startup": 18, "active": 1, "recovery": 46, "invuln": 43, "prop": "sketch", "sfx": "magic",
+			"projectile": {"kind": "tiger", "speed": 4.2, "size": Vector2(150, 110), "offset": Vector2(60, -70), "life": 150,
+				"hits": 10, "interval": 5, "damage": 24, "hitstun": 18, "kb": Vector2(3.6, 0), "chip": 0.2, "hitstop": 3,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "magic",
+				"tint": {"core": Color("fff3d8"), "mid": Color("f0a03c"), "edge": Color("7a3a10"),
+					"ink": Color("2a1408")}},
+			# She has the page up in front of her face and is drawing as it goes.
+			"cutin_pose": {"lean": -6, "head": -14, "arm_f": 156, "elb_f": 22, "arm_b": 128, "elb_b": 60,
+				"leg_f": 28, "knee_f": 36, "leg_b": -22, "knee_b": 30},
 			"keys": [
-				# Draws the wand back over her shoulder to load it...
-				[0, {"lean": -8, "head": -22, "arm_f": 172, "elb_f": 22, "arm_b": 148, "elb_b": 36,
-					"leg_f": 18, "knee_f": 24, "leg_b": -16, "knee_b": 24, "ground": 0, "hip": -56}, 0.5],
-				# ...then drives it straight out and the light leaves the tip.
-				[14, {"lean": 12, "head": 4, "arm_f": 86, "elb_f": 4, "arm_b": 74, "elb_b": 96,
-					"leg_f": 44, "knee_f": 26, "leg_b": -38, "knee_b": 44, "ground": 0, "hip": -48}, 0.95],
-				# Braced, holding the beam out at arm's length.
-				[40, {"lean": 8, "head": 2, "arm_f": 82, "elb_f": 10, "arm_b": 72, "elb_b": 100,
-					"leg_f": 36, "knee_f": 28, "leg_b": -32, "knee_b": 42, "ground": 0, "hip": -50}, 0.4],
-				[56, {"lean": 2, "head": -2, "arm_f": 44, "elb_f": 80, "arm_b": 46, "elb_b": 96}, 0.35],
+				# Page up, wand in the other hand, both feet off the floor.
+				[0, {"lean": -4, "head": -10, "arm_f": 150, "elb_f": 30, "arm_b": 120, "elb_b": 70,
+					"leg_f": 26, "knee_f": 34, "leg_b": -18, "knee_b": 26, "ground": 0, "hip": -40}, 0.5],
+				# She sweeps the wand across the page and the cat comes off it.
+				[16, {"lean": 10, "head": 4, "arm_f": 108, "elb_f": 10, "arm_b": 60, "elb_b": 100,
+					"leg_f": 44, "knee_f": 26, "leg_b": -34, "knee_b": 44, "ground": 0, "hip": -36}, 0.95],
+				[46, {"lean": 2, "head": -2, "arm_f": 100, "elb_f": 20, "arm_b": 70, "elb_b": 90,
+					"leg_f": 34, "knee_f": 34, "leg_b": -26, "knee_b": 38, "ground": 0, "hip": -40}, 0.4],
+				[60, {"lean": 4, "head": 0, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
+					"leg_f": 30, "knee_f": 34, "leg_b": -20, "knee_b": 30}, 0.35],
 			],
-			# The bar is through them and she shoves it further out.
-			"contact_pose": {"lean": 20, "head": 8, "arm_f": 96, "elb_f": 0, "arm_b": 84, "elb_b": 88,
-				"leg_f": 54, "knee_f": 30, "leg_b": -46, "knee_b": 50, "ground": 0, "hip": -46}}),
-		# MAX version of SKETCHBOOK SUMMON — same input, all three bars. She tears
-		# out the last page in the book and the thing on it is enormous. Slower than
-		# the base version so it can still cross the opponent and land every hit.
+			"events": {18: [["voice", {"line": "hyper"}], ["shake", {"amount": 5.0}]],
+				34: [["shake", {"amount": 2.0}]]},
+			# The cat is through them and she is still holding the page up.
+			"contact_pose": {"lean": 14, "head": 6, "arm_f": 118, "elb_f": 0, "arm_b": 84, "elb_b": 60,
+				"leg_f": 40, "knee_f": 30, "leg_b": -30, "knee_b": 40}}),
+		# MAX of WAND BEAM — the whole chapter at once, and wide enough that it
+		# reads as the room being lit rather than as one shot.
 		"hyper_max": MoveData.make({"id": "page one hundred", "display": "PAGE ONE HUNDRED!", "level": 3,
-			"startup": 22, "active": 1, "recovery": 46, "invuln": 49, "prop": "sketch",
+			"startup": 18, "active": 1, "recovery": 52, "invuln": 47, "prop": "sketch",
 			"meter_cost": 300, "sfx": "magic",
-			"projectile": {"kind": "dragon", "speed": 2.6, "size": Vector2(200, 180), "offset": Vector2(65, -92), "life": 200,
-				"hits": 15, "interval": 5, "damage": 34, "hitstun": 20, "kb": Vector2(4, -2), "chip": 0.2, "hitstop": 4,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
-				# The same violet, so the two dragons are the same book at two
-				# sizes and not two different summons.
-				"tint": {"core": Color("fff2fb"), "mid": Color("c85ae0"), "edge": Color("4a1266"),
-					"halo": Color("b14ae8")}},
-			# Both arms wide and high, back arched, floating well off the floor.
-			"cutin_pose": {"lean": -16, "head": -32, "arm_f": 186, "elb_f": 4, "arm_b": 170, "elb_b": 14,
-				"leg_f": 12, "knee_f": 18, "leg_b": -12, "knee_b": 18, "ground": 0, "hip": -72},
+			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(820, 230), "offset": Vector2(60, -110), "life": 84,
+				"hits": 17, "interval": 5, "damage": 28, "hitstun": 20, "kb": Vector2(3.8, -1.0), "chip": 0.2, "hitstop": 4,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "magic",
+				"tint": {"core": Color("ffffff"), "mid": Color("d47cff"), "edge": Color("2a0846"),
+					"halo": Color("e2b0ff"), "text": "PAGE ONE HUNDRED", "label": Color("1a0430"),
+					"label_ink": Color("ffffff")}},
+			"cutin_pose": {"lean": -14, "head": -26, "arm_f": 176, "elb_f": 8, "arm_b": 162, "elb_b": 16,
+				"leg_f": 18, "knee_f": 22, "leg_b": -14, "knee_b": 20},
 			"keys": [
-				[0, {"lean": -14, "head": -30, "arm_f": 182, "elb_f": 8, "arm_b": 166, "elb_b": 18,
-					"leg_f": 10, "knee_f": 16, "leg_b": -10, "knee_b": 16, "ground": 0, "hip": -68}, 0.5],
-				[20, {"lean": 10, "head": 4, "arm_f": 128, "elb_f": 0, "arm_b": 150, "elb_b": 4,
-					"leg_f": 40, "knee_f": 24, "leg_b": -36, "knee_b": 40, "ground": 0, "hip": -54}, 0.95],
-				[50, {"lean": 4, "head": 0, "arm_f": 116, "elb_f": 14, "arm_b": 138, "elb_b": 18,
-					"leg_f": 32, "knee_f": 26, "leg_b": -30, "knee_b": 38, "ground": 0, "hip": -58}, 0.4],
-				[66, {"lean": 2, "head": -2, "arm_f": 44, "elb_f": 80, "arm_b": 46, "elb_b": 96}, 0.35],
+				[0, {"lean": 8, "head": 10, "arm_f": 30, "elb_f": 130, "arm_b": 22, "elb_b": 140,
+					"leg_f": 40, "knee_f": 44, "leg_b": -26, "knee_b": 32}, 0.5],
+				[17, {"lean": -12, "head": -22, "arm_f": 168, "elb_f": 4, "arm_b": 156, "elb_b": 10,
+					"leg_f": 26, "knee_f": 12, "leg_b": -16, "knee_b": 14}, 0.95],
+				[62, {"lean": -6, "head": -16, "arm_f": 158, "elb_f": 10, "arm_b": 146, "elb_b": 16,
+					"leg_f": 22, "knee_f": 14, "leg_b": -12, "knee_b": 16}, 0.4],
+				[76, {"lean": 2, "head": 0, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
+					"leg_f": 30, "knee_f": 34, "leg_b": -20, "knee_b": 30}, 0.35],
 			],
-			# Throwing the page after it, both arms out.
-			"contact_pose": {"lean": 18, "head": 8, "arm_f": 140, "elb_f": 0, "arm_b": 160, "elb_b": 0,
-				"leg_f": 52, "knee_f": 28, "leg_b": -48, "knee_b": 46, "ground": 0, "hip": -50}}),
-		# MAX version of WAND BLITZ! — the entire chapter of the book, fired at
-		# once as one bar of light.
+			"events": {18: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
+				40: [["shake", {"amount": 3.0}]]},
+			"contact_pose": {"lean": 10, "head": -10, "arm_f": 148, "elb_f": 16, "arm_b": 136, "elb_b": 22,
+				"leg_f": 28, "knee_f": 18, "leg_b": -16, "knee_b": 18}}),
+		# MAX of FELINE ATTACK — the big cat, drawn mid-leap and slower so it can
+		# still cross the opponent and land every hit.
 		"hyper2_max": MoveData.make({"id": "the whole chapter", "display": "THE WHOLE CHAPTER!", "level": 3,
-			"startup": 17, "active": 1, "recovery": 48, "invuln": 47, "prop": "sketch",
+			"startup": 19, "active": 1, "recovery": 50, "invuln": 47, "prop": "sketch",
 			"meter_cost": 300, "sfx": "magic",
-			"projectile": {"kind": "beam", "speed": 4.5, "size": Vector2(420, 190), "offset": Vector2(60, -86), "life": 100,
-				"hits": 13, "interval": 4, "damage": 30, "hitstun": 20, "kb": Vector2(4, -1), "chip": 0.2,
-				"hitstop": 4, "meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
-				# Violet rather than pink, so it is unmistakably the page-book
-				# super and not the wand one.
-				"tint": {"core": Color("fff2fb"), "mid": Color("c85ae0"), "edge": Color("4a1266"),
-					"halo": Color("b14ae8")}},
-			# Arms up and out, both heels down, chin up: the whole book overhead.
-			"cutin_pose": {"lean": -12, "head": -28, "arm_f": 180, "elb_f": 8, "arm_b": 166, "elb_b": 20,
-				"leg_f": 16, "knee_f": 20, "leg_b": -14, "knee_b": 20, "ground": 0, "hip": -66},
+			"projectile": {"kind": "tiger", "speed": 3.4, "size": Vector2(210, 150), "offset": Vector2(70, -80), "life": 180,
+				"hits": 13, "interval": 5, "damage": 27, "hitstun": 20, "kb": Vector2(4.0, -1.5), "chip": 0.2, "hitstop": 4,
+				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "magic",
+				"tint": {"core": Color("fffdf4"), "mid": Color("e07a2c"), "edge": Color("5c2408"),
+					"ink": Color("1e0e04")}},
+			"cutin_pose": {"lean": -10, "head": -22, "arm_f": 170, "elb_f": 10, "arm_b": 150, "elb_b": 26,
+				"leg_f": 22, "knee_f": 30, "leg_b": -18, "knee_b": 26},
 			"keys": [
-				[0, {"lean": -10, "head": -26, "arm_f": 176, "elb_f": 12, "arm_b": 162, "elb_b": 24,
-					"leg_f": 14, "knee_f": 18, "leg_b": -12, "knee_b": 18, "ground": 0, "hip": -62}, 0.5],
-				[16, {"lean": 14, "head": 6, "arm_f": 84, "elb_f": 0, "arm_b": 96, "elb_b": 60,
-					"leg_f": 50, "knee_f": 28, "leg_b": -44, "knee_b": 48, "ground": 0, "hip": -50}, 0.95],
-				[46, {"lean": 10, "head": 4, "arm_f": 80, "elb_f": 6, "arm_b": 92, "elb_b": 64,
-					"leg_f": 42, "knee_f": 30, "leg_b": -38, "knee_b": 46, "ground": 0, "hip": -52}, 0.4],
-				[62, {"lean": 2, "head": -2, "arm_f": 44, "elb_f": 80, "arm_b": 46, "elb_b": 96}, 0.35],
+				[0, {"lean": -4, "head": -12, "arm_f": 156, "elb_f": 26, "arm_b": 132, "elb_b": 54,
+					"leg_f": 30, "knee_f": 38, "leg_b": -22, "knee_b": 32, "ground": 0, "hip": -48}, 0.5],
+				[18, {"lean": 14, "head": 6, "arm_f": 116, "elb_f": 6, "arm_b": 72, "elb_b": 92,
+					"leg_f": 52, "knee_f": 22, "leg_b": -42, "knee_b": 48, "ground": 0, "hip": -40}, 0.95],
+				[54, {"lean": 4, "head": 0, "arm_f": 106, "elb_f": 16, "arm_b": 80, "elb_b": 82,
+					"leg_f": 40, "knee_f": 30, "leg_b": -32, "knee_b": 42, "ground": 0, "hip": -44}, 0.4],
+				[70, {"lean": 4, "head": 0, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
+					"leg_f": 30, "knee_f": 34, "leg_b": -20, "knee_b": 30}, 0.35],
 			],
-			# Shoving the whole chapter through them.
-			"contact_pose": {"lean": 22, "head": 10, "arm_f": 96, "elb_f": 0, "arm_b": 108, "elb_b": 52,
-				"leg_f": 60, "knee_f": 32, "leg_b": -52, "knee_b": 54, "ground": 0, "hip": -48}}),
+			"events": {19: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
+				38: [["shake", {"amount": 3.0}]]},
+			"contact_pose": {"lean": 18, "head": 8, "arm_f": 126, "elb_f": 0, "arm_b": 92, "elb_b": 52,
+				"leg_f": 46, "knee_f": 26, "leg_b": -36, "knee_b": 44}}),
 	}
+
 
 
 ## Connected chain: an odd hit is the authored front limb, an even hit is the

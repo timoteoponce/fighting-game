@@ -43,8 +43,8 @@ func _init() -> void:
 		["L + H", "Bark Blast"],
 		["FWD + L + H", "Puppy Dash"],
 		["DOWN + L + H", "Bouncy Bounce"],
-		["BACK + L + H", "MOON HOWL"],
-		["UP + L + H", "FULL MOON!"],
+		["BACK + L + H", "MOONLIGHT HOWL!"],
+		["UP + L + H", "SUPER BITE!"],
 	]
 	poses = {
 		"intro": {"arm_f": 140, "elb_f": 60, "arm_b": 140, "elb_b": 60, "head": 12, "lean": -4},
@@ -167,55 +167,19 @@ func _init() -> void:
 			],
 			"events": {3: [["voice", {"line": "special"}], ["dust", {}]]},
 		}),
-		# Moon Howl: he finally goes full were-puppy and howls the screen down.
+# Hyper A — MOONLIGHT HOWL. A pillar of light comes down on him from
+		# above, so it catches anyone in the air and cannot be dodged by stepping
+		# back. Warm sodium yellow, the colour of a street light.
 		"hyper": MoveData.make({
-			"id": "moon howl", "display": "MOON HOWL!", "level": 3, "startup": 18, "active": 1,
-			"recovery": 46, "invuln": 44, "prop": "moon", "sfx": "hyper",
+			"id": "moonlight howl", "display": "MOONLIGHT HOWL!", "level": 3, "startup": 17,
+			"active": 1, "recovery": 46, "invuln": 44, "prop": "moon", "sfx": "hyper",
 			"projectile": {
-				"kind": "wolf", "anchored": true, "size": Vector2(520, 96), "offset": Vector2(40, -66),
-				"life": 58, "hits": 13, "interval": 4, "damage": 18, "hitstun": 16, "kb": Vector2(1.1, -0.6),
-				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
-				"strength": 99, "shake": 0.8, "sfx": "hyper",
-				# The pack's own colour: cold blue-white, so the wolf reads as
-				# a spirit and not as one of the beams.
-				"tint": {"core": Color("f4faff"), "mid": Color("8fc4ff"), "edge": Color("2e4f96"),
-					"halo": Color("a8d4ff")},
-			},
-			"keys": [
-				[0, {"head": 10, "lean": 16, "arm_f": 30, "elb_f": 120, "arm_b": 30, "elb_b": 120, "leg_f": 20, "knee_f": 60}, 0.5],
-				[12, {"head": -8, "lean": -6, "arm_f": 60, "elb_f": 80, "arm_b": 60, "elb_b": 80}, 0.7],
-				[18, {"head": -26, "lean": -24, "arm_f": 165, "elb_f": 10, "arm_b": 170, "elb_b": 10,
-					"leg_f": 25, "knee_f": 20}, 0.95],
-				[40, {"head": -22, "lean": -18, "arm_f": 150, "elb_f": 30, "arm_b": 155, "elb_b": 30}, 0.5],
-				[55, {"head": 0, "lean": 4, "arm_f": 40, "elb_f": 100, "arm_b": 40, "elb_b": 100}, 0.3],
-			],
-			# Through the cut-in he is already up on his back legs, head thrown
-			# back, front paws up in the air — a two-year-old about to lose it.
-			"cutin_pose": {"head": -30, "lean": -26, "arm_f": 172, "elb_f": 6, "arm_b": 176, "elb_b": 6,
-				"leg_f": 30, "knee_f": 16, "leg_b": -14, "knee_b": 18},
-			# The wolves are on them and he is leaning into the howl.
-			"contact_pose": {"head": -36, "lean": -32, "arm_f": 180, "elb_f": 0, "arm_b": 182, "elb_b": 0,
-				"leg_f": 38, "knee_f": 12, "leg_b": -20, "knee_b": 14},
-			"events": {
-				18: [["voice", {"line": "hyper"}], ["shake", {"amount": 5.0}]],
-				24: [["shake", {"amount": 3.0}]],
-				32: [["shake", {"amount": 2.0}]],
-			},
-		}),
-		# Hyper B — UP + L + H. His first super sends the wolves running along the
-		# ground. This one calls up the moon itself: a pillar of light that drops
-		# onto him from above, so it catches anyone above and cannot be dodged by
-		# stepping back.
-		"hyper2": MoveData.make({
-			"id": "full moon", "display": "FULL MOON!", "level": 3, "startup": 16,
-			"active": 1, "recovery": 44, "invuln": 43, "prop": "moon", "sfx": "hyper",
-			"projectile": {
-				# A tall narrow column instead of the howl's long low charge.
-				"kind": "beam", "anchored": true, "size": Vector2(190, 320), "offset": Vector2(50, -160),
-				"life": 60, "hits": 11, "interval": 4, "damage": 20, "hitstun": 16,
-				"kb": Vector2(1.2, -3.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
+				# Tall and narrow: a column, not a bar, so `_draw_beam` takes its
+				# vertical branch and lays a core column rather than a spine.
+				"kind": "beam", "anchored": true, "size": Vector2(200, 340), "offset": Vector2(50, -170),
+				"life": 58, "hits": 12, "interval": 4, "damage": 21, "hitstun": 16,
+				"kb": Vector2(1.2, -3.2), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
-				# Moonlight, not a laser: a pale yellow column with a warm halo.
 				"tint": {"core": Color("fffdf2"), "mid": Color("ffe9a8"), "edge": Color("8f7423"),
 					"halo": Color("fff3c4")},
 			},
@@ -231,7 +195,7 @@ func _init() -> void:
 					"leg_f": 62, "knee_f": 12, "leg_b": -46, "knee_b": 56}, 0.95],
 				[40, {"head": -34, "lean": -10, "arm_f": 108, "elb_f": 14, "arm_b": 104, "elb_b": 18,
 					"leg_f": 52, "knee_f": 16, "leg_b": -40, "knee_b": 48}, 0.4],
-				[54, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+				[54, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 96}, 0.35],
 			],
 			# The light lands on him and he holds it open over his head.
 			"contact_pose": {"head": -42, "lean": -2, "arm_f": 112, "elb_f": 8, "arm_b": 108, "elb_b": 12,
@@ -241,21 +205,61 @@ func _init() -> void:
 				26: [["shake", {"amount": 3.0}]],
 			},
 		}),
-		# MAX version of MOON HOWL — same input, all three bars. The whole pack
-		# arrives, not just the two at the front.
+		# Hyper B — SUPER BITE. He dashes across the whole stage and bites. The
+		# fastest super in the game and the shortest: a toddler at full tilt, so
+		# it is a paced multi-hit melee rather than one big hit.
+		"hyper2": MoveData.make({
+			"id": "super bite", "display": "SUPER BITE!", "level": 3, "startup": 12,
+			"active": 26, "recovery": 42, "invuln": 43, "prop": "bone", "sfx": "heavy",
+			"hits": 8, "hit_interval": 4, "damage": 19, "hitstun": 16,
+			"hitbox": Rect2(-24, -104, 128, 84), "kb": Vector2(2.0, -1.2), "chip": 0.18,
+			"hitstop": 4, "meter": 0.0, "shake": 1.8, "hit_sfx": "light",
+			# Fast enough to cross the stage, not so fast it overshoots: a dash of
+			# 13 covered 260px in 20 frames and sailed straight past anyone
+			# standing off, so the super whiffed. The hitbox also reaches *back*
+			# past him, so a bite still lands as he runs by.
+			"dash_speed": 8.6, "dash_from": 4, "dash_to": 20,
+			"strength": 99,
+			"cutin_pose": {"head": -30, "lean": 30, "arm_f": 120, "elb_f": 60, "arm_b": 140, "elb_b": 50,
+				"leg_f": 120, "knee_f": 40, "leg_b": -40, "knee_b": 90},
+			"keys": [
+				# Drops onto all fours, ears back.
+				[0, {"head": -10, "lean": 26, "arm_f": 60, "elb_f": 110, "arm_b": 70, "elb_b": 120,
+					"leg_f": 60, "knee_f": 100, "leg_b": 30, "knee_b": 100}, 0.5],
+				# Straight down the stage, mouth open, both arms pumping.
+				[10, {"head": -26, "lean": 38, "arm_f": 150, "elb_f": 20, "arm_b": 175, "elb_b": 12,
+					"leg_f": 130, "knee_f": 20, "leg_b": -50, "knee_b": 100}, 0.95],
+				# Skids to a stop, still grinning.
+				[26, {"head": -18, "lean": 20, "arm_f": 110, "elb_f": 50, "arm_b": 130, "elb_b": 40,
+					"leg_f": 96, "knee_f": 40, "leg_b": -34, "knee_b": 70}, 0.5],
+				[40, {"head": -4, "lean": 8, "arm_f": 50, "elb_f": 90, "arm_b": 60, "elb_b": 90,
+					"leg_f": 40, "knee_f": 40, "leg_b": 20, "knee_b": 40}, 0.35],
+			],
+			# Dust kicked up along the way and a tooth mark on the finishing hit.
+			"events": {
+				12: [["voice", {"line": "hyper"}], ["dust", {"offset": Vector2(-10, 0)}],
+					["shake", {"amount": 1.8}]],
+				18: [["dust", {"offset": Vector2(-10, 0)}], ["slash", {"r": 60.0}]],
+				24: [["dust", {"offset": Vector2(-10, 0)}], ["slash", {"r": 52.0}]],
+				30: [["slash", {"r": 58.0}]],
+			},
+			# Teeth in, and he does not let go.
+			"contact_pose": {"head": -34, "lean": 42, "arm_f": 168, "elb_f": 10, "arm_b": 186, "elb_b": 6,
+				"leg_f": 140, "knee_f": 10, "leg_b": -56, "knee_b": 104},
+		}),
+		# MAX of MOONLIGHT HOWL — the moon itself comes down, so the column is
+		# taller than the screen and near-white.
 		"hyper_max": MoveData.make({
-			"id": "the whole sky", "display": "THE WHOLE SKY!", "level": 3, "startup": 20,
+			"id": "the whole sky", "display": "THE WHOLE SKY!", "level": 3, "startup": 19,
 			"active": 1, "recovery": 52, "invuln": 47, "prop": "moon", "sfx": "hyper",
 			"meter_cost": 300,
 			"projectile": {
-				"kind": "wolf", "anchored": true, "size": Vector2(700, 140), "offset": Vector2(40, -70),
-				"life": 76, "hits": 19, "interval": 4, "damage": 20, "hitstun": 18,
-				"kb": Vector2(1.2, -2.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				"kind": "beam", "anchored": true, "size": Vector2(290, 440), "offset": Vector2(50, -220),
+				"life": 74, "hits": 17, "interval": 5, "damage": 26, "hitstun": 18,
+				"kb": Vector2(1.2, -4.2), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
-				# Brighter and icier than the two-wolf howl, so the full pack
-				# reads as more of them rather than the same wolf scaled up.
-				"tint": {"core": Color("ffffff"), "mid": Color("b8dcff"), "edge": Color("1f3a7a"),
-					"halo": Color("d4ecff")},
+				"tint": {"core": Color("ffffff"), "mid": Color("fff4c8"), "edge": Color("a8862b"),
+					"halo": Color("fffbe8")},
 			},
 			# Thrown back on one leg, both arms straight up, mouth wide open.
 			"cutin_pose": {"head": -42, "lean": -30, "arm_f": 188, "elb_f": 0, "arm_b": 190, "elb_b": 0,
@@ -267,9 +271,8 @@ func _init() -> void:
 					"leg_f": 34, "knee_f": 6, "leg_b": -26, "knee_b": 26}, 0.95],
 				[52, {"head": -40, "lean": -28, "arm_f": 172, "elb_f": 4, "arm_b": 176, "elb_b": 4,
 					"leg_f": 30, "knee_f": 8, "leg_b": -30, "knee_b": 30}, 0.4],
-				[68, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+				[68, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 96}, 0.35],
 			],
-			# Leaning into the full pack, nose up.
 			"contact_pose": {"head": -50, "lean": -38, "arm_f": 186, "elb_f": 0, "arm_b": 190, "elb_b": 0,
 				"leg_f": 40, "knee_f": 4, "leg_b": -22, "knee_b": 20},
 			"events": {
@@ -277,40 +280,43 @@ func _init() -> void:
 				30: [["shake", {"amount": 3.0}]],
 			},
 		}),
-		# MAX version of FULL MOON! — the moon comes down over the whole stage.
+		# MAX of SUPER BITE — he crosses the whole stage twice, biting twice on
+		# the way, and still gets one bite in on the way back.
 		"hyper2_max": MoveData.make({
-			"id": "super moon", "display": "SUPER MOON!", "level": 3, "startup": 18,
-			"active": 1, "recovery": 50, "invuln": 47, "prop": "moon", "sfx": "hyper",
-			"meter_cost": 300,
-			"projectile": {
-				"kind": "beam", "anchored": true, "size": Vector2(270, 410), "offset": Vector2(50, -205),
-				"life": 70, "hits": 16, "interval": 4, "damage": 22, "hitstun": 18,
-				"kb": Vector2(1.2, -4.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
-				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
-				# The moon coming down over the whole stage: near-white, with the
-				# warm rim the smaller pillar keeps.
-				"tint": {"core": Color("ffffff"), "mid": Color("fff4c8"), "edge": Color("a8862b"),
-					"halo": Color("fffbe8")},
-			},
-			# Arms crossed over his eyes, bracing for it to land on him.
-			"cutin_pose": {"head": -38, "lean": -12, "arm_f": 186, "elb_f": 0, "arm_b": 182, "elb_b": 0,
-				"leg_f": 30, "knee_f": 20, "leg_b": -26, "knee_b": 26},
+			"id": "the whole puppy", "display": "THE WHOLE PUPPY!", "level": 3, "startup": 13,
+			"active": 32, "recovery": 46, "invuln": 45, "prop": "bone",
+			"meter_cost": 300, "sfx": "heavy",
+			"hits": 12, "hit_interval": 4, "damage": 22, "hitstun": 16,
+			"hitbox": Rect2(-28, -110, 148, 92), "kb": Vector2(2.2, -1.4), "chip": 0.18,
+			"hitstop": 4, "meter": 0.0, "shake": 2.2, "hit_sfx": "light",
+			# Same reasoning as the ordinary one, a little longer and one frame
+			# quicker off the mark.
+			"dash_speed": 9.2, "dash_from": 4, "dash_to": 24,
+			"knockdown": true, "strength": 99,
+			"cutin_pose": {"head": -38, "lean": 36, "arm_f": 140, "elb_f": 44, "arm_b": 160, "elb_b": 36,
+				"leg_f": 136, "knee_f": 30, "leg_b": -50, "knee_b": 100},
 			"keys": [
-				[0, {"head": -36, "lean": -10, "arm_f": 184, "elb_f": 2, "arm_b": 180, "elb_b": 2,
-					"leg_f": 28, "knee_f": 22, "leg_b": -24, "knee_b": 28}, 0.5],
-				[17, {"head": -44, "lean": 4, "arm_f": 106, "elb_f": 16, "arm_b": 102, "elb_b": 20,
-					"leg_f": 72, "knee_f": 8, "leg_b": -54, "knee_b": 64}, 0.95],
-				[48, {"head": -40, "lean": 0, "arm_f": 114, "elb_f": 12, "arm_b": 110, "elb_b": 16,
-					"leg_f": 64, "knee_f": 12, "leg_b": -48, "knee_b": 58}, 0.4],
-				[62, {"head": -2, "lean": 6, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+				[0, {"head": -12, "lean": 30, "arm_f": 50, "elb_f": 120, "arm_b": 60, "elb_b": 130,
+					"leg_f": 70, "knee_f": 104, "leg_b": 36, "knee_b": 104}, 0.5],
+				[11, {"head": -32, "lean": 46, "arm_f": 168, "elb_f": 12, "arm_b": 188, "elb_b": 4,
+					"leg_f": 146, "knee_f": 14, "leg_b": -60, "knee_b": 106}, 0.95],
+				[34, {"head": -20, "lean": 24, "arm_f": 120, "elb_f": 44, "arm_b": 140, "elb_b": 34,
+					"leg_f": 104, "knee_f": 36, "leg_b": -38, "knee_b": 74}, 0.5],
+				[52, {"head": -4, "lean": 8, "arm_f": 50, "elb_f": 90, "arm_b": 60, "elb_b": 90,
+					"leg_f": 44, "knee_f": 38, "leg_b": 22, "knee_b": 38}, 0.35],
 			],
-			# Holding it open over his head with the whole moon behind it.
-			"contact_pose": {"head": -48, "lean": 8, "arm_f": 118, "elb_f": 6, "arm_b": 114, "elb_b": 10,
-				"leg_f": 82, "knee_f": 6, "leg_b": -60, "knee_b": 70},
+			# Twice the dust and twice the tooth marks.
 			"events": {
-				17: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
-				30: [["shake", {"amount": 3.0}]],
+				13: [["voice", {"line": "hyper"}], ["dust", {"offset": Vector2(-10, 0)}],
+					["shake", {"amount": 2.2}]],
+				18: [["dust", {"offset": Vector2(-10, 0)}], ["slash", {"r": 70.0}]],
+				24: [["dust", {"offset": Vector2(-10, 0)}], ["slash", {"r": 62.0}]],
+				30: [["dust", {"offset": Vector2(-10, 0)}], ["slash", {"r": 66.0}]],
+				38: [["slash", {"r": 58.0}]],
 			},
+			# Buried in them, both hands in.
+			"contact_pose": {"head": -40, "lean": 50, "arm_f": 184, "elb_f": 4, "arm_b": 190, "elb_b": 0,
+				"leg_f": 152, "knee_f": 8, "leg_b": -64, "knee_b": 110},
 		}),
 	}
 	size = 0.78  # he is two

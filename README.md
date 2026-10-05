@@ -59,22 +59,22 @@ cd PJsClash
 | L + H | Power Shot (even with the field ball loose) | Wand Spark | Chest Pass | Bark Blast |
 | Forward + L + H | Driving Tackle, or **Sprint Dash** with no ball | Cartwheel Rush | Fast Break | Puppy Dash |
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
-| Back + L + H, **full HYPER meter** | GAME OVER COMBO | SKETCHBOOK SUMMON | CRYBABY FLOOD | MOON HOWL |
-| Up + L + H, **full HYPER meter** | FULL PITCH! | WAND BLITZ! | TEAR GEYSER! | FULL MOON! |
+| Back + L + H, **full HYPER meter** | GAME THUNDER! | WAND BEAM! | BASKETBALL RAIN! | MOONLIGHT HOWL! |
+| Up + L + H, **full HYPER meter** | MURILLO!! | FELINE ATTACK! | CRYBABY FLOOD! | SUPER BITE! |
 | ...with **all three** bars | FINAL SCORE!! | PAGE ONE HUNDRED! | SOBBING FIT! | THE WHOLE SKY! |
-| ...with all three bars | THE LAST DITCH! | THE WHOLE CHAPTER! | ABSOLUTE DELUGE! | SUPER MOON! |
+| ...with all three bars | THE LAST DITCH! | THE WHOLE CHAPTER! | ABSOLUTE DELUGE! | THE WHOLE PUPPY! |
 
 ### Two supers, one meter bar
 
 Every fighter has **two** supers and a full meter bar buys you either one, so
 which direction you press is the whole decision:
 
-- **BACK + L + H** is the heavy cinematic super — a screen-crossing beam, a
-  summoned creature, a wave.
-- **UP + L + H** is the faster, more situational one — Ulises slides the length
-  of the pitch on his side, Emilia fires a solid bar of raw wand light, Charlie
-  puts a geyser of tears straight up (good against jumpers), Silvan drops a
-  pillar of moonlight (it comes from above, so stepping back does not help).
+- **BACK + L + H** is the heavy cinematic super — a bolt of lightning, a bar of
+  wand light, a rain of basketballs, a pillar of moonlight.
+- **UP + L + H** is the faster, more situational one, and two of the four are
+  *melee*: Ulises runs in with a super kick (MURILLO) and Silvan crosses the
+  whole stage biting (SUPER BITE). Emilia sends a tiger she drew (FELINE
+  ATTACK) and Charlie floods the floor with tears (CRYBABY FLOOD).
 
 ### The third bar: MAX supers
 
@@ -85,10 +85,10 @@ longer, considerably nastier version of the same move. The gauge says
 
 | | MAX of hyper 1 (Back) | MAX of hyper 2 (Up) |
 |---|---|---|
-| Ulises | the beam fills the whole screen | an even longer slide down the pitch |
-| Emilia | an enormous doodle dragon | one bar of light for the whole chapter |
-| Charlie | the flood climbs past his head | a column that comes off the top of the screen |
-| Silvan | the whole pack arrives, not two wolves | the moon comes down over the whole stage |
+| Ulises | the bolt fills the whole screen | an even bigger kick, off a full sprint |
+| Emilia | one bar of light for the whole chapter | the big cat, drawn mid-leap |
+| Charlie | a bigger rain, dropped from higher | the water comes up past his head |
+| Silvan | the moon comes down over the whole stage | he crosses the stage twice, biting |
 
 Two bars is not enough, so the input falls back to the ordinary super — you are
 never left with a dead button.
@@ -208,22 +208,23 @@ handles blinking, X eyes on a knockout and the squint on an attack.
   energy bars — so you can read both what it is and exactly where it hits.
 - **Every super has its own colour.** Sixteen supers share seven shapes, so the
   palette moved onto the move: a `"tint"` on the projectile spec, read through
-  `Projectile.pal()`. Ulises' arcade-green GAME OVER beam, his turf-green slide,
-  the white-gold FINAL SCORE and the red THE LAST DITCH are told apart at a
-  glance. Emilia's dragons are violet and her wand light pink; Silvan's wolf is
-  icy blue and his moonlight a warm yellow pillar; Charlie's floods are murky
-  blue and his geysers bright.
+  `Projectile.pal()`. Ulises' storm-blue GAME THUNDER is told apart from his
+  white-gold FINAL SCORE at a glance, even though both are beams. Emilia's wand
+  light is pink and her tiger orange; Silvan's moonlight is a warm gold pillar;
+  Charlie's basketball is orange on its own dark halo.
 - **Charlie finally has two different water moves.** A wide, low hitbox is the
-  flood that rolls along the ground; a tall one is now a geyser, a column of
-  water climbing off him that throws basketballs up its length. Before this,
-  both of his `tears` supers drew the same horizontal wave.
-- **The word on the beam is legible.** "GAME OVER" and "FINAL SCORE" sit on a
+  flood that rolls along the ground; a tall one is a geyser, a column of water
+  climbing off him. Before this, both of his `tears` supers drew the same
+  horizontal wave.
+- **The word on the beam is legible.** "GAME THUNDER" and "FINAL SCORE" sit on a
   dark plate sized to the text and centred on its cap height, instead of
   disappearing into the beam.
 - **Halos stop swallowing the screen.** They were scaled off the largest
   dimension and then scaled up again, which painted an opaque disc over half the
   view on a big projectile; they are now keyed off the smaller dimension and hug
-  the body.
+  the body. A basketball keys its halo off the ball rather than its hitbox, so a
+  small sprite inside a 34x40 box is no longer wrapped in a glow three times its
+  size.
 
 ### The pixel look is back
 

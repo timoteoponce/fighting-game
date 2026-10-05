@@ -189,18 +189,37 @@ func _check_hyper_spec(d: CharacterDef, h: MoveData, key: String) -> void:
 	# clip is all wind-up and the whole recovery is one held pose.
 	check(not h.keys.is_empty() and int(h.keys[-1][0]) >= h.startup,
 		"%s's %s clip is still moving when the attack goes live" % [id, key])
-	# It is a projectile super, so it needs one, and the slot exemption and the
-	# meter cost are both keyed on the projectile's own `level` — forget that and
-	# the super quietly occupies the one-projectile slot and cannot be fired.
-	check(not h.projectile.is_empty(), "%s's %s shoots something" % [id, key])
-	check(int(h.projectile.get("level", 0)) == 3,
-		"%s's %s projectile is level 3, or it takes the projectile slot and costs no meter" % [id, key])
-	# The shake is read by `_apply_hit` off the *projectile's* MoveData, which
-	# `Projectile.setup` builds from this spec. A hyper that leaves it out lands
-	# with no screen effect on any of its hits. The screen *flash* is not checked
-	# here because `final_knockdown` supplies it on the finishing hit — see
-	# `_test_hyper_landing`, which checks it on a real projectile.
-	check(float(h.projectile.get("shake", 0.0)) > 0.0, "%s's %s projectile shakes the screen" % [id, key])
+	# A super is either a projectile or a paced melee. Both are legal, and both
+	# have to be *paced*: a melee super with a single hit is a normal wearing a
+	# super's name, and a projectile super with one hit is a projectile.
+	#
+	# For the projectile form, the slot exemption and the meter cost are keyed on
+	# the projectile's own `level` — forget that and the super quietly occupies
+	# the one-projectile slot and cannot be fired. The shake is read by
+	# `_apply_hit` off the *projectile's* MoveData, which `Projectile.setup`
+	# builds from this spec, so a projectile super that leaves it out lands with
+	# no screen effect on any of its hits.
+	#
+	# The screen *flash* is not checked here because `final_knockdown` supplies it
+	# on the finishing hit — see `_test_hyper_landing`, which drives a real one.
+	if h.projectile.is_empty():
+		check(h.hits >= 2, "%s's %s is a melee super, so it needs at least 2 hits (%d)"
+			% [id, key, h.hits])
+		check(h.hit_interval > 0, "%s's %s paces its melee hits, so it is not one big hit" % [id, key])
+		check(h.hitbox.size.x > 0.0, "%s's %s melee super reaches out to hit with" % [id, key])
+		check(float(h.shake) > 0.0 or h.dash_speed != 0.0,
+			"%s's %s melee super shakes the screen or travels into it" % [id, key])
+	else:
+		check(int(h.projectile.get("level", 0)) == 3,
+			"%s's %s projectile is level 3, or it takes the projectile slot and costs no meter" % [id, key])
+		check(float(h.projectile.get("shake", 0.0)) > 0.0, "%s's %s projectile shakes the screen" % [id, key])
+		# A volley is a single-hit projectile thrown several times, so the base
+		# spec can be one hit. Either the projectile hits more than once, or the
+		# character throws it more than once — both are a paced multi-hit super.
+		var throws: int = d.volley_count
+		check(int(h.projectile.get("hits", 1)) >= 2 or throws >= 2,
+			"%s's %s is a multi-hit super (%d hits x %d balls)" % [id, key,
+				int(h.projectile.get("hits", 1)), throws])
 
 
 ## A hyper used to land as ten to fourteen identical chip hits that each slammed
@@ -246,15 +265,39 @@ func _test_hyper_landing() -> void:
 		check(flash_seen > 0, "%s's hyper flashes the screen on the finishing hit" % id)
 		check(zoom_seen >= Fight.HYPER_ZOOM - 0.06,
 			"%s's hyper pushes the camera in (reached %.2f of %.2f)" % [id, zoom_seen, Fight.HYPER_ZOOM])
-		# And the projectile really does carry the effect forwards, and only the
-		# finishing one flashes.
-		check(hyper_m != null, "%s's hyper put a level 3 projectile in the arena" % id)
+		# And the move really does carry the effect forwards. A projectile super
+		# forwards it through the projectile's own MoveData, which `Projectile.setup`
+		# builds from the spec, and only the finishing hit flashes. A melee super
+		# has no projectile at all: it paces its own hits, so the check is that it
+		# landed more than one and reached `final_knockdown`'s slow-motion catch.
 		if hyper_m != null:
 			check(float(hyper_m.shake) > 0.0, "%s's hyper projectile carries its shake through (%.2f)"
 				% [id, float(hyper_m.shake)])
-			check(int(hyper_m.flash) == 0 and hyper_final != null and int(hyper_final.flash) > 0,
-				"%s's hyper flashes only on the finishing hit (running %d, finishing %d)" % [id,
-					int(hyper_m.flash), int(hyper_final.flash) if hyper_final != null else -1])
+			if hyper_final == null:
+				# A volley: each ball is a copy of the spec, and the character
+				# puts `final_knockdown` on the last one. So the *base* spec has
+				# no `m_final` and no knockdown — what has to hold is that the
+				# move fired more than one projectile and that the opponent
+				# ended up off their feet, which is what a finishing ball is for.
+				var thrown := 0
+				for pp in f.projectiles:
+					if pp.m != null and pp.m.level == 3:
+						thrown += 1
+				check(f.fighters[1].state in [Fighter.S.KNOCKDOWN, Fighter.S.LAUNCHED, Fighter.S.KO]
+						or f.fighters[1].health < Fighter.MAX_HEALTH,
+					"%s's volley landed (%d balls still up, opponent %d hp in state %d)"
+					% [id, thrown, int(f.fighters[1].health), f.fighters[1].state])
+			else:
+				check(int(hyper_m.flash) == 0 and int(hyper_final.flash) > 0,
+					"%s's hyper flashes only on the finishing hit (running %d, finishing %d)" % [id,
+						int(hyper_m.flash), int(hyper_final.flash)])
+		else:
+			var mv: MoveData = p1.def.moves["hyper"]
+			check(mv.projectile.is_empty(), "%s's first hyper is a melee super" % id)
+			check(mv.hits >= 2, "%s's melee hyper lands several hits (%d)" % [id, mv.hits])
+			check(p1.hits_done >= 2 or p1.combo >= 2,
+				"%s's melee hyper connected more than once (%d hits, combo %d)"
+				% [id, p1.hits_done, p1.combo])
 		f.free()
 
 
@@ -427,9 +470,21 @@ func _test_specials(id: String) -> void:
 		# opponent out of reach and top them back up first: a few hypers in a row
 		# can leave them standing next to us, and a close L+H is a throw before it
 		# is ever a special.
+		#
+		# Both fighters have to be put back: a super that travels (or, for a
+		# gap-closer like Silvan's, one that *runs at* the opponent) leaves P1
+		# somewhere new, so moving only P2 can leave them already past each
+		# other — which is a harness bug, not a move bug.
+		p1.position.x = 300.0
+		p1.vel = Vector2.ZERO
+		p1.facing = 1
 		f.fighters[1].position.x = p1.position.x + 220.0
 		f.fighters[1].health = Fighter.MAX_HEALTH
 		_run(f, 150)
+		# And again after the settle, in case the idle frames moved either of them.
+		p1.position.x = 300.0
+		p1.facing = 1
+		f.fighters[1].position.x = p1.position.x + 220.0
 		p1.meter = 100.0
 		var y_start := p1.position.y
 		_script(p1, [[U | LI | HE, 3], [0, 60]])

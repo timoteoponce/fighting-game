@@ -192,6 +192,10 @@ const TINTS := {
 	"dragon": {"core": Color(1, 0.98, 0.93), "mid": Color(1, 0.6, 0.82), "edge": Color(0.72, 0.3, 0.6)},
 	"tears": {"core": Color(0.88, 0.97, 1.0), "mid": Color(0.42, 0.72, 1.0), "edge": Color(0.16, 0.42, 0.78)},
 	"wolf": {"core": Color(0.95, 0.98, 1.0), "mid": Color(0.72, 0.85, 1.0), "edge": Color(0.36, 0.5, 0.88)},
+	# Emilia's drawn tiger: ink-and-wash orange, deliberately flat and papery so
+	# it reads as something she sketched rather than as a real animal.
+	"tiger": {"core": Color("fff3d8"), "mid": Color("f0a03c"), "edge": Color("7a3a10"),
+		"ink": Color("2a1408")},
 }
 
 
@@ -212,6 +216,20 @@ func _draw_halo(h: Node2D) -> void:
 	var pulse := 1.0 + 0.15 * sin(t * 0.5)
 	if kind == "tears":
 		h.draw_rect(Rect2(0, -size.y * 0.5, size.x * minf(1.0, t / 6.0), size.y), Color(col, 0.12))
+		return
+	if kind == "bball":
+		# Keyed off the ball, not the hitbox: the ball is a 10px sprite inside a
+		# 34x40 box, and the shared halo scaled to the box was three times its size
+		# and read as a brown ellipse rather than a glow.
+		var br := 12.0 * pulse
+		for i in 3:
+			h.draw_circle(Vector2.ZERO, br * (1.0 + float(i) * 0.42), Color(col, 0.12 - float(i) * 0.032), true, -1.0, true)
+		return
+	if kind == "tiger":
+		# A drawing, not a light. The shared glow scaled to the hitbox made a flat
+		# sketch look like a lit object, and the paper wash behind it read as a
+		# slab of grey, so this kind gets no halo at all — the ink and the flat
+		# fill are what make it read as something she drew.
 		return
 	if kind == "wolf":
 		# A glow behind the head, not a disc the size of the hitbox. Tight and
@@ -270,11 +288,18 @@ func _draw() -> void:
 		"tears":
 			_draw_tears()
 		"bball":
-			for i in 4:
-				draw_circle(Vector2(-11.0 - i * 7.0, sin(t * 0.4 + i) * 2.0), 7.0 - i * 1.5, Color(1, 0.8, 0.6, 0.3 - i * 0.06))
-			CharlieDef._basketball(self, Vector2(0, absf(sin(t * 0.25)) * -6.0), 10.0, t * 0.3)
+			# A tight trail behind the ball, then the ball itself. The old trail was
+			# four wide flat circles that merged into one long ellipse, which at this
+			# size read as a brown smear rather than as a ball in flight.
+			for i in 3:
+				var f := float(i)
+				draw_circle(Vector2(-9.0 - i * 6.0, sin(t * 0.4 + f) * 1.6), 4.5 - f * 1.1,
+					Color(1, 0.82, 0.55, 0.26 - f * 0.07))
+			CharlieDef._basketball(self, Vector2(0, sin(t * 0.22) * 1.6), 10.0, t * 1.6)
 		"wolf":
 			_draw_wolf()
+		"tiger":
+			_draw_tiger()
 
 
 static func draw_soccer_ball(ci: CanvasItem, c: Vector2, r: float, rot: float) -> void:
@@ -433,7 +458,7 @@ func _draw_dragon() -> void:
 		draw_line(Vector2(-60.0 - i * 8.0, y + sin(t * 0.4 + i) * 3.0), Vector2(-90.0 - i * 8.0, y), Color(0.3, 0.3, 0.4, 0.5), 1.5, true)
 
 
-## Charlie: CRYBABY FLOOD and TEAR GEYSER. He bawls so hard the tears become
+## Charlie: CRYBABY FLOOD and ABSOLUTE DELUGE. He bawls so hard the tears become
 ## water. A wide, low hitbox is the flood that rolls over the ground; a tall one
 ## is the geyser, a column climbing off him. `tint` colours both.
 func _draw_tears() -> void:
@@ -485,9 +510,9 @@ func _draw_tears() -> void:
 		CharlieDef._basketball(self, Vector2(bx, surface + 6.0 + sin(t * 0.3 + i * 2.0) * 4.0), 9.0, t * 0.15 + i)
 
 
-## Charlie: TEAR GEYSER. The tall one. A column of water climbing straight off
-## him rather than rolling along the floor, so it catches anything above him.
-## Basketballs get thrown up the column instead of bobbing in it.
+## Charlie: the MAX floods, SOBBING FIT and ABSOLUTE DELUGE. The tall one is a
+## column of water climbing straight off him rather than rolling along the floor,
+## so it catches anything above him.
 func _draw_geyser() -> void:
 	var out := FighterRenderer.OUT
 	var w := size.x * minf(1.0, t / 6.0)
@@ -544,13 +569,75 @@ func _draw_geyser() -> void:
 		draw_line(Vector2(bx, by + 8.0), Vector2(bx, by + 16.0), Color(edge, 0.5 * fade * (1.0 - k)), 2.0, true)
 
 
+## Emilia: FELINE ATTACK. A tiger she drew, so it is ink and wash on paper: a
+## flat orange body, hard black stripes and a scribbled outline, with a few
+## frames of the sketch appearing before the ink settles.
+func _draw_tiger() -> void:
+	var out := FighterRenderer.OUT
+	var ink: Color = pal("ink")
+	var fur: Color = pal("mid")
+	var paper: Color = pal("core")
+	var edge: Color = pal("edge")
+	# The drawing pushes in: `t` past 6 is the ink settling, before that the cat
+	# is still a rough pencil shape.
+	var inked := clampf((t - 3.0) / 6.0, 0.0, 1.0)
+	var lung := 8.0 * (1.0 - inked)
+	# Tail first, whipping behind.
+	var tail := PackedVector2Array()
+	for i in 9:
+		var f := float(i) / 8.0
+		tail.append(Vector2(-34.0 - f * 30.0, -6.0 + sin(t * 1.1 - f * 2.4) * (7.0 + f * 9.0)))
+	draw_polyline(tail, edge, 7.0 - inked * 2.0, true)
+	draw_polyline(tail, fur, 4.0, true)
+	# Body: a stretched cat, mid-pounce.
+	var body := PackedVector2Array([
+		Vector2(-30, -12), Vector2(-6, -20), Vector2(18, -16), Vector2(34, -8),
+		Vector2(36, 6), Vector2(16, 14), Vector2(-10, 16), Vector2(-32, 8),
+	])
+	draw_colored_polygon(body, fur)
+	draw_polyline(body + PackedVector2Array([body[0]]), ink, 2.6, true)
+	# Legs, tucked then extending.
+	for lx: float in [-18.0, -2.0, 12.0]:
+		var swing := sin(t * 1.6 + lx) * 5.0
+		draw_line(Vector2(lx, 12), Vector2(lx + 8.0, 24.0 + swing), ink, 4.0, true)
+		draw_line(Vector2(lx + 8.0, 24.0 + swing), Vector2(lx + 18.0, 22.0 + swing), fur, 3.0, true)
+	# Head and muzzle.
+	var head := PackedVector2Array([
+		Vector2(30, -14), Vector2(44, -18), Vector2(54, -10), Vector2(52, 0),
+		Vector2(38, 2), Vector2(30, -2),
+	])
+	draw_colored_polygon(head, paper)
+	draw_polyline(head + PackedVector2Array([head[0]]), ink, 2.4, true)
+	# Ears.
+	for ex: float in [36.0, 46.0]:
+		var ear := PackedVector2Array([Vector2(ex, -16), Vector2(ex - 3, -26), Vector2(ex + 5, -17)])
+		draw_colored_polygon(ear, fur)
+		draw_polyline(ear + PackedVector2Array([ear[0]]), ink, 2.0, true)
+	# Stripes, and they only appear as the ink settles.
+	var stripes := maxi(0, int(inked * 5.0))
+	for i in stripes:
+		var sx := -22.0 + float(i) * 12.0
+		draw_line(Vector2(sx, -17.0), Vector2(sx - 4.0, -4.0), ink, 3.0, true)
+	# Eye and a fang.
+	draw_circle(Vector2(44, -8), 2.6, ink, true, -1.0, true)
+	draw_circle(Vector2(45, -9), 1.0, paper, true, -1.0, true)
+	if inked > 0.5:
+		var fang := PackedVector2Array([Vector2(48, 0), Vector2(51, 0), Vector2(49.5, 5)])
+		draw_colored_polygon(fang, paper)
+		draw_polyline(fang + PackedVector2Array([fang[0]]), ink, 1.4, true)
+	# Claw swipes off the front paws, and the paper it is drawn on.
+	for i in 3:
+		var y := -6.0 + float(i) * 8.0
+		draw_line(Vector2(20, y), Vector2(52 + inked * 8.0, y - 4.0), Color(ink, 0.55), 2.0, true)
+
+
 ## Where Silvan's spirit wolf's head is: it races the length of the hitbox in
 ## 16 frames, then stays at the far end snapping.
 func _wolf_x() -> float:
 	return lerpf(20.0, size.x - 55.0, minf(1.0, t / 16.0))
 
 
-## Silvan: MOON HOWL. A ghostly giant wolf-dog charges out of him, leaving
+## Silvan: a ghostly giant wolf-dog charges out of him, leaving
 ## afterimages and paw prints, howling as it goes.
 func _draw_wolf() -> void:
 	var fade := 1.0 if life > 10 else life / 10.0

@@ -6,6 +6,13 @@ extends CharacterDef
 ## is the old heavy's, untouched; only the look and the jokes changed.
 
 
+## The gaps, in frames from the move's `startup`, at which each ball in the rain
+## goes out. `0` is the one the move's own `projectile` spec spawns; the rest are
+## thrown from `tick`. Kept tight so the whole volley resolves inside the move's
+## active window.
+const RAIN_GAPS := [0, 9, 18, 27]
+
+
 func _init() -> void:
 	id = "charlie"
 	display = "CHARLIE"
@@ -47,8 +54,8 @@ func _init() -> void:
 		["L + H", "Chest Pass"],
 		["FWD + L + H", "Fast Break"],
 		["DOWN + L + H", "Rim Shot"],
-		["BACK + L + H", "CRYBABY FLOOD"],
-		["UP + L + H", "TEAR GEYSER!"],
+		["BACK + L + H", "BASKETBALL RAIN!"],
+		["UP + L + H", "CRYBABY FLOOD!"],
 	]
 	poses = {
 		"intro": {"arm_f": 70, "elb_f": 60, "arm_b": 30, "elb_b": 90, "lean": 4, "head": 6},
@@ -140,12 +147,51 @@ func _init() -> void:
 			"pose_s": {"arm_f": -20, "elb_f": 60, "leg_f": 40, "knee_f": 90, "lean": 10},
 			"pose_a": {"arm_f": 180, "elb_f": 0, "arm_b": -30, "lean": -14, "leg_f": 20, "leg_b": -40, "ground": 0, "hip": -40},
 		}),
-		# He winds up a sob, then bawls so hard it becomes a tidal wave.
+# Hyper A — BASKETBALL RAIN. He empties the whole rack: four balls lobbed
+		# over in sequence, each one arcing down onto the opponent. The volley is
+		# fired from `tick`, because one `projectile` spec can only spawn one ball.
 		"hyper": MoveData.make({
+			"id": "basketball rain", "display": "BASKETBALL RAIN!", "level": 3, "startup": 16,
+			"active": 40, "recovery": 44, "invuln": 44, "prop": "ball", "sfx": "heavy",
+			# The first ball is the one the spec owns; `tick` throws the rest.
+			"projectile": {
+				"kind": "bball", "speed": 5.4, "size": Vector2(34, 40), "offset": Vector2(46, -104),
+				"life": 150, "hits": 1, "interval": 0, "damage": 22, "hitstun": 18,
+				"kb": Vector2(2.4, -2.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
+				"strength": 99, "shake": 0.8, "sfx": "heavy",
+			},
+			# Overhead pass, both arms up, ball held behind his head.
+			"cutin_pose": {"head": -24, "lean": -14, "arm_f": 168, "elb_f": 14, "arm_b": 172, "elb_b": 10,
+				"leg_f": 20, "knee_f": 10, "leg_b": -14, "knee_b": 14},
+			"keys": [
+				# Crouched, winding both arms back with the ball.
+				[0, {"head": -8, "lean": 20, "arm_f": -120, "elb_f": 130, "arm_b": -140, "elb_b": 120,
+					"leg_f": 50, "knee_f": 90, "leg_b": 26, "knee_b": 90}, 0.5],
+				# Overhead pass, arms whipping forward as the balls go out.
+				[15, {"head": -22, "lean": -12, "arm_f": 156, "elb_f": 18, "arm_b": 164, "elb_b": 12,
+					"leg_f": 26, "knee_f": 14, "leg_b": -18, "knee_b": 16}, 0.95],
+				# Follow-through, arms coming down across his body.
+				[44, {"head": -12, "lean": 4, "arm_f": 120, "elb_f": 40, "arm_b": 128, "elb_b": 34,
+					"leg_f": 30, "knee_f": 24, "leg_b": -20, "knee_b": 26}, 0.45],
+				[62, {"head": 2, "lean": 8, "arm_f": 50, "elb_f": 90, "arm_b": 56, "elb_b": 92,
+					"leg_f": 24, "knee_f": 30, "leg_b": 16, "knee_b": 30}, 0.35],
+			],
+			"events": {
+				16: [["voice", {"line": "hyper"}], ["shake", {"amount": 4.0}]],
+				30: [["sfx", {"name": "heavy"}], ["shake", {"amount": 2.0}]],
+				42: [["sfx", {"name": "heavy"}], ["shake", {"amount": 2.0}]],
+			},
+			# Arms still coming down as the last one lands.
+			"contact_pose": {"head": -6, "lean": 16, "arm_f": 96, "elb_f": 60, "arm_b": 104, "elb_b": 54,
+				"leg_f": 26, "knee_f": 34, "leg_b": -18, "knee_b": 34},
+		}),
+		# Hyper B — CRYBABY FLOOD. Kept: the wide, low tear flood that rolls over
+		# the ground with basketballs bobbing in the surf.
+		"hyper2": MoveData.make({
 			"id": "crybaby flood", "display": "CRYBABY FLOOD!", "level": 3, "startup": 18,
 			"active": 1, "recovery": 48, "invuln": 44, "prop": "tears", "sfx": "hyper",
 			"projectile": {
-				"kind": "tears", "anchored": true, "size": Vector2(300, 150), "offset": Vector2(60, -80),
+				"kind": "tears", "anchored": true, "size": Vector2(320, 160), "offset": Vector2(60, -80),
 				"life": 60, "hits": 14, "interval": 4, "damage": 19, "hitstun": 16, "kb": Vector2(1.0, -1.0),
 				"chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3, "final_knockdown": true,
 				"strength": 99, "shake": 0.8, "sfx": "hyper",
@@ -154,6 +200,9 @@ func _init() -> void:
 				"tint": {"core": Color("e8f6ff"), "mid": Color("4f9fd8"), "edge": Color("1d4a72"),
 					"halo": Color("6fc0f0")},
 			},
+			# Head thrown right back, eyes shut, both hands up off his face.
+			"cutin_pose": {"head": -30, "lean": -18, "arm_f": 162, "elb_f": 16, "arm_b": 152, "elb_b": 22,
+				"leg_f": 26, "knee_f": 24, "leg_b": -22, "knee_b": 26},
 			"keys": [
 				# Fists to the eyes, shoulders shaking...
 				[0, {"arm_f": 150, "elb_f": 150, "arm_b": 140, "elb_b": 150, "lean": 10, "head": 12}, 0.5],
@@ -162,102 +211,60 @@ func _init() -> void:
 				[18, {"arm_f": 120, "elb_f": 10, "arm_b": 150, "elb_b": 10, "lean": -14, "head": -22}, 0.95],
 				[44, {"arm_f": 110, "elb_f": 30, "arm_b": 130, "elb_b": 30, "lean": -8, "head": -14}, 0.3],
 			],
-			# Held through the cut-in: fists still pressed to the eyes, chin
-			# already going up, braced for it. The sob building before the wail.
-			"cutin_pose": {"lean": -16, "head": -26, "arm_f": 148, "elb_f": 152, "arm_b": 138, "elb_b": 152,
-				"leg_f": 26, "knee_f": 34, "leg_b": -22, "knee_b": 30},
-			# The flood is through them and he is still going.
-			"contact_pose": {"lean": -22, "head": -32, "arm_f": 126, "elb_f": 4, "arm_b": 156, "elb_b": 4,
-				"leg_f": 34, "knee_f": 22, "leg_b": -30, "knee_b": 20},
-			"events": {18: [["shake", {"amount": 4.0}]]},
+			"contact_pose": {"arm_f": 116, "elb_f": 4, "arm_b": 144, "elb_b": 4, "lean": -18, "head": -26},
+			"events": {18: [["voice", {"line": "hyper"}], ["shake", {"amount": 5.0}]],
+				34: [["shake", {"amount": 3.0}]]},
 		}),
-		# Hyper B — UP + L + H. His flood spreads sideways along the floor. This
-		# one goes straight up: a geyser of tears that erupts over his head, so it
-		# catches jumpers and anyone hovering above him.
-		"hyper2": MoveData.make({
-			"id": "tear geyser", "display": "TEAR GEYSER!", "level": 3, "startup": 17,
-			"active": 1, "recovery": 46, "invuln": 43, "prop": "tears", "sfx": "hyper",
-			"projectile": {
-				# Tall and narrow, against the flood's wide and low. The tears art
-				# runs from the floor up to the top of `size.y`, so this is a column.
-				"kind": "tears", "anchored": true, "size": Vector2(230, 300), "offset": Vector2(50, -150),
-				"life": 60, "hits": 12, "interval": 4, "damage": 20, "hitstun": 16,
-				"kb": Vector2(1.0, -5.0), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
-				"final_knockdown": true, "strength": 99, "shake": 0.8, "sfx": "hyper",
-				# A colder, brighter column, so the two `tears` supers are told
-				# apart by colour as well as by shape.
-				"tint": {"core": Color("f0fbff"), "mid": Color("6ec6f0"), "edge": Color("205a86"),
-					"halo": Color("9fe0ff")},
-			},
-			# Head thrown right back, eyes shut, cheeks blown out: the inhale before
-			# the geyser, with his whole body arched away from where it will come out.
-			"cutin_pose": {"lean": -30, "head": -34, "arm_f": 168, "elb_f": 12, "arm_b": 150, "elb_b": 20,
-				"leg_f": 30, "knee_f": 26, "leg_b": -24, "knee_b": 24},
-			"keys": [
-				# Reeling back, arms up and away from his face...
-				[0, {"lean": -28, "head": -32, "arm_f": 164, "elb_f": 14, "arm_b": 146, "elb_b": 22,
-					"leg_f": 28, "knee_f": 28, "leg_b": -22, "knee_b": 26}, 0.5],
-				# ...then the wail, straight up, on his toes with both arms punched out.
-				[16, {"lean": -6, "head": -30, "arm_f": 178, "elb_f": 4, "arm_b": 174, "elb_b": 4,
-					"leg_f": 44, "knee_f": 10, "leg_b": -16, "knee_b": 14}, 0.95],
-				[40, {"lean": -12, "head": -26, "arm_f": 172, "elb_f": 8, "arm_b": 168, "elb_b": 8,
-					"leg_f": 38, "knee_f": 14, "leg_b": -20, "knee_b": 18}, 0.4],
-				[56, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
-			],
-			# The column is up and he is still pushing at the sky.
-			"contact_pose": {"lean": -2, "head": -36, "arm_f": 184, "elb_f": 0, "arm_b": 180, "elb_b": 0,
-				"leg_f": 50, "knee_f": 8, "leg_b": -14, "knee_b": 12},
-			"events": {16: [["shake", {"amount": 5.0}]]},
-		}),
-		# MAX version of CRYBABY FLOOD — same input, all three bars. The water comes
-		# up past his head and keeps going.
+		# MAX of BASKETBALL RAIN — same four balls, but bigger, faster and
+		# dropped from higher, so they come down like weather rather than a pass.
+		# It reuses `RAIN_GAPS`, so the MAX throws exactly as many as the
+		# ordinary one: the difference is where they come from, not how many.
 		"hyper_max": MoveData.make({
-			"id": "sobbing fit", "display": "SOBBING FIT!", "level": 3, "startup": 20,
+			"id": "sobbing fit", "display": "SOBBING FIT!", "level": 3, "startup": 18,
+			"active": 54, "recovery": 48, "invuln": 47, "prop": "ball",
+			"meter_cost": 300, "sfx": "heavy",
+			"projectile": {
+				"kind": "bball", "speed": 6.2, "size": Vector2(38, 44), "offset": Vector2(46, -124),
+				"life": 170, "hits": 1, "interval": 0, "damage": 24, "hitstun": 18,
+				"kb": Vector2(2.6, -2.4), "chip": 0.2, "hitstop": 3, "meter": 0.0, "level": 3,
+				"strength": 99, "shake": 1.0, "sfx": "heavy",
+			},
+			# Both arms straight up over his head, ball held in both hands.
+			"cutin_pose": {"head": -30, "lean": -20, "arm_f": 176, "elb_f": 6, "arm_b": 178, "elb_b": 4,
+				"leg_f": 16, "knee_f": 8, "leg_b": -12, "knee_b": 12},
+			"keys": [
+				[0, {"head": -10, "lean": 24, "arm_f": -130, "elb_f": 140, "arm_b": -150, "elb_b": 130,
+					"leg_f": 56, "knee_f": 96, "leg_b": 30, "knee_b": 96}, 0.5],
+				[17, {"head": -28, "lean": -18, "arm_f": 172, "elb_f": 10, "arm_b": 176, "elb_b": 6,
+					"leg_f": 20, "knee_f": 10, "leg_b": -14, "knee_b": 14}, 0.95],
+				[58, {"head": -14, "lean": 2, "arm_f": 128, "elb_f": 36, "arm_b": 134, "elb_b": 30,
+					"leg_f": 26, "knee_f": 22, "leg_b": -18, "knee_b": 24}, 0.45],
+				[76, {"head": 2, "lean": 8, "arm_f": 50, "elb_f": 90, "arm_b": 56, "elb_b": 92,
+					"leg_f": 24, "knee_f": 30, "leg_b": 16, "knee_b": 30}, 0.35],
+			],
+			"events": {
+				18: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
+				30: [["sfx", {"name": "heavy"}], ["shake", {"amount": 3.0}]],
+				42: [["sfx", {"name": "heavy"}], ["shake", {"amount": 3.0}]],
+				54: [["sfx", {"name": "heavy"}], ["shake", {"amount": 2.5}]],
+			},
+			"contact_pose": {"head": -8, "lean": 18, "arm_f": 100, "elb_f": 56, "arm_b": 106, "elb_b": 50,
+				"leg_f": 24, "knee_f": 32, "leg_b": -16, "knee_b": 32},
+		}),
+		# MAX of CRYBABY FLOOD — the water comes up past his head and keeps going.
+		"hyper2_max": MoveData.make({
+			"id": "absolute deluge", "display": "ABSOLUTE DELUGE!", "level": 3, "startup": 19,
 			"active": 1, "recovery": 52, "invuln": 47, "prop": "tears", "sfx": "hyper",
 			"meter_cost": 300,
 			"projectile": {
-				"kind": "tears", "anchored": true, "size": Vector2(390, 230), "offset": Vector2(55, -115),
-				"life": 76, "hits": 20, "interval": 4, "damage": 21, "hitstun": 18,
-				"kb": Vector2(1.0, -2.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
+				# Taller than wide, so `_draw_tears` takes its geyser branch and
+				# draws a column climbing off him rather than a wave.
+				"kind": "tears", "anchored": true, "size": Vector2(300, 400), "offset": Vector2(50, -200),
+				"life": 72, "hits": 18, "interval": 4, "damage": 23, "hitstun": 18,
+				"kb": Vector2(1.0, -3.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
 				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
-				# Deeper than the ordinary flood, so the MAX reads as more water
-				# rather than as the same wave scaled up.
-				"tint": {"core": Color("e8f6ff"), "mid": Color("2f7fbe"), "edge": Color("123a5e"),
-					"halo": Color("4f9fd8")},
-			},
-			# Chin down, eyes screwed shut, arms clamped to his ribs: he is bracing
-			# for the biggest sob of his life rather than throwing one.
-			"cutin_pose": {"lean": 34, "head": 34, "arm_f": 150, "elb_f": 158, "arm_b": 140, "elb_b": 158,
-				"leg_f": 34, "knee_f": 40, "leg_b": -28, "knee_b": 36},
-			"keys": [
-				# Hunched over his own knees, shaking...
-				[0, {"lean": 32, "head": 32, "arm_f": 148, "elb_f": 160, "arm_b": 138, "elb_b": 160,
-					"leg_f": 32, "knee_f": 38, "leg_b": -26, "knee_b": 34}, 0.5],
-				# ...then he comes apart: head back, arms out, straight up.
-				[19, {"lean": -24, "head": -40, "arm_f": 186, "elb_f": 0, "arm_b": 182, "elb_b": 0,
-					"leg_f": 40, "knee_f": 8, "leg_b": -18, "knee_b": 10}, 0.95],
-				[52, {"lean": -18, "head": -34, "arm_f": 178, "elb_f": 6, "arm_b": 174, "elb_b": 6,
-					"leg_f": 36, "knee_f": 12, "leg_b": -20, "knee_b": 14}, 0.4],
-				[68, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
-			],
-			# Still going, arms wide, head thrown all the way back.
-			"contact_pose": {"lean": -32, "head": -46, "arm_f": 190, "elb_f": 0, "arm_b": 188, "elb_b": 0,
-				"leg_f": 48, "knee_f": 6, "leg_b": -16, "knee_b": 8},
-			"events": {19: [["shake", {"amount": 6.0}]]},
-		}),
-		# MAX version of TEAR GEYSER! — the column is so tall it comes off the top
-		# of the screen, and nothing at ground level is out of it.
-		"hyper2_max": MoveData.make({
-			"id": "absolute deluge", "display": "ABSOLUTE DELUGE!", "level": 3, "startup": 19,
-			"active": 1, "recovery": 50, "invuln": 47, "prop": "tears", "sfx": "hyper",
-			"meter_cost": 300,
-			"projectile": {
-				"kind": "tears", "anchored": true, "size": Vector2(300, 390), "offset": Vector2(52, -195),
-				"life": 70, "hits": 17, "interval": 4, "damage": 22, "hitstun": 18,
-				"kb": Vector2(1.0, -6.0), "chip": 0.2, "hitstop": 4, "meter": 0.0, "level": 3,
-				"final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "hyper",
-				# Brighter and whiter than the ordinary geyser, like the pressure
-				# of the whole sky letting go at once.
+				# Brighter and whiter than the ordinary flood, like the pressure of
+				# the whole sky letting go at once.
 				"tint": {"core": Color("ffffff"), "mid": Color("9fe0ff"), "edge": Color("2a6f9e"),
 					"halo": Color("cdefff")},
 			},
@@ -266,23 +273,74 @@ func _init() -> void:
 				"leg_f": 38, "knee_f": 46, "leg_b": -30, "knee_b": 40},
 			"keys": [
 				# Hunched, arms in tight, head down...
-				[0, {"lean": 38, "head": 38, "arm_f": 154, "elb_f": 166, "arm_b": 144, "elb_b": 166,
-					"leg_f": 36, "knee_f": 44, "leg_b": -28, "knee_b": 38}, 0.5],
-				# ...then straight up, on his toes, everything out.
-				[18, {"lean": -4, "head": -38, "arm_f": 188, "elb_f": 0, "arm_b": 184, "elb_b": 0,
-					"leg_f": 52, "knee_f": 6, "leg_b": -14, "knee_b": 8}, 0.95],
-				[48, {"lean": -8, "head": -32, "arm_f": 182, "elb_f": 4, "arm_b": 178, "elb_b": 4,
-					"leg_f": 46, "knee_f": 10, "leg_b": -18, "knee_b": 12}, 0.4],
-				[64, {"lean": 4, "head": 0, "arm_f": 40, "elb_f": 100, "arm_b": 42, "elb_b": 100}, 0.35],
+				[0, {"lean": 30, "head": 32, "arm_f": 150, "elb_f": 158, "arm_b": 140, "elb_b": 158}, 0.5],
+				# ...and then he opens up and the column goes up off him.
+				[18, {"lean": 4, "head": -26, "arm_f": 120, "elb_f": 8, "arm_b": 132, "elb_b": 4,
+					"leg_f": 30, "knee_f": 14, "leg_b": -24, "knee_b": 26}, 0.95],
+				[54, {"lean": 10, "head": -18, "arm_f": 114, "elb_f": 16, "arm_b": 126, "elb_b": 12,
+					"leg_f": 26, "knee_f": 18, "leg_b": -20, "knee_b": 22}, 0.45],
+				[70, {"lean": 14, "head": -6, "arm_f": 100, "elb_f": 30, "arm_b": 110, "elb_b": 26,
+					"leg_f": 24, "knee_f": 26, "leg_b": -18, "knee_b": 30}, 0.35],
 			],
-			# The column is past the top of the screen and he is still pushing.
-			"contact_pose": {"lean": 0, "head": -46, "arm_f": 192, "elb_f": 0, "arm_b": 190, "elb_b": 0,
-				"leg_f": 58, "knee_f": 4, "leg_b": -12, "knee_b": 6},
-			"events": {18: [["shake", {"amount": 6.0}]]},
+			"contact_pose": {"lean": 0, "head": -32, "arm_f": 126, "elb_f": 0, "arm_b": 138, "elb_b": 0,
+				"leg_f": 32, "knee_f": 8, "leg_b": -26, "knee_b": 30},
+			"events": {19: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
+				38: [["shake", {"amount": 3.0}]]},
 		}),
 	}
 	size = 1.12  # the tall one
+	# Four balls, so the suite can tell a volley from a single-shot super.
+	volley_count = RAIN_GAPS.size()
 	scale_moves()
+
+
+## BASKETBALL RAIN is a volley, and one `projectile` spec can only spawn a
+## single ball — so the first comes out of the move itself and the rest are
+## thrown from here. `tick` runs once per step after the state machine, which is
+## what a timed volley needs; `on_move_frame` only fires on a single frame.
+##
+var _rain_thrown := -1
+
+
+func tick(f: Fighter) -> void:
+	if f.fight == null or f.state != Fighter.S.ATTACK or f.move == null:
+		_rain_thrown = -1
+		return
+	var m: MoveData = f.move
+	if m.id != "basketball rain" and m.id != "sobbing fit":
+		_rain_thrown = -1
+		return
+	# Re-arm on the first frame of the move, then count the volley forward.
+	if _rain_thrown < 0:
+		_rain_thrown = 0
+		return
+	var elapsed := f.sf - m.startup
+	if elapsed < 0:
+		return
+	var want := 0
+	for g: int in RAIN_GAPS:
+		if elapsed >= g:
+			want += 1
+	if want <= _rain_thrown:
+		return
+	# A copy of the spec, so retuning the move re-skins every ball in the rain.
+	# Later balls go a little higher and further out, so the volley lands as a
+	# spread rather than as one line of shots.
+	var spec: Dictionary = m.projectile.duplicate(true)
+	var step := want - 1
+	# The last ball of the rain is the one that finishes them. It carries the
+	# finishing knockdown, so the super ends on a real landing rather than on a
+	# volley of chips: an earlier ball knocking them down would leave every ball
+	# after it hitting someone already on the floor.
+	spec["final_knockdown"] = step == RAIN_GAPS.size() - 1
+	# `base_offset` is the move's own, so the MAX drops from where its spec says
+	# rather than from the ordinary rain's height.
+	var base: Vector2 = m.projectile.get("offset", Vector2(46, -104))
+	var drop := 20.0 if m.id == "sobbing fit" else 0.0
+	spec["offset"] = Vector2(base.x + float(step) * 10.0, base.y - drop - float(step) * 16.0)
+	spec["speed"] = float(spec.get("speed", 5.4)) + float(step) * 0.35
+	f.fight.spawn_projectile(f, spec)
+	_rain_thrown = want
 
 
 ## Connected chain: an odd hit is the authored front limb, an even hit is the
