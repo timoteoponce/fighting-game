@@ -707,6 +707,12 @@ func _attack_step() -> void:
 	if dashing:
 		vel.x = m.dash_speed * facing
 	_fire_events(sf)
+	# A melee super has no projectile whose `hits_left` can reach zero, so its
+	# finishing beat is the last frame of its active window — where the screen
+	# punch, the flash and the slow-motion catch land, the same payoff a
+	# projectile's final hit gets. Only if it actually connected.
+	if m.level == 3 and m.projectile.is_empty() and hits_done > 0 and sf == m.startup + m.active and fight != null:
+		fight.hyper_finisher()
 	# The character gets a look at this frame before its projectile is built, so
 	# a move can be re-scaled on the way out (Ulises' hyper grows with the ball).
 	def.on_move_frame(self, m, sf)

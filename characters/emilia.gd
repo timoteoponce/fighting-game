@@ -40,7 +40,7 @@ func _init() -> void:
 		["L + H", "Wand Spark"],
 		["FWD + L + H", "Cartwheel Rush"],
 		["DOWN + L + H", "Star Jump"],
-		["BACK + L + H", "WAND BEAM!"],
+		["BACK + L + H", "CARTWHEEL ATTACK!"],
 		["UP + L + H", "FELINE ATTACK!"],
 	]
 	poses = {
@@ -90,36 +90,40 @@ func _init() -> void:
 			"pose_s": {"leg_f": 60, "knee_f": 100, "leg_b": 20, "knee_b": 100},
 			"pose_a": {"arm_f": 150, "elb_f": 0, "arm_b": 210, "elb_b": 0, "leg_f": 40, "knee_f": 0, "leg_b": -40, "knee_b": 0,
 				"lean": 0, "ground": 0, "hip": -46}}),
-		# Hyper A — WAND BEAM. Her old summons are gone; this is the wand itself,
-		# fired as a bar of raw light: violet body, white core, and a hard edge.
-		"hyper": MoveData.make({"id": "wand beam", "display": "WAND BEAM!", "level": 3, "startup": 15,
-			"active": 1, "recovery": 46, "invuln": 45, "prop": "sketch", "sfx": "magic",
-			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(520, 120), "offset": Vector2(60, -84), "life": 52,
-				"hits": 12, "interval": 4, "damage": 22, "hitstun": 18, "kb": Vector2(3.4, 0), "chip": 0.2, "hitstop": 3,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 0.9, "sfx": "magic",
-				"tint": {"core": Color("fff8ff"), "mid": Color("b45cf0"), "edge": Color("3a0d5e"),
-					"halo": Color("c98aff"), "text": "WAND BEAM", "label": Color("2a0846"),
-					"label_ink": Color("f6e6ff")}},
-			# Wand held out in both hands, chin up: she is aiming it.
-			"cutin_pose": {"lean": -8, "head": -18, "arm_f": 164, "elb_f": 14, "arm_b": 150, "elb_b": 24,
-				"leg_f": 26, "knee_f": 26, "leg_b": -20, "knee_b": 22},
+		# Hyper A — CARTWHEEL ATTACK. Aerobics is her thing, so her heavy super is
+		# a full sideways wheel that keeps kicking all the way through them. Pure
+		# melee: it paces its own hits and carries no projectile, so it lands as a
+		# run of small kicks that resolve into one heavy finish.
+		"hyper": MoveData.make({"id": "cartwheel attack", "display": "CARTWHEEL ATTACK!", "level": 3,
+			"startup": 12, "active": 26, "recovery": 44, "invuln": 46, "sfx": "kick",
+			"hits": 6, "hit_interval": 4, "damage": 23, "hitstun": 17,
+			"hitbox": Rect2(-20, -124, 124, 112), "kb": Vector2(3.0, -3.6), "chip": 0.2,
+			"hitstop": 5, "meter": 0.0, "shake": 2.4, "hit_sfx": "heavy",
+			"dash_speed": 7.5, "dash_from": 5, "dash_to": 26,
+			"knockdown": true, "strength": 99, "spin": 720.0,
+			# Coiled low, both hands planted, ready to throw her weight over.
+			"cutin_pose": {"lean": 20, "head": 8, "arm_f": 34, "elb_f": 122, "arm_b": 44, "elb_b": 132,
+				"leg_f": 32, "knee_f": 52, "leg_b": -24, "knee_b": 46},
 			"keys": [
-				# Both hands come together on the wand...
-				[0, {"lean": 6, "head": 8, "arm_f": 40, "elb_f": 120, "arm_b": 30, "elb_b": 130,
-					"leg_f": 34, "knee_f": 40, "leg_b": -22, "knee_b": 30}, 0.5],
-				# ...then it is out in front of her and the light leaves the tip.
-				[14, {"lean": -8, "head": -14, "arm_f": 150, "elb_f": 8, "arm_b": 138, "elb_b": 14,
-					"leg_f": 40, "knee_f": 18, "leg_b": -26, "knee_b": 24}, 0.95],
-				[36, {"lean": -4, "head": -10, "arm_f": 144, "elb_f": 12, "arm_b": 132, "elb_b": 18,
-					"leg_f": 34, "knee_f": 22, "leg_b": -22, "knee_b": 26}, 0.4],
-				[50, {"lean": 2, "head": 0, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
+				[0, {"lean": 22, "head": 10, "arm_f": 30, "elb_f": 126, "arm_b": 40, "elb_b": 136,
+					"leg_f": 28, "knee_f": 56, "leg_b": -22, "knee_b": 48}, 0.5],
+				# Hands down, hips up, legs scissoring wide: the wheel is over.
+				[11, {"lean": 0, "head": 0, "arm_f": 172, "elb_f": 0, "arm_b": 192, "elb_b": 0,
+					"leg_f": 42, "knee_f": 0, "leg_b": -42, "knee_b": 0, "ground": 0, "hip": -58}, 0.95],
+				# Feet over her head, still travelling.
+				[28, {"lean": 0, "head": 0, "arm_f": 168, "elb_f": 0, "arm_b": 188, "elb_b": 0,
+					"leg_f": 36, "knee_f": 0, "leg_b": -36, "knee_b": 0, "ground": 0, "hip": -54}, 0.6],
+				# Lands out of it, chest up, hands out.
+				[46, {"lean": 6, "head": 2, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
 					"leg_f": 30, "knee_f": 34, "leg_b": -20, "knee_b": 30}, 0.35],
 			],
-			"events": {14: [["voice", {"line": "hyper"}], ["shake", {"amount": 4.0}]],
-				26: [["shake", {"amount": 2.5}]]},
-			# Shoving the light further out.
-			"contact_pose": {"lean": 12, "head": -6, "arm_f": 136, "elb_f": 20, "arm_b": 124, "elb_b": 26,
-				"leg_f": 34, "knee_f": 26, "leg_b": -22, "knee_b": 28}}),
+			# A whoosh as she leaves the floor, then a bigger one per revolution.
+			"events": {12: [["voice", {"line": "hyper"}], ["slash", {}], ["shake", {"amount": 3.0}]],
+				22: [["slash", {"r": 84.0}], ["sfx", {"name": "kick"}]],
+				32: [["slash", {"r": 76.0}]]},
+			# Bare foot through them, mid-wheel.
+			"contact_pose": {"lean": 8, "head": 4, "arm_f": 176, "elb_f": 0, "arm_b": 196, "elb_b": 0,
+				"leg_f": 50, "knee_f": 0, "leg_b": -32, "knee_b": 8, "ground": 0, "hip": -58}}),
 		# Hyper B — FELINE ATTACK. The tiger she drew comes off the page and goes
 		# for them. It travels, so it keeps the projectile-slow rule: the overlap
 		# window has to outlast `hits * interval` or it can never finish.
@@ -150,33 +154,33 @@ func _init() -> void:
 			# The cat is through them and she is still holding the page up.
 			"contact_pose": {"lean": 14, "head": 6, "arm_f": 118, "elb_f": 0, "arm_b": 84, "elb_b": 60,
 				"leg_f": 40, "knee_f": 30, "leg_b": -30, "knee_b": 40}}),
-		# MAX of WAND BEAM — the whole chapter at once, and wide enough that it
-		# reads as the room being lit rather than as one shot.
-		"hyper_max": MoveData.make({"id": "page one hundred", "display": "PAGE ONE HUNDRED!", "level": 3,
-			"startup": 18, "active": 1, "recovery": 52, "invuln": 47, "prop": "sketch",
-			"meter_cost": 300, "sfx": "magic",
-			"projectile": {"kind": "beam", "anchored": true, "size": Vector2(820, 230), "offset": Vector2(60, -110), "life": 84,
-				"hits": 17, "interval": 5, "damage": 28, "hitstun": 20, "kb": Vector2(3.8, -1.0), "chip": 0.2, "hitstop": 4,
-				"meter": 0.0, "level": 3, "final_knockdown": true, "strength": 99, "shake": 1.0, "sfx": "magic",
-				"tint": {"core": Color("ffffff"), "mid": Color("d47cff"), "edge": Color("2a0846"),
-					"halo": Color("e2b0ff"), "text": "PAGE ONE HUNDRED", "label": Color("1a0430"),
-					"label_ink": Color("ffffff")}},
-			"cutin_pose": {"lean": -14, "head": -26, "arm_f": 176, "elb_f": 8, "arm_b": 162, "elb_b": 16,
-				"leg_f": 18, "knee_f": 22, "leg_b": -14, "knee_b": 20},
+		# MAX of CARTWHEEL ATTACK — a longer, faster wheel that spins the whole
+		# way round twice and sweeps most of the screen while it goes.
+		"hyper_max": MoveData.make({"id": "cartwheel cyclone", "display": "CARTWHEEL CYCLONE!", "level": 3,
+			"startup": 14, "active": 32, "recovery": 52, "invuln": 50, "sfx": "kick",
+			"meter_cost": 300,
+			"hits": 9, "hit_interval": 4, "damage": 25, "hitstun": 18,
+			"hitbox": Rect2(-28, -134, 156, 126), "kb": Vector2(3.4, -4.2), "chip": 0.2,
+			"hitstop": 5, "meter": 0.0, "shake": 3.0, "hit_sfx": "heavy",
+			"dash_speed": 9.5, "dash_from": 5, "dash_to": 30,
+			"knockdown": true, "strength": 99, "spin": 1080.0,
+			"cutin_pose": {"lean": 22, "head": 10, "arm_f": 28, "elb_f": 128, "arm_b": 38, "elb_b": 138,
+				"leg_f": 30, "knee_f": 56, "leg_b": -22, "knee_b": 50},
 			"keys": [
-				[0, {"lean": 8, "head": 10, "arm_f": 30, "elb_f": 130, "arm_b": 22, "elb_b": 140,
-					"leg_f": 40, "knee_f": 44, "leg_b": -26, "knee_b": 32}, 0.5],
-				[17, {"lean": -12, "head": -22, "arm_f": 168, "elb_f": 4, "arm_b": 156, "elb_b": 10,
-					"leg_f": 26, "knee_f": 12, "leg_b": -16, "knee_b": 14}, 0.95],
-				[62, {"lean": -6, "head": -16, "arm_f": 158, "elb_f": 10, "arm_b": 146, "elb_b": 16,
-					"leg_f": 22, "knee_f": 14, "leg_b": -12, "knee_b": 16}, 0.4],
-				[76, {"lean": 2, "head": 0, "arm_f": 44, "elb_f": 90, "arm_b": 48, "elb_b": 96,
+				[0, {"lean": 24, "head": 12, "arm_f": 26, "elb_f": 130, "arm_b": 36, "elb_b": 140,
+					"leg_f": 26, "knee_f": 58, "leg_b": -20, "knee_b": 52}, 0.5],
+				[13, {"lean": 0, "head": 0, "arm_f": 174, "elb_f": 0, "arm_b": 194, "elb_b": 0,
+					"leg_f": 46, "knee_f": 0, "leg_b": -46, "knee_b": 0, "ground": 0, "hip": -60}, 0.95],
+				[34, {"lean": 0, "head": 0, "arm_f": 166, "elb_f": 0, "arm_b": 186, "elb_b": 0,
+					"leg_f": 34, "knee_f": 0, "leg_b": -34, "knee_b": 0, "ground": 0, "hip": -52}, 0.6],
+				[56, {"lean": 8, "head": 2, "arm_f": 46, "elb_f": 88, "arm_b": 50, "elb_b": 94,
 					"leg_f": 30, "knee_f": 34, "leg_b": -20, "knee_b": 30}, 0.35],
 			],
-			"events": {18: [["voice", {"line": "hyper"}], ["shake", {"amount": 6.0}]],
-				40: [["shake", {"amount": 3.0}]]},
-			"contact_pose": {"lean": 10, "head": -10, "arm_f": 148, "elb_f": 16, "arm_b": 136, "elb_b": 22,
-				"leg_f": 28, "knee_f": 18, "leg_b": -16, "knee_b": 18}}),
+			"events": {14: [["voice", {"line": "hyper"}], ["slash", {}], ["shake", {"amount": 4.0}]],
+				26: [["slash", {"r": 96.0}], ["sfx", {"name": "kick"}]],
+				40: [["slash", {"r": 88.0}]]},
+			"contact_pose": {"lean": 10, "head": 6, "arm_f": 180, "elb_f": 0, "arm_b": 200, "elb_b": 0,
+				"leg_f": 54, "knee_f": 0, "leg_b": -34, "knee_b": 8, "ground": 0, "hip": -60}}),
 		# MAX of FELINE ATTACK — the big cat, drawn mid-leap and slower so it can
 		# still cross the opponent and land every hit.
 		"hyper2_max": MoveData.make({"id": "the whole chapter", "display": "THE WHOLE CHAPTER!", "level": 3,

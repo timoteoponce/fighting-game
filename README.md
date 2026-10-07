@@ -99,9 +99,9 @@ Settings are saved to `~/.local/share/godot/app_userdata/PJ's Clash/settings.cfg
 | L + H | Power Shot (even with the field ball loose) | Wand Spark | Chest Pass | Bark Blast |
 | Forward + L + H | Driving Tackle, or **Sprint Dash** with no ball | Cartwheel Rush | Fast Break | Puppy Dash |
 | Down + L + H | Bicycle Kick (anti-air) | Star Jump (anti-air) | Rim Shot (anti-air) | Bouncy Bounce (anti-air) |
-| Back + L + H, **full HYPER meter** | GAME THUNDER! | WAND BEAM! | BASKETBALL RAIN! | MOONLIGHT HOWL! |
+| Back + L + H, **full HYPER meter** | GAME THUNDER! | CARTWHEEL ATTACK! | BASKETBALL RAIN! | MOONLIGHT HOWL! |
 | Up + L + H, **full HYPER meter** | MURILLO!! | FELINE ATTACK! | CRYBABY FLOOD! | SUPER BITE! |
-| ...with **all three** bars | FINAL SCORE!! | PAGE ONE HUNDRED! | SOBBING FIT! | THE WHOLE SKY! |
+| ...with **all three** bars | FINAL SCORE!! | CARTWHEEL CYCLONE! | SOBBING FIT! | THE WHOLE SKY! |
 | ...with all three bars | THE LAST DITCH! | THE WHOLE CHAPTER! | ABSOLUTE DELUGE! | THE WHOLE PUPPY! |
 
 ### Two supers, one meter bar
@@ -109,8 +109,9 @@ Settings are saved to `~/.local/share/godot/app_userdata/PJ's Clash/settings.cfg
 Every fighter has **two** supers and a full meter bar buys you either one, so
 which direction you press is the whole decision:
 
-- **BACK + L + H** is the heavy cinematic super — a bolt of lightning, a bar of
-  wand light, a rain of basketballs, a pillar of moonlight.
+- **BACK + L + H** is the heavy cinematic super — a bolt of lightning, a
+  spinning cartwheel, a rain of basketballs, a pillar of moonlight. Emilia's is
+  a *melee* super: she throws herself through you rather than firing anything.
 - **UP + L + H** is the faster, more situational one, and two of the four are
   *melee*: Ulises runs in with a super kick (MURILLO) and Silvan crosses the
   whole stage biting (SUPER BITE). Emilia sends a tiger she drew (FELINE
@@ -126,7 +127,7 @@ longer, considerably nastier version of the same move. The gauge says
 | | MAX of hyper 1 (Back) | MAX of hyper 2 (Up) |
 |---|---|---|
 | Ulises | the bolt fills the whole screen | an even bigger kick, off a full sprint |
-| Emilia | one bar of light for the whole chapter | the big cat, drawn mid-leap |
+| Emilia | a longer, faster wheel that spins twice | the big cat, drawn mid-leap |
 | Charlie | a bigger rain, dropped from higher | the water comes up past his head |
 | Silvan | the moon comes down over the whole stage | he crosses the stage twice, biting |
 
@@ -249,6 +250,21 @@ is specific to it — a nose, a unibrow, a snaggletooth. The shared face already
 handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
+
+### Emilia's heavy super is a cartwheel now
+
+Her BACK + L + H super was a beam of wand light, which made two of her supers
+the same "point the wand and fire" move. It is now **CARTWHEEL ATTACK!**: a
+full sideways wheel, aerobics being her whole thing, that dashes through you
+and kicks six times on the way past. It is a *melee* super with no projectile
+at all, so it resolves as a run of small kicks into one heavy finish. The
+three-bar version is **CARTWHEEL CYCLONE!**, a longer, faster wheel that spins
+the whole way round twice. Her UP super (FELINE ATTACK!) is untouched.
+
+Melee supers also got the payoff projectile supers already had: the screen
+punch, flash and slow-motion catch used to require a projectile running out of
+hits, so a melee super just stopped. A melee super now fires the finishing beat
+on the last frame of its active window, after it has connected.
 
 ### Options, a real pause, and the first-run checklist
 

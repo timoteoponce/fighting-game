@@ -181,14 +181,21 @@ bite you.
   exemption (`Fight.spawn_projectile`) and the meter spend are both keyed on it, so a
   hyper that forgets it silently occupies the slot and fires for free. `_check_hyper_spec`
   checks this for every hyper the fighter defines.
-- **A hyper does not have to be a projectile.** Four of the sixteen are *melee* — Ulises'
-  `MURILLO` and Silvan's `SUPER BITE` have no `"projectile"` key at all and carry their
-  damage on the move's own hitbox. `_check_hyper_spec` therefore accepts either form: a
-  projectile hyper needs `"level": 3` plus a `shake`, while a melee hyper needs `hits >= 2`,
-  a positive `hit_interval`, forward reach (`hitbox.x > 0`) and a `dash` or a `shake`. The
-  reason to insist on `hits >= 2` is the same as for a projectile: a super has to be able to
-  finish, and `hits_left` reaching 0 is what triggers the punch, the flash and the catch.
-- **Sixteen hypers share seven projectile kinds, so the colour is on the move.** A `kind`
+- **A hyper does not have to be a projectile.** Six of the sixteen are *melee* — Ulises'
+  `MURILLO`, Silvan's `SUPER BITE`, Emilia's `CARTWHEEL ATTACK` (and all three `_max`
+  versions) have no `"projectile"` key at all and carry their damage on the move's own
+  hitbox. `_check_hyper_spec` therefore accepts either form: a projectile hyper needs
+  `"level": 3` plus a `shake`, while a melee hyper needs `hits >= 2`, a positive
+  `hit_interval`, forward reach (`hitbox.size.x > 0`) and a `dash` or a `shake`. The
+  reason to insist on `hits >= 2` is the same as for a projectile: a super has to be able
+  to finish.
+- **A melee super earns its finishing beat differently from a projectile one.** A
+  projectile hyper reaches the payoff when its `hits_left` hits zero; a melee hyper has no
+  projectile to run out, so `Fighter._attack_step` calls `Fight.hyper_finisher()` on the
+  last frame of the active window (once it has connected), which is where the screen
+  flash, the camera push and the slow-motion catch live. Without this a melee super just
+  stopped, and `_test_hyper_landing` covers it because it drives the *first* hyper.
+- **Ten hypers share seven projectile kinds, so the colour is on the move.** A `kind`
   picks the *shape* (`beam`, `wolf`, `tears`, `dragon`, ...) and `Projectile.pal(key)`
   picks the *colour*: the spec's `"tint"` dictionary wins key by key, and anything it
   omits falls back to `Projectile.TINTS` for that kind. Keys are `core` (hot centre),

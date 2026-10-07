@@ -332,6 +332,16 @@ func on_hyper(f: Fighter, m: MoveData) -> void:
 			effects.say(o.position + Vector2(0, -74.0 * o.def.size), o.def.hurt_lines[0], -o.facing, o.index)
 
 
+## The finishing beat for a *melee* super. A projectile super reaches the payoff
+## when its `hits_left` reaches zero; a melee super has no projectile to run
+## out, so its Fighter calls this on the last frame of the active window. Only
+## one thing is meant to punch the screen, and for a melee super this is it.
+func hyper_finisher() -> void:
+	slowmo = maxi(slowmo, HYPER_CATCH_SLOWMO)
+	flash = maxi(flash, 3)
+	shake = maxf(shake, 6.0)
+
+
 ## A throw completed: same feedback a heavy hit gets, plus a stats entry.
 func on_throw(a: Fighter, d: Fighter, m: MoveData, res: String) -> void:
 	var key := "%s throw" % a.def.id

@@ -90,19 +90,41 @@ func _build_voices(id: String, pitch: float) -> void:
 		_voices[id + "/" + line] = custom if custom else _voice(pitch, line)
 
 
+## Loads a fighter's voice line. Recordings dropped next to the executable win
+## over the built-in ones.
+##
+## The built-in path is used *as is* and must not be globalized:
+## `globalize_path("res://voices")` resolves to the executable's directory in an
+## exported build, not to the pack, so globalizing it is why Ulises' records
+## went missing from the web build (he is the only fighter with custom voices).
 func _load_recording(id: String, line: String) -> AudioStream:
-	for dir in [OS.get_executable_path().get_base_dir() + "/voices", ProjectSettings.globalize_path("res://voices")]:
-		var base := "%s/%s/%s" % [dir, id, line]
-		if FileAccess.file_exists(base + ".wav"):
-			# afconvert writes WAVE_FORMAT_EXTENSIBLE, which Godot's loader rejects.
-			var parsed := _load_pcm_wav(base + ".wav")
-			if parsed != null:
-				return parsed
-			var loaded := AudioStreamWAV.load_from_file(base + ".wav")
-			if loaded != null:
-				return loaded
-		if FileAccess.file_exists(base + ".ogg"):
-			return AudioStreamOggVorbis.load_from_file(base + ".ogg")
+	var stream := _load_recording_dir(OS.get_executable_path().get_base_dir() + "/voices", id, line, false)
+	if stream != null:
+		return stream
+	return _load_recording_dir("res://voices", id, line, true)
+
+
+func _load_recording_dir(dir: String, id: String, line: String, in_pack: bool) -> AudioStream:
+	var base := "%s/%s/%s" % [dir, id, line]
+	# Read a WAV ourselves first: afconvert writes WAVE_FORMAT_EXTENSIBLE, which
+	# Godot's loader rejects, and the raw bytes are the only way in.
+	if FileAccess.file_exists(base + ".wav"):
+		var parsed := _load_pcm_wav(base + ".wav")
+		if parsed != null:
+			return parsed
+		var loaded := AudioStreamWAV.load_from_file(base + ".wav")
+		if loaded != null:
+			return loaded
+	if FileAccess.file_exists(base + ".ogg"):
+		return AudioStreamOggVorbis.load_from_file(base + ".ogg")
+	# A built-in's raw file may not be packed but its imported resource is.
+	# `load()` follows the .import remap, which FileAccess cannot.
+	if in_pack:
+		for res in [base + ".wav", base + ".ogg"]:
+			if ResourceLoader.exists(res):
+				var r = load(res)
+				if r is AudioStream:
+					return r
 	return null
 
 
