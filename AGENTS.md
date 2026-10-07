@@ -149,11 +149,13 @@ bite you.
   returns a mask. `CpuInput` returns the same mask shape and converts its relative
   `FWD`/`BACK` bits to absolute via `_to_abs(mask, facing)`, so fighter code is
   player/CPU-agnostic — keep it that way. A phone adds `Controls.TOUCH`, fed by
-  `scripts/ui/touch_controls.gd`. `Controls.phone` is true only when the browser
-  reports a coarse pointer with no hover, so a computer never lists that device.
-  The title rows are also hit-tested (`UI.menu_index_at`, same geometry as
-  `UI.menu`): a tap or click on a caption confirms it. The words sit in the
-  middle of the screen, nowhere near the pad, so pad-only input never sees them.
+  `scripts/ui/touch_controls.gd`. `Controls.phone` starts from the browser
+  check (a coarse pointer with no hover, or a small touch screen). A real
+  finger (`InputEventScreenTouch` → `Controls.adopt_touch()`) turns it on
+  too, so a missed check still grows the pad. A mouse click must not.
+  The title rows are hit-tested (`UI.menu_index_at`). On fighter select the
+  touch device is already player 1, and `CharSelect.column_bit()` maps a tap
+  on the active name to left / light / right for one poll.
 
 ## Conventions that differ from defaults
 

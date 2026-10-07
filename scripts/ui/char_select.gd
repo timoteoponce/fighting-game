@@ -10,6 +10,8 @@ var slots := [
 var cpu_step := 0  # 0 = P1 picks, 1 = picks CPU fighter, 2 = difficulty
 var start_timer := -1.0
 var t := 0.0
+## A column tap held for one poll, then released so it stays a press.
+var _pulse := 0
 var chibis: Array[FighterRenderer] = []
 
 
@@ -22,6 +24,9 @@ func _ready() -> void:
 		add_child(r)
 		chibis.append(r)
 	_refresh_chibis()
+	# The phone is already holding a controller. Waiting for "press L to join"
+	# made the arrows do nothing, which is the whole screen.
+	_ensure_touch_player()
 
 
 func _cpu() -> bool:
@@ -43,6 +48,9 @@ func _process(delta: float) -> void:
 			_start_fight()
 	else:
 		_handle_input()
+	if _pulse != 0:
+		Controls.set_touch(Controls.touch_mask & ~_pulse)
+		_pulse = 0
 	for i in 2:
 		var r := chibis[i]
 		r.t = t * 60.0
@@ -81,8 +89,11 @@ func _handle_input() -> void:
 				s["ready"] = true
 				Sfx.play("confirm")
 			elif Controls.just_pressed(dev, Controls.HEAVY):
-				s["dev"] = Controls.NONE
-				Sfx.play("select")
+				if dev == Controls.TOUCH:
+					GameState.goto("title")
+				else:
+					s["dev"] = Controls.NONE
+					Sfx.play("select")
 		elif Controls.just_pressed(dev, Controls.HEAVY):
 			s["ready"] = false
 			Sfx.play("select")
@@ -103,7 +114,10 @@ func _handle_cpu_mode() -> void:
 				slots[0]["ready"] = true
 				cpu_step = 1
 			elif back:
-				slots[0]["dev"] = Controls.NONE
+				if dev == Controls.TOUCH:
+					GameState.goto("title")
+				else:
+					slots[0]["dev"] = Controls.NONE
 		1:
 			_change_char(1, dev)
 			if ok:
@@ -139,6 +153,69 @@ func _change_char(i: int, dev: int) -> void:
 		_refresh_chibis()
 
 
+## The phone player is slot 0. A gamepad can still take the empty seat.
+func _ensure_touch_player() -> void:
+	if Controls.phone and slots[0]["dev"] == Controls.NONE:
+		slots[0]["dev"] = Controls.TOUCH
+
+
+## Which side the buttons are choosing right now. -1 when nobody is picking.
+func _active_column() -> int:
+	if _cpu():
+		return 0 if cpu_step == 0 else 1
+	if slots[0]["dev"] == Controls.TOUCH and not slots[0]["ready"]:
+		return 0
+	return -1
+
+
+## Bit a tap on the active name stands for. Left of the name is the previous
+## fighter, right is the next, the name itself confirms. The pad and L sit
+## below this band, so a thumb on a button is not also a tap on the picture.
+func column_bit(point: Vector2) -> int:
+	var col := _active_column()
+	if col < 0:
+		return 0
+	var cx := 150.0 if col == 0 else 490.0
+	var row := Rect2(cx - 140.0, 62.0, 280.0, 80.0)
+	if not row.has_point(point):
+		return 0
+	var rel := point.x - cx
+	if rel < -40.0:
+		return Controls.LEFT
+	if rel > 40.0:
+		return Controls.RIGHT
+	return Controls.LIGHT
+
+
+## A tap on the name is the same press as the glass button, held for one poll.
+func _input(event: InputEvent) -> void:
+	if start_timer >= 0.0:
+		return
+	var at := _press_point(event)
+	if at.x < 0.0:
+		return
+	_ensure_touch_player()
+	var bit := column_bit(at)
+	if bit == 0:
+		return
+	_pulse = bit
+	Controls.set_touch(Controls.touch_mask | bit)
+	get_viewport().set_input_as_handled()
+
+
+func _press_point(event: InputEvent) -> Vector2:
+	if event is InputEventScreenTouch:
+		var tap := event as InputEventScreenTouch
+		if tap.pressed:
+			Controls.adopt_touch()
+			return tap.position
+	elif Controls.phone and event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+			return click.position
+	return Vector2(-1, -1)
+
+
 func _slot_of(dev: int) -> int:
 	for i in 2:
 		if slots[i]["dev"] == dev:
@@ -164,7 +241,7 @@ func _draw() -> void:
 		UI.text(self, Vector2(320, 250), "GET READY!", 22, Color.WHITE)
 	var hint := "LEFT / RIGHT: choose     L: confirm     H: back"
 	if Controls.phone:
-		hint = "PAD: choose     L: confirm     H: back     P2: gamepad"
+		hint = "ARROWS or tap the name     L: confirm     H: back"
 	UI.text(self, Vector2(320, 352), hint, 11, Color(1, 1, 1, 0.8))
 
 

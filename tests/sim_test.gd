@@ -33,6 +33,7 @@ func _ready() -> void:
 	_test_roster()
 	_test_logo_sting()
 	_test_touch()
+	_test_touch_select()
 	for id in GameState.CHARACTERS:
 		_test_character_def(id)
 	for id in GameState.CHARACTERS:
@@ -113,6 +114,38 @@ func _test_touch() -> void:
 	check(UI.menu_index_at(rows, TouchControls.LIGHT_AT, menu_at, 17, 28) == -1, "a tap on L is not a menu row")
 	Controls.touch_mask = 0
 	Controls.phone = saved
+	Controls._process(0.0)
+
+
+## Fighter select on a phone. The touch device is already player 1, and a tap
+## on the name is the same press as the arrows and L.
+func _test_touch_select() -> void:
+	print("[touch select]")
+	var saved_phone := Controls.phone
+	var saved_mode := GameState.mode
+	Controls.phone = false
+	Controls.adopt_touch()
+	check(Controls.phone, "a finger turns the touch pad on")
+	check(Controls.devices().has(Controls.TOUCH), "the touch device is listed after a finger")
+	Controls.phone = true
+	GameState.mode = "cpu"
+	var screen := CharSelect.new()
+	add_child(screen)
+	check(screen.slots[0]["dev"] == Controls.TOUCH, "a phone is already player 1 on fighter select")
+	var name_at := Vector2(150, 90)
+	check(screen.column_bit(name_at + Vector2(-80, 0)) == Controls.LEFT, "left of the name is the previous fighter")
+	check(screen.column_bit(name_at) == Controls.LIGHT, "a tap on the name confirms")
+	check(screen.column_bit(name_at + Vector2(80, 0)) == Controls.RIGHT, "right of the name is the next fighter")
+	check(screen.column_bit(Vector2(490, 90)) == 0, "the other side is not active while you pick your fighter")
+	check(screen.column_bit(TouchControls.LIGHT_AT) == 0, "L is the button, not a tap on the name")
+	check(screen.column_bit(TouchControls.PAD) == 0, "the pad is not a tap on the name")
+	screen.cpu_step = 2
+	check(screen.column_bit(Vector2(410, 128)) == Controls.LEFT, "left of the difficulty makes it easier")
+	check(screen.column_bit(Vector2(490, 128)) == Controls.LIGHT, "a tap on the difficulty confirms")
+	check(screen.column_bit(Vector2(570, 128)) == Controls.RIGHT, "right of the difficulty makes it harder")
+	screen.free()
+	GameState.mode = saved_mode
+	Controls.phone = saved_phone
 	Controls._process(0.0)
 
 

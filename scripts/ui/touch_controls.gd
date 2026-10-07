@@ -33,6 +33,9 @@ func _process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	# A finger is enough. The browser check runs once at boot and can miss.
+	if (event is InputEventScreenTouch or event is InputEventScreenDrag) and not Controls.phone:
+		Controls.adopt_touch()
 	if not Controls.phone or _portrait():
 		return
 	if event is InputEventScreenTouch:
@@ -115,12 +118,13 @@ func _draw() -> void:
 
 
 func _draw_pad() -> void:
-	draw_circle(PAD, PAD_R, Color(0, 0, 0, 0.38))
+	# Dark glass, not a solid disc: the fighter and the stage stay visible.
+	draw_circle(PAD, PAD_R, Color(0.02, 0.01, 0.06, 0.55))
 	var sector := _sector_of(Controls.touch_mask)
 	if sector >= 0:
 		_wedge(sector, Color(1, 0.82, 0.25, 0.9))
-	draw_arc(PAD, PAD_R - 2.0, 0, TAU, 32, Color(1, 1, 1, 0.45), 2.0)
-	draw_circle(PAD, PAD_DEAD, Color(1, 1, 1, 0.18))
+	draw_arc(PAD, PAD_R - 2.0, 0, TAU, 32, Color(1, 1, 1, 0.92), 3.0)
+	draw_circle(PAD, PAD_DEAD, Color(1, 1, 1, 0.22))
 	for dir: Vector2 in [Vector2.RIGHT, Vector2.DOWN, Vector2.LEFT, Vector2.UP]:
 		var tip := PAD + dir * (PAD_R * 0.72)
 		draw_colored_polygon(PackedVector2Array([
@@ -166,6 +170,6 @@ func _wedge(sector: int, col: Color) -> void:
 
 func _draw_button(at: Vector2, radius: float, label: String, bit: int) -> void:
 	var down := Controls.touch_mask & bit != 0
-	draw_circle(at, radius, Color(1, 0.82, 0.25, 0.95) if down else Color(0, 0, 0, 0.45))
-	draw_arc(at, radius - 1.5, 0, TAU, 24, Color(1, 1, 1, 0.7), 2.0)
+	draw_circle(at, radius, Color(1, 0.82, 0.25, 0.95) if down else Color(0.02, 0.01, 0.06, 0.55))
+	draw_arc(at, radius - 1.5, 0, TAU, 24, Color(1, 1, 1, 0.92), 3.0)
 	UI.text(self, at + Vector2(0, radius * 0.28), label, int(radius * 0.7), Color(0.08, 0.04, 0.1) if down else Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 3)

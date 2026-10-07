@@ -36,10 +36,13 @@ it). Open it from a web server, not by double-clicking the html file.
 
 The page asks you to click once before the game starts. That click is what
 lets the browser play the logo sting. Keyboard and gamepad work the same as
-on the desktop build. A phone, held sideways, gets a pad on the left and L
-and H on the right. On the title menu, tap the row you want (VS PLAYER, VS
-CPU, and the rest). A computer does not show that pad; clicking a row there
-works the same way.
+on the desktop build. A phone, held sideways, gets see-through buttons:
+arrows on the left, L and H on the right. Those presses are the same buttons
+as a controller, so they run the menus and the fight. Fighter select starts
+with you already in — the arrows change the fighter, L confirms, and a tap
+on the name does the same thing. On the title menu, tap the row you want
+(VS PLAYER, VS CPU, and the rest). A computer does not show the buttons;
+clicking a title row there still works.
 
 A push to `main` builds this and copies it onto the server. See "For
 developers" for the secrets that deploy needs, and `deploy/nginx/pjclash.conf`

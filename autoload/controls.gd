@@ -119,6 +119,12 @@ func rest_of(dev: int) -> Dictionary:
 	return _rest.get(Input.get_joy_guid(dev), {})
 
 
+## A finger touched the glass. The browser check can miss a phone, and the
+## pad should appear anyway. A mouse click must not call this.
+func adopt_touch() -> void:
+	phone = true
+
+
 ## Replace the held touch bits. A bit that was not held before is remembered
 ## until the next poll, so a same-frame tap still counts as a press.
 func set_touch(mask: int) -> void:
