@@ -19,6 +19,9 @@ const KB2 := -2
 ## list stays the two keyboards plus whatever gamepads are plugged in.
 const TOUCH := -3
 const NONE := -99
+## Largest short side, in CSS pixels, that still counts as a cellphone.
+## Phones top out around 430. The smallest tablets start around 744.
+const PHONE_SHORT_MAX := 520.0
 
 const ACTIONS := ["up", "down", "left", "right", "light", "heavy", "start"]
 const ACTION_BITS := {
@@ -52,8 +55,8 @@ var _rest := {}  # guid -> {axis index: resting value}
 var _prev := {}  # device -> mask (for menu edge detection)
 var _just := {}  # device -> mask pressed this frame
 
-## True on a phone or tablet browser: a coarse pointer and no hover. A desktop,
-## including a laptop that also has a touchscreen, stays false and shows no pad.
+## True only on a cellphone's touch screen. A computer, a tablet and a
+## touchscreen laptop stay false and show no pad.
 var phone := false
 ## Bits the on-screen pad is holding this frame. `read(TOUCH)` is what menus
 ## and the fight actually see, after opposite directions cancel.
@@ -73,15 +76,31 @@ func _ready() -> void:
 
 
 ## The web export is the same build for a computer and a phone, so the engine's
-## "mobile" feature is never set. The browser's primary pointer is the signal.
+## "mobile" feature is never set. The browser reports the glass, and
+## `is_phone_screen` decides.
 func _detect_phone() -> bool:
 	if not OS.has_feature("web"):
 		return false
-	# A phone is a coarse pointer, or a touch screen whose short side is a phone
-	# or a small tablet. `screen.width` ignores the browser window, so a laptop
-	# with a touchscreen stays a computer. Numbers come back as floats.
-	var hit: Variant = JavaScriptBridge.eval("(function(){var coarse=window.matchMedia('(pointer: coarse)').matches;var noHover=window.matchMedia('(hover: none)').matches;var touch=navigator.maxTouchPoints>0;var shortSide=Math.min(screen.width,screen.height);return (coarse&&noHover)||(touch&&shortSide<=820);})()")
-	return hit == true or hit == 1 or hit == 1.0
+	var probe := _phone_probe()
+	return is_phone_screen(probe.y, probe.x >= 1.0)
+
+
+## Touch bit in x, short side of the glass in y. (0, 0) when the page cannot
+## be asked. `screen.width` is the glass, not the browser window, so resizing
+## a desktop window does not shrink it into a phone. A phone that reports
+## device pixels is folded back by its pixel ratio.
+func _phone_probe() -> Vector2:
+	var hit: Variant = JavaScriptBridge.eval("(function(){try{var touch=navigator.maxTouchPoints>0?1:0;var shortSide=Math.min(screen.width,screen.height);var dpr=window.devicePixelRatio||1;if(shortSide>520&&dpr>=2){var css=shortSide/dpr;if(css<=520)shortSide=css;}return touch+Math.round(shortSide)*2;}catch(e){return 0;}})()")
+	if typeof(hit) != TYPE_FLOAT and typeof(hit) != TYPE_INT:
+		return Vector2.ZERO
+	var packed := int(hit)
+	return Vector2(float(packed & 1), float(packed >> 1))
+
+
+## A cellphone's touch screen. `short_side` is CSS pixels. No touch, a tablet,
+## or a monitor all stay a computer.
+func is_phone_screen(short_side: float, touch: bool) -> bool:
+	return touch and short_side > 0.0 and short_side <= PHONE_SHORT_MAX
 
 
 ## Cheap adapters often rest with a stick or an unused axis off centre, which
@@ -119,10 +138,12 @@ func rest_of(dev: int) -> Dictionary:
 	return _rest.get(Input.get_joy_guid(dev), {})
 
 
-## A finger touched the glass. The browser check can miss a phone, and the
-## pad should appear anyway. A mouse click must not call this.
+## A finger touched the glass. Ask the browser again, in case the boot check
+## ran before the page could answer. A mouse click must not call this, and a
+## finger on a computer, a tablet or a laptop must not grow the pad.
 func adopt_touch() -> void:
-	phone = true
+	if _detect_phone():
+		phone = true
 
 
 ## Replace the held touch bits. A bit that was not held before is remembered

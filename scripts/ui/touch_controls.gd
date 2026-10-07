@@ -1,7 +1,8 @@
 class_name TouchControls
 extends Node2D
-## On-screen pad for a phone. Holds the same bits a keyboard holds, so every
-## screen keeps reading Controls and never learns about fingers.
+## On-screen pad for a cellphone. Holds the same bits a keyboard holds, so
+## every screen keeps reading Controls and never learns about fingers. A
+## computer, a tablet and a touchscreen laptop leave it hidden.
 ##
 ## Sits in the bottom corners of the 640x360 screen, under the move lists on
 ## the select screen and over the edges of a stage. One finger on the pad can
@@ -33,7 +34,8 @@ func _process(_delta: float) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	# A finger is enough. The browser check runs once at boot and can miss.
+	# The boot check can run before the page answers. A finger asks again,
+	# and adopt_touch still refuses anything that is not a cellphone.
 	if (event is InputEventScreenTouch or event is InputEventScreenDrag) and not Controls.phone:
 		Controls.adopt_touch()
 	if not Controls.phone or _portrait():

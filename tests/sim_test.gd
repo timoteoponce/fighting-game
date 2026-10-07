@@ -126,10 +126,15 @@ func _test_touch_select() -> void:
 	print("[touch select]")
 	var saved_phone := Controls.phone
 	var saved_mode := GameState.mode
+	check(Controls.is_phone_screen(390.0, true), "a phone-sized touch screen is a cellphone")
+	check(Controls.is_phone_screen(430.0, true), "a large phone is still a cellphone")
+	check(not Controls.is_phone_screen(768.0, true), "a tablet is not a cellphone")
+	check(not Controls.is_phone_screen(1080.0, true), "a touch monitor is not a cellphone")
+	check(not Controls.is_phone_screen(390.0, false), "a phone-sized screen without touch is a computer")
 	Controls.phone = false
 	Controls.adopt_touch()
-	check(Controls.phone, "a finger turns the touch pad on")
-	check(Controls.devices().has(Controls.TOUCH), "the touch device is listed after a finger")
+	check(not Controls.phone, "a finger on a computer does not turn the pad on")
+	check(not Controls.devices().has(Controls.TOUCH), "a computer still has no touch device after a finger")
 	Controls.phone = true
 	GameState.mode = "cpu"
 	var screen := CharSelect.new()

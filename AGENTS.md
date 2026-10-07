@@ -158,11 +158,15 @@ bite you.
   (`UP DOWN LEFT RIGHT LIGHT HEAVY START`). Fighters never see devices: `input_source.sample()`
   returns a mask. `CpuInput` returns the same mask shape and converts its relative
   `FWD`/`BACK` bits to absolute via `_to_abs(mask, facing)`, so fighter code is
-  player/CPU-agnostic — keep it that way. A phone adds `Controls.TOUCH`, fed by
-  `scripts/ui/touch_controls.gd`. `Controls.phone` starts from the browser
-  check (a coarse pointer with no hover, or a small touch screen). A real
-  finger (`InputEventScreenTouch` → `Controls.adopt_touch()`) turns it on
-  too, so a missed check still grows the pad. A mouse click must not.
+  player/CPU-agnostic — keep it that way. A cellphone adds `Controls.TOUCH`,
+  fed by `scripts/ui/touch_controls.gd`. `Controls.phone` is
+  `is_phone_screen()`: the browser has touch points and the glass's short
+  side is at most `PHONE_SHORT_MAX` (520 CSS px). That is the gap between a
+  large phone and a small tablet, so a computer, a tablet and a touchscreen
+  laptop stay on the keyboard and gamepad. A finger
+  (`InputEventScreenTouch` → `Controls.adopt_touch()`) asks the browser
+  again, for a page that was not ready at boot, and still refuses anything
+  that is not a cellphone. A mouse click must not call it.
   The title rows are hit-tested (`UI.menu_index_at`). On fighter select the
   touch device is already player 1, and `CharSelect.column_bit()` maps a tap
   on the active name to left / light / right for one poll.

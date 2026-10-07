@@ -234,7 +234,8 @@ func _press_point(event: InputEvent) -> Vector2:
 		var tap := event as InputEventScreenTouch
 		if tap.pressed:
 			Controls.adopt_touch()
-			return tap.position
+			if Controls.phone:
+				return tap.position
 	elif Controls.phone and event is InputEventMouseButton:
 		var click := event as InputEventMouseButton
 		if click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
