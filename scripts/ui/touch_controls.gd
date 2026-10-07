@@ -91,7 +91,7 @@ func _apply() -> void:
 	var m := 0
 	for bits in _fingers.values():
 		m |= int(bits)
-	Controls.touch_mask = m
+	Controls.set_touch(m)
 	queue_redraw()
 
 
@@ -99,7 +99,7 @@ func _release_all() -> void:
 	if _fingers.is_empty() and Controls.touch_mask == 0:
 		return
 	_fingers.clear()
-	Controls.touch_mask = 0
+	Controls.set_touch(0)
 
 
 func _draw() -> void:

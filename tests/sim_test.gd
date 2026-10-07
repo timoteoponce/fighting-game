@@ -76,14 +76,14 @@ func _test_touch() -> void:
 	Controls.phone = true
 	check(Controls.devices().has(Controls.TOUCH), "a phone lists the touch device")
 	Controls._process(0.0)
-	Controls.touch_mask = Controls.RIGHT | Controls.LIGHT
+	Controls.set_touch(Controls.RIGHT | Controls.LIGHT)
 	Controls._process(0.0)
 	check(Controls.read(Controls.TOUCH) == Controls.RIGHT | Controls.LIGHT, "touch holds right and light")
 	check(Controls.just_pressed(Controls.TOUCH, Controls.RIGHT), "right counts as just pressed")
 	check(Controls.just_pressed(Controls.TOUCH, Controls.LIGHT), "light counts as just pressed")
 	Controls._process(0.0)
 	check(not Controls.just_pressed(Controls.TOUCH, Controls.LIGHT), "a held button is not pressed again")
-	Controls.touch_mask = Controls.LEFT | Controls.RIGHT | Controls.LIGHT
+	Controls.set_touch(Controls.LEFT | Controls.RIGHT | Controls.LIGHT)
 	var cleaned := Controls.read(Controls.TOUCH)
 	check(cleaned & (Controls.LEFT | Controls.RIGHT) == 0, "opposite directions cancel")
 	check(cleaned & Controls.LIGHT != 0, "light survives the cancel")
@@ -94,6 +94,14 @@ func _test_touch() -> void:
 	check(pad.bits_at(TouchControls.LIGHT_AT) == Controls.LIGHT, "the L button is light")
 	check(pad.bits_at(TouchControls.HEAVY_AT) == Controls.HEAVY, "the H button is heavy")
 	pad.free()
+	Controls.set_touch(0)
+	Controls._process(0.0)
+	Controls.set_touch(Controls.LIGHT)
+	Controls.set_touch(0)
+	check(Controls.read(Controls.TOUCH) & Controls.LIGHT != 0, "a tap still reads as held until the poll")
+	Controls._process(0.0)
+	check(Controls.just_pressed(Controls.TOUCH, Controls.LIGHT), "a tap that ends in the same frame still counts")
+	check(Controls.read(Controls.TOUCH) & Controls.LIGHT == 0, "the tap is released after the poll")
 	Controls.touch_mask = 0
 	Controls.phone = saved
 	Controls._process(0.0)

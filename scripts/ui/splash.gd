@@ -29,6 +29,20 @@ func _process(delta: float) -> void:
 	queue_redraw()
 
 
+func _input(event: InputEvent) -> void:
+	if t <= 0.2 or _left:
+		return
+	# The caption says any button. A phone tap lands on the words, not on the
+	# pad, and that tap is the button.
+	var tap := false
+	if event is InputEventScreenTouch:
+		tap = (event as InputEventScreenTouch).pressed
+	elif event is InputEventMouseButton:
+		tap = (event as InputEventMouseButton).pressed
+	if tap:
+		_leave()
+
+
 func _leave() -> void:
 	if _left:
 		return

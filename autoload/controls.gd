@@ -58,6 +58,9 @@ var phone := false
 ## Bits the on-screen pad is holding this frame. `read(TOUCH)` is what menus
 ## and the fight actually see, after opposite directions cancel.
 var touch_mask := 0
+## Bits that went down since the last poll. A tap often presses and releases
+## before `_process` samples the mask, and that press would otherwise vanish.
+var _touch_edge := 0
 
 
 func _ready() -> void:
@@ -74,8 +77,11 @@ func _ready() -> void:
 func _detect_phone() -> bool:
 	if not OS.has_feature("web"):
 		return false
-	var hit: Variant = JavaScriptBridge.eval("window.matchMedia('(hover: none) and (pointer: coarse)').matches")
-	return hit == true
+	# A phone is a coarse pointer, or a touch screen whose short side is a phone
+	# or a small tablet. `screen.width` ignores the browser window, so a laptop
+	# with a touchscreen stays a computer. Numbers come back as floats.
+	var hit: Variant = JavaScriptBridge.eval("(function(){var coarse=window.matchMedia('(pointer: coarse)').matches;var noHover=window.matchMedia('(hover: none)').matches;var touch=navigator.maxTouchPoints>0;var shortSide=Math.min(screen.width,screen.height);return (coarse&&noHover)||(touch&&shortSide<=820);})()")
+	return hit == true or hit == 1 or hit == 1.0
 
 
 ## Cheap adapters often rest with a stick or an unused axis off centre, which
@@ -113,12 +119,20 @@ func rest_of(dev: int) -> Dictionary:
 	return _rest.get(Input.get_joy_guid(dev), {})
 
 
+## Replace the held touch bits. A bit that was not held before is remembered
+## until the next poll, so a same-frame tap still counts as a press.
+func set_touch(mask: int) -> void:
+	_touch_edge |= mask & ~touch_mask
+	touch_mask = mask
+
+
 func _process(_delta: float) -> void:
 	for dev in devices():
 		var cur := read(dev)
 		var prev: int = _prev.get(dev, 0)
 		_just[dev] = cur & ~prev
 		_prev[dev] = cur
+	_touch_edge = 0
 
 
 func devices() -> Array:
@@ -145,7 +159,7 @@ func device_name(dev: int) -> String:
 func read(dev: int) -> int:
 	var m := 0
 	if dev == TOUCH:
-		m = touch_mask
+		m = touch_mask | _touch_edge
 	elif dev < 0:
 		if not KEYS.has(dev):
 			return 0

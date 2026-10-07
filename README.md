@@ -6,7 +6,7 @@ the game has a chunky KOF-era pixel look and the body can still move every
 frame. The menus draw the same fighters, live.
 
 The game opens on a short logo slam — the letters of **PJ'S CLASH** hit one
-at a time, with a synthesized sting — and any button skips it to the menu.
+at a time, with a synthesized sting — and any button, or a tap on a phone, skips it to the menu.
 Music after that is synthesized too: a mellow track for the menus and a driving
 one for the fight, with a short fanfare when a match is won. Drop `.ogg`,
 `.wav`, or `.mp3` files in `music/` and those play instead, in order, quietly,
@@ -513,6 +513,6 @@ Nothing about frame data, damage or balance changed.
   fight and a short win fanfare, all generated in code — or drop your own files
   in `music/`.
 - **Logo slam.** The game opens on PJ'S CLASH, one letter at a time, with a
-  generated sting. Any button skips to the menu. In the browser, click the
+  generated sting. Any button, or a tap on a phone, skips to the menu. In the browser, click the
   loading picture or CLICK TO START so the sting can play. A push to `main` publishes the
   web build; see "Playing in a browser" above.
