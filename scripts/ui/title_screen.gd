@@ -2,9 +2,13 @@ class_name TitleScreen
 extends Node2D
 
 const ITEMS := ["VS PLAYER", "VS CPU", "OPTIONS", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"]
+const MENU_AT := Vector2(320, 150)
+const MENU_SIZE := 17
+const MENU_SPACING := 28
 
 var idx := 0
 var t := 0.0
+var _left := false
 var chibis: Array[FighterRenderer] = []
 
 
@@ -43,31 +47,66 @@ func _process(delta: float) -> void:
 		r.prop = r.def.intro_prop if intro else ""
 		r.update_pose(r.def.pose("intro" if intro else "idle", {"lean": 6 + sin(t * 3.0 + i) * 3.0}), 0.1)
 	var items := _items()
-	if Controls.any_just_pressed(Controls.UP) != Controls.NONE:
-		idx = posmod(idx - 1, items.size())
-		Sfx.play("select")
-	if Controls.any_just_pressed(Controls.DOWN) != Controls.NONE:
-		idx = posmod(idx + 1, items.size())
-		Sfx.play("select")
-	if Controls.any_just_pressed(Controls.LIGHT | Controls.START) != Controls.NONE:
-		Sfx.play("confirm")
-		match items[idx]:
-			"VS PLAYER":
-				GameState.mode = "vs"
-				GameState.goto("select")
-			"VS CPU":
-				GameState.mode = "cpu"
-				GameState.goto("select")
-			"OPTIONS":
-				GameState.options_return = "title"
-				GameState.goto("options")
-			"HOW TO PLAY":
-				GameState.goto("howto")
-			"CONTROLLER SETUP":
-				GameState.goto("setup")
-			"QUIT":
-				get_tree().quit()
+	if not _left:
+		if Controls.any_just_pressed(Controls.UP) != Controls.NONE:
+			idx = posmod(idx - 1, items.size())
+			Sfx.play("select")
+		if Controls.any_just_pressed(Controls.DOWN) != Controls.NONE:
+			idx = posmod(idx + 1, items.size())
+			Sfx.play("select")
+		if Controls.any_just_pressed(Controls.LIGHT | Controls.START) != Controls.NONE:
+			_confirm(items)
 	queue_redraw()
+
+
+## A finger on the words. The pad still moves the highlight; this is for the
+## tap on "VS CPU" itself, which is nowhere near the pad.
+func _input(event: InputEvent) -> void:
+	if _left:
+		return
+	var at := _press_at(event)
+	if at.x < 0.0:
+		return
+	var items := _items()
+	var hit := UI.menu_index_at(items, at, MENU_AT, MENU_SIZE, MENU_SPACING)
+	if hit < 0:
+		return
+	idx = hit
+	_confirm(items)
+	get_viewport().set_input_as_handled()
+
+
+func _press_at(event: InputEvent) -> Vector2:
+	if event is InputEventScreenTouch:
+		var tap := event as InputEventScreenTouch
+		if tap.pressed:
+			return tap.position
+	elif event is InputEventMouseButton:
+		var click := event as InputEventMouseButton
+		if click.pressed and click.button_index == MOUSE_BUTTON_LEFT:
+			return click.position
+	return Vector2(-1, -1)
+
+
+func _confirm(items: Array) -> void:
+	_left = true
+	Sfx.play("confirm")
+	match items[idx]:
+		"VS PLAYER":
+			GameState.mode = "vs"
+			GameState.goto("select")
+		"VS CPU":
+			GameState.mode = "cpu"
+			GameState.goto("select")
+		"OPTIONS":
+			GameState.options_return = "title"
+			GameState.goto("options")
+		"HOW TO PLAY":
+			GameState.goto("howto")
+		"CONTROLLER SETUP":
+			GameState.goto("setup")
+		"QUIT":
+			get_tree().quit()
 
 
 func _draw() -> void:
@@ -85,9 +124,9 @@ func _draw() -> void:
 	UI.text(self, Vector2(320, 70 - bob), "VS", 34, Color("ffd23f"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("7a1030"))
 	UI.text(self, Vector2(430, 64 + bob), "EMILIA", 44, Color("d19bff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("3a0d5a"))
 	UI.text(self, Vector2(320, 96), "PJ's CLASH", 14, Color.WHITE)
-	UI.menu(self, _items(), idx, Vector2(320, 150), 17, 28)
+	UI.menu(self, _items(), idx, MENU_AT, MENU_SIZE, MENU_SPACING)
 	var hint := "P1: WASD + F / G     P2: Arrows + K / L     Gamepads: D-pad + buttons     F11: fullscreen"
 	if Controls.phone:
-		hint = "PAD: move     L: confirm     H: back     A second player needs a gamepad"
+		hint = "TAP A ROW     or PAD + L     A second player needs a gamepad"
 	UI.text(self, Vector2(320, 350), hint, 10, Color(1, 1, 1, 0.8))
 	UI.text(self, Vector2(10, 350), "v" + ProjectSettings.get_setting("application/config/version"), 10, Color(1, 1, 1, 0.5), HORIZONTAL_ALIGNMENT_LEFT, 2)

@@ -102,6 +102,15 @@ func _test_touch() -> void:
 	Controls._process(0.0)
 	check(Controls.just_pressed(Controls.TOUCH, Controls.LIGHT), "a tap that ends in the same frame still counts")
 	check(Controls.read(Controls.TOUCH) & Controls.LIGHT == 0, "the tap is released after the poll")
+	# The title captions sit on these baselines. A tap there has to hit that row,
+	# and a tap on the pad or on L must not, or the menu would steal the buttons.
+	var rows := ["VS PLAYER", "VS CPU", "OPTIONS", "HOW TO PLAY", "CONTROLLER SETUP"]
+	var menu_at := Vector2(320, 150)
+	check(UI.menu_index_at(rows, Vector2(320, 140), menu_at, 17, 28) == 0, "a tap on the first caption is VS PLAYER")
+	check(UI.menu_index_at(rows, Vector2(320, 170), menu_at, 17, 28) == 1, "a tap on the second caption is VS CPU")
+	check(UI.menu_index_at(rows, Vector2(400, 220), menu_at, 17, 28) == 3, "a tap on a lower caption is HOW TO PLAY")
+	check(UI.menu_index_at(rows, Vector2(40, 170), menu_at, 17, 28) == -1, "a tap on the pad is not a menu row")
+	check(UI.menu_index_at(rows, TouchControls.LIGHT_AT, menu_at, 17, 28) == -1, "a tap on L is not a menu row")
 	Controls.touch_mask = 0
 	Controls.phone = saved
 	Controls._process(0.0)

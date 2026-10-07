@@ -151,6 +151,9 @@ bite you.
   player/CPU-agnostic — keep it that way. A phone adds `Controls.TOUCH`, fed by
   `scripts/ui/touch_controls.gd`. `Controls.phone` is true only when the browser
   reports a coarse pointer with no hover, so a computer never lists that device.
+  The title rows are also hit-tested (`UI.menu_index_at`, same geometry as
+  `UI.menu`): a tap or click on a caption confirms it. The words sit in the
+  middle of the screen, nowhere near the pad, so pad-only input never sees them.
 
 ## Conventions that differ from defaults
 

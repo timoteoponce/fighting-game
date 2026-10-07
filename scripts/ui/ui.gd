@@ -64,3 +64,16 @@ static func menu(ci: CanvasItem, items: Array, idx: int, center: Vector2, size :
 		if sel:
 			gradient_quad(ci, slant(Rect2(center.x - 140, y - size - 3, 280, size + 12), 10.0), Color(1, 0.35, 0.6, 0.85), Color(0.6, 0.1, 0.4, 0.85))
 		text(ci, Vector2(center.x, y), items[i], size, Color(1, 0.95, 0.4) if sel else Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 5, Color(0.05, 0.03, 0.1), arcade_font())
+
+
+## Row under `point`, or -1. The band is the highlight `menu()` draws, grown a
+## little so a finger on the letters still counts. Where two bands overlap, the
+## higher row wins. Wide enough for the longest caption, and short of the
+## on-screen L button.
+static func menu_index_at(items: Array, point: Vector2, center: Vector2, size := 18, spacing := 28) -> int:
+	for i in items.size():
+		var y := center.y + float(i) * spacing
+		var row := Rect2(center.x - 150.0, y - float(size) - 6.0, 300.0, float(size) + 16.0)
+		if row.has_point(point):
+			return i
+	return -1
