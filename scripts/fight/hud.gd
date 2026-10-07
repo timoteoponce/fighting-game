@@ -143,7 +143,7 @@ func _draw_overlay() -> void:
 		_cutin_text(o)
 	if fight.flash > 0:
 		o.draw_rect(Rect2(0, 0, 640, 360), Color(1, 1, 1, fight.flash / 8.0))
-	if not fight.menu_items.is_empty():
+	if not fight.menu_stack.is_empty():
 		_menu(o)
 	if fight.debug:
 		for i in 2:
@@ -198,7 +198,7 @@ func _lifebar(o: Node2D, i: int) -> void:
 		label += "  CPU"
 	UI.text(o, Vector2(nx, y + BAR_H + 17), label, 15, Color.WHITE, HORIZONTAL_ALIGNMENT_RIGHT if right else HORIZONTAL_ALIGNMENT_LEFT, 5, Color("15102a"), UI.arcade_font())
 	# Round wins.
-	for k in Fight.ROUNDS_TO_WIN:
+	for k in fight.rounds_to_win:
 		var sx := x0 + 14.0 + k * 18.0 if right else x0 + BAR_W - 14.0 - k * 18.0
 		var won: bool = fight.wins[i] > k
 		var gem := PackedVector2Array([Vector2(sx, y + BAR_H + 5), Vector2(sx + 6, y + BAR_H + 11), Vector2(sx, y + BAR_H + 17), Vector2(sx - 6, y + BAR_H + 11)])
@@ -412,13 +412,22 @@ func _cutin_text(o: Node2D) -> void:
 
 func _menu(o: Node2D) -> void:
 	o.draw_rect(Rect2(0, 0, 640, 360), Color(0, 0, 0.05, 0.65))
+	var menu := fight._current_menu()
+	if menu.is_empty():
+		return
+	var items: Array = menu["items"]
+	var idx: int = menu["idx"]
+	var title := str(menu["title"])
 	var y := 120.0
-	if fight.menu_title != "":
-		UI.title(o, Vector2(320, 92), fight.menu_title, 34)
+	if title != "":
+		UI.title(o, Vector2(320, 92), title, 34)
 	else:
 		y = 222.0
-	UI.menu(o, fight.menu_items, fight.menu_idx, Vector2(320, y), 16, 28)
-	if fight.paused:
+	UI.menu(o, items, idx, Vector2(320, y), 16, 28)
+	# Options sub-menu: draw the value next to each row.
+	if title == "OPTIONS":
+		_draw_options_values(o, idx, y)
+	elif fight.paused:
 		for i in 2:
 			var d := fight.fighters[i].def
 			var x := 20.0 if i == 0 else 330.0
@@ -427,6 +436,27 @@ func _menu(o: Node2D) -> void:
 				var row: Array = d.specials_text[j]
 				UI.text(o, Vector2(x, 256 + j * 18), "%s:  %s" % [row[0], row[1]], 11, Color.WHITE, HORIZONTAL_ALIGNMENT_LEFT, 3)
 		UI.text(o, Vector2(320, 348), "L / START: choose     H: resume", 11, Color(0.8, 0.8, 0.9))
+
+
+## Value column for the in-fight options sub-menu. Rows line up with UI.menu's
+## 16px text at 28px spacing starting at y.
+func _draw_options_values(o: Node2D, idx: int, y: float) -> void:
+	var stages := ["RANDOM", "FIELD", "LIBRARY", "ROOFTOP", "DOJO", "BEACH", "SNOW"]
+	var stage_names := ["", "field", "library", "rooftop", "dojo", "beach", "snow"]
+	var values := [
+		"%.0f%%" % (Settings.sfx_volume * 100.0),
+		"%.0f%%" % (Settings.voice_volume * 100.0),
+		"%.0f%%" % (Settings.music_volume * 100.0),
+		str(Settings.rounds_to_win),
+		"ON" if Settings.timer_enabled else "OFF",
+		stages[stage_names.find(Settings.stage)] if stage_names.find(Settings.stage) >= 0 else "RANDOM",
+		"",
+	]
+	for i in values.size():
+		var sel := i == idx
+		var col := Color(1, 0.95, 0.4) if sel else Color(0.8, 0.8, 0.9)
+		UI.text(o, Vector2(420, y + i * 28), values[i], 16, col, HORIZONTAL_ALIGNMENT_LEFT, 4, Color(0.05, 0.03, 0.1))
+	UI.text(o, Vector2(320, 348), "LEFT / RIGHT: change     H: back", 11, Color(0.8, 0.8, 0.9))
 
 
 func _mask_text(m: int) -> String:

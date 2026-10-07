@@ -42,6 +42,19 @@ cd PJsClash
   (`ls -l /dev/input/`). On most desktops this works out of the box; otherwise add
   your user to the `input` group: `sudo usermod -aG input $USER` and log in again.
 
+### First-run checklist (a fresh machine)
+
+1. Untar somewhere the user can write to and run `./PJsClash.x86_64`.
+2. The title screen opens fullscreen and shows the version in the bottom-left.
+3. Open **OPTIONS**: move a volume and confirm the confirm-blip changes; set
+   **STAGE** to a specific stage and start a match to confirm it sticks.
+4. Open **CONTROLLER SETUP** if a pad is misread; the mapping is remembered for
+   that controller model.
+5. Optional folders live next to the executable and are picked up on launch:
+   `voices/<character>/<line>.wav|ogg`, `music/*.ogg|wav|mp3`,
+   `gamecontrollerdb.txt`. None are required.
+6. Player settings land in `~/.local/share/godot/app_userdata/PJ's Clash/`.
+
 ## Controls
 
 | Action | Gamepad | Keyboard P1 | Keyboard P2 |
@@ -51,6 +64,18 @@ cd PJsClash
 | **L**: light attack | Square or Cross | F | K |
 | **H**: heavy attack (launches!) | Triangle or Circle | G | L |
 | Pause | Start | Esc | Enter |
+
+### Pause and options
+
+**Start** pauses at any point in a match (intro, fight, or KO). The pause menu has:
+
+- **RESUME** — back to the fight (H also resumes).
+- **OPTIONS** — volumes (SFX / voices / music), rounds to win (1-3), timer on/off, and stage select. Changes save immediately and apply to the next match.
+- **REMATCH** — restart the match from round 1.
+- **CHARACTER SELECT** — back to character select (VS Player / VS CPU).
+- **QUIT TO TITLE** — back to the title screen.
+
+Settings are saved to `~/.local/share/godot/app_userdata/PJ's Clash/settings.cfg` on Linux.
 
 ### Special moves: press L and H together
 
@@ -149,7 +174,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 - Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. There are no image files in the game at all. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
 - Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
-- Jump to one screen: `godot --path . -- --screen=select` (`title`, `select`, `fight`, `setup`, `howto`). `--full-meter` starts the hyper bar full.
+- Jump to one screen: `godot --path . -- --screen=select` (`title`, `select`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
 - F1 during a fight shows the hitboxes, the hurtboxes and a readout of each fighter's state and frame count.
@@ -197,6 +222,17 @@ is specific to it — a nose, a unibrow, a snaggletooth. The shared face already
 handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
+
+### Options, a real pause, and the first-run checklist
+
+- **Options screen.** Volumes (SFX / voices / music), rounds to win (1-3), timer
+  on/off and stage select, reachable from the title screen and from the in-fight
+  pause menu. Changes apply live and save immediately to `settings.cfg`, so
+  there is no apply button and nothing is lost on a crash.
+- **Start pauses at any point**, not just mid-fight — during the round intro, the
+  KO and the win pose too. The pause menu is now RESUME / OPTIONS / REMATCH /
+  CHARACTER SELECT / QUIT TO TITLE (with the move list still on screen).
+- **A version number** (`1.0.0`) is shown on the title screen.
 
 ### The supers finally look like sixteen different moves
 

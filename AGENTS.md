@@ -28,8 +28,8 @@ godot --path . -- --screen=select                               # jump straight 
 - **Args after `--` are read by the game** (`OS.get_cmdline_user_args()`, `scripts/main.gd:12`).
   Engine flags like `--windowed` / `--fullscreen` must go **before** the `--` or they are ignored.
 - Full flag set: `--demo --test --balance --chars=a,b --stage=library --screen=NAME
-  --full-meter`. Screens: `title select fight setup howto`. The player-facing
-  list is the README's "For developers" section.
+  --full-meter`. Screens: `title select fight setup howto options`. The
+  player-facing list is the README's "For developers" section.
 - **No linter, formatter, typecheck or CI exists.** The test run *is* the verification step.
 - `F1` toggles the debug overlay during a fight: each fighter's hurtbox (green
   outline), hitbox (filled red) and a `STATE f<frame> <move id>` label. It does
@@ -69,10 +69,11 @@ bite you.
   `.tscn` files; to add a screen, add a `match` branch in `_switch` and call
   `GameState.goto("name")` (which is `call_deferred`, so it lands after the current frame).
 - **No script preloads anywhere.** Types resolve via `class_name` globals
-  (`Fight`, `Fighter`, `MoveData`, `CharacterDef`, `FighterRenderer`, `UI`, ...) plus 3
-  autoloads: `Controls` (input polling + joypad remap), `GameState` (match setup, screen
-  switching, `make_character`), `Sfx` (synthesized audio, plus optional files in
-  `voices/` and `music/`). Adding a `preload` would be off-style.
+  (`Fight`, `Fighter`, `MoveData`, `CharacterDef`, `FighterRenderer`, `UI`, ...) plus
+  4 autoloads: `Controls` (input polling + joypad remap), `GameState` (match setup,
+  screen switching, `make_character`), `Sfx` (synthesized audio, plus optional files
+  in `voices/` and `music/`) and `Settings` (volumes, match rules and stage choice,
+  saved to `user://settings.cfg`). Adding a `preload` would be off-style.
 - **The match is drawn in code; a few recordings are files.** Fighters, stages, the
   HUD, the menus and synthesized SFX are all generated in code — there are no image
   files in the game at all. `design/` is a scratch directory kept out of the import via
@@ -371,6 +372,29 @@ input did nothing. Move the opponent out of range before scripting another super
 - Community mappings load from `gamecontrollerdb.txt` in `user://`, `res://` or next to the
   executable — prefer that over inventing GUID tables you cannot verify.
 - `Controls.device_changed` fires on hot-plug; `Fight._on_device_changed` auto-pauses.
+
+## Settings and pause
+
+- **`Settings` (autoload) is the only place match rules live.** `Fight._ready`
+  reads `Settings.rounds_to_win`, `Settings.timer_enabled` and `Settings.stage`;
+  the old `ROUNDS_TO_WIN` / random-stage constants are gone. `Sfx.apply_volumes()`
+  reads `Settings.sfx_volume` / `voice_volume` / `music_volume`, applied as
+  `base_db + Settings.lin2db(v)`. Nothing else writes settings except the
+  options screen and the in-fight options sub-menu, both of which call
+  `Settings.save_settings()` on every change.
+- **`scripts/ui/options_screen.gd` is a normal screen** (`main.gd:_switch`
+  branch `"options"`), reached from the title screen and returning to
+  `GameState.options_return`. The pause menu does **not** navigate there: it
+  pushes an `"OPTIONS"` sub-menu onto `Fight.menu_stack`, so the match is never
+  torn down to change a volume.
+- **The pause menu is a stack, not three variables.** `Fight.menu_stack` holds
+  `{title, items, idx}`; `_current_menu()` is the top, `_open_menu` pushes and
+  `_close_menu` pops. `Hud._menu` reads it the same way, and `Hud._draw_options_values`
+  draws the value column for the options sub-menu. `START` pauses in every
+  phase (`intro`, `fight`, `ko`) — `fight.gd` checks it *above* the phase gate,
+  guarded by `menu_stack.is_empty()` so it cannot stack on the over/win menu.
+  The one exception is the round intro: `input_enabled` is false there, so
+  `poll_input` pushes a zero mask and the START press never reaches the buffer.
 
 ## Testing quirks
 

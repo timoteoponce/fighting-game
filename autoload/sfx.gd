@@ -49,6 +49,23 @@ func _ready() -> void:
 		add_child(vp)
 		_voice_player.append(vp)
 	_start_music()
+	apply_volumes()
+
+
+## Applies the Settings volumes to every player. Called from _ready() and
+## from the options screen whenever a slider moves, so a change is audible
+## immediately.
+func apply_volumes() -> void:
+	for p in _players:
+		p.volume_db = -8.0 + Settings.lin2db(Settings.sfx_volume)
+	for p in _voice_player:
+		p.volume_db = -3.0 + Settings.lin2db(Settings.voice_volume)
+	if _music != null:
+		_music.volume_db = -16.0 + Settings.lin2db(Settings.music_volume)
+	if _synth_player != null:
+		_synth_player.volume_db = -16.0 + Settings.lin2db(Settings.music_volume)
+	if _jingle != null:
+		_jingle.volume_db = -10.0 + Settings.lin2db(Settings.music_volume)
 
 
 ## Plays a fighter shout. Each fighter uses its own channel so shouts cut each

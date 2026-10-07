@@ -43,6 +43,8 @@ func _switch(screen: String) -> void:
 			current = ControllerSetup.new()
 		"howto":
 			current = HowToPlay.new()
+		"options":
+			current = OptionsScreen.new()
 		_:
 			current = TitleScreen.new()
 	add_child(current)

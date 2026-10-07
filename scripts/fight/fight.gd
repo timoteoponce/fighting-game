@@ -17,8 +17,10 @@ const BALL_KICK_SPEED := 6.0
 ## How close a fighter has to be to a resting ball for a boot to reach it. A ball
 ## on the floor is below almost every hitbox, so proximity is the real rule.
 const BALL_TOUCH := 40.0
-const ROUNDS_TO_WIN := 2
 const ROUND_FRAMES := 99 * 60
+## Match rules come from Settings (autoload/settings.gd), read in _ready().
+var rounds_to_win := 2
+var timer_enabled := true
 
 var fighters: Array[Fighter] = []
 var projectiles: Array[Projectile] = []
@@ -63,9 +65,7 @@ var banner_t := 0
 
 var debug := false
 var paused := false
-var menu_items: Array = []
-var menu_idx := 0
-var menu_title := ""
+var menu_stack: Array = []  # [{title, items, idx}, ...]; empty = no menu
 var stats := {}  # "character move" -> damage dealt (for balance testing)
 
 
@@ -83,7 +83,14 @@ func _ready() -> void:
 	screen.stretch_mode = TextureRect.STRETCH_SCALE
 	add_child(screen)
 	stage = Stage.new()
-	stage.kind = GameState.stage if GameState.stage != "" else Stage.KINDS.pick_random()
+	# Stage choice: Settings first (the options screen), then the --stage
+	# debug flag, then random. An unknown saved stage falls through to random.
+	var stage_id := Settings.stage if Settings.stage != "" and Stage.KINDS.has(Settings.stage) else ""
+	if stage_id == "":
+		stage_id = GameState.stage if GameState.stage != "" else Stage.KINDS.pick_random()
+	stage.kind = stage_id
+	rounds_to_win = Settings.rounds_to_win
+	timer_enabled = Settings.timer_enabled
 	world.add_child(stage)
 	var ids: Array = GameState.chars
 	for i in 2:
@@ -140,7 +147,7 @@ func _ready() -> void:
 
 ## A controller pulled out mid-round should never cost someone the match.
 func _on_device_changed(dev: int, connected: bool) -> void:
-	if connected or paused or phase == "over" or menu_items.size() > 0:
+	if connected or paused or phase == "over" or menu_stack.size() > 0:
 		return
 	for f in fighters:
 		if f.input_source is PlayerInput and (f.input_source as PlayerInput).device == dev:
@@ -168,7 +175,7 @@ func start_round() -> void:
 	freeze_owner = null
 	slowmo = 0
 	stage.dim = 0.0
-	var final: bool = wins[0] == ROUNDS_TO_WIN - 1 and wins[1] == ROUNDS_TO_WIN - 1
+	var final: bool = wins[0] == rounds_to_win - 1 and wins[1] == rounds_to_win - 1
 	_banner("FINAL ROUND" if final else "ROUND %d" % round_num)
 	_update_camera()
 
@@ -185,10 +192,12 @@ func _physics_process(_delta: float) -> void:
 		return
 	for f in fighters:
 		f.poll_input()
-	if phase == "fight":
+	# START pauses in every phase (intro, fight, ko) — not just mid-fight. Only
+	# when no menu is already open, so it cannot stack on the over/win menu.
+	if menu_stack.is_empty():
 		for f in fighters:
 			if f.is_human() and f.buf.pressed_now(Controls.START):
-				_open_menu("PAUSE", ["RESUME", "CHARACTER SELECT", "TITLE SCREEN"])
+				_open_menu("PAUSE", ["RESUME", "OPTIONS", "REMATCH", "CHARACTER SELECT", "QUIT TO TITLE"])
 				paused = true
 				return
 	effects.step()
@@ -253,7 +262,7 @@ func _update_phase() -> void:
 				winner = -1 if down.size() == 2 else 1 - down[0].index
 				slowmo = 60
 				Sfx.play("ko")
-			elif timer == 0:
+			elif timer_enabled and timer == 0:
 				_end_round("TIME!")
 				var h0 := fighters[0].health
 				var h1 := fighters[1].health
@@ -275,7 +284,7 @@ func _update_phase() -> void:
 			if phase_t >= 210:
 				if winner >= 0:
 					wins[winner] += 1
-				if winner >= 0 and wins[winner] >= ROUNDS_TO_WIN:
+				if winner >= 0 and wins[winner] >= rounds_to_win:
 					phase = "over"
 					phase_t = 0
 					_banner("%s WINS!" % fighters[winner].def.display)
@@ -630,45 +639,112 @@ func _celebrate() -> void:
 # --- Menus -------------------------------------------------------------------
 
 func _open_menu(title: String, items: Array) -> void:
-	menu_title = title
-	menu_items = items
-	menu_idx = 0
+	menu_stack.append({"title": title, "items": items, "idx": 0})
+
+
+func _close_menu() -> void:
+	if not menu_stack.is_empty():
+		menu_stack.pop_back()
+
+
+func _current_menu() -> Dictionary:
+	if menu_stack.is_empty():
+		return {}
+	return menu_stack[menu_stack.size() - 1]
 
 
 func _process(_delta: float) -> void:
-	if menu_items.is_empty():
+	if menu_stack.is_empty():
 		return
+	var menu := _current_menu()
+	var items: Array = menu["items"]
 	if Controls.any_just_pressed(Controls.UP) != Controls.NONE:
-		menu_idx = posmod(menu_idx - 1, menu_items.size())
+		menu["idx"] = posmod(menu["idx"] - 1, items.size())
 		Sfx.play("select")
 	if Controls.any_just_pressed(Controls.DOWN) != Controls.NONE:
-		menu_idx = posmod(menu_idx + 1, menu_items.size())
+		menu["idx"] = posmod(menu["idx"] + 1, items.size())
 		Sfx.play("select")
+	# Options sub-menu: LEFT/RIGHT changes values, H/BACK pops.
+	if menu["title"] == "OPTIONS":
+		if Controls.any_just_pressed(Controls.LEFT) != Controls.NONE:
+			_options_change(-1)
+		if Controls.any_just_pressed(Controls.RIGHT) != Controls.NONE:
+			_options_change(1)
+		if Controls.any_just_pressed(Controls.HEAVY) != Controls.NONE:
+			Sfx.play("select")
+			_close_menu()
+			return
+		if Controls.any_just_pressed(Controls.LIGHT | Controls.START) != Controls.NONE:
+			if items[menu["idx"]] == "BACK":
+				Sfx.play("select")
+				_close_menu()
+		return
 	if paused and Controls.any_just_pressed(Controls.HEAVY) != Controls.NONE:
 		_menu_action("RESUME")
 		return
 	if Controls.any_just_pressed(Controls.LIGHT | Controls.START) != Controls.NONE:
 		Sfx.play("confirm")
-		_menu_action(menu_items[menu_idx])
+		_menu_action(items[menu["idx"]])
+
+
+## In-fight options sub-menu. LEFT/RIGHT changes the highlighted row; every
+## change saves immediately (autoload/settings.gd).
+func _options_change(d: int) -> void:
+	var menu := _current_menu()
+	var row: int = menu["idx"]
+	match row:
+		0:  # SFX VOLUME
+			Settings.sfx_volume = clampf(Settings.sfx_volume + d * 0.1, 0.0, 1.0)
+			Sfx.apply_volumes()
+			Sfx.play("confirm")
+		1:  # VOICE VOLUME
+			Settings.voice_volume = clampf(Settings.voice_volume + d * 0.1, 0.0, 1.0)
+			Sfx.apply_volumes()
+			Sfx.play("confirm")
+		2:  # MUSIC VOLUME
+			Settings.music_volume = clampf(Settings.music_volume + d * 0.1, 0.0, 1.0)
+			Sfx.apply_volumes()
+			Sfx.play("confirm")
+		3:  # ROUNDS TO WIN
+			Settings.rounds_to_win = clampi(Settings.rounds_to_win + d, 1, 3)
+			Sfx.play("select")
+		4:  # TIMER
+			Settings.timer_enabled = not Settings.timer_enabled
+			Sfx.play("select")
+		5:  # STAGE
+			var stages := ["", "field", "library", "rooftop", "dojo", "beach", "snow"]
+			var i := stages.find(Settings.stage)
+			if i < 0:
+				i = 0
+			i = posmod(i + d, stages.size())
+			Settings.stage = stages[i]
+			Sfx.play("select")
+	Settings.save_settings()
 
 
 func _menu_action(item: String) -> void:
 	match item:
 		"RESUME":
-			menu_items = []
+			menu_stack.clear()
 			paused = false
 			for f in fighters:
 				f.resync_input()
+		"OPTIONS":
+			_open_menu("OPTIONS", ["SFX VOLUME", "VOICE VOLUME", "MUSIC VOLUME", "ROUNDS TO WIN", "TIMER", "STAGE", "BACK"])
 		"REMATCH":
-			menu_items = []
+			menu_stack.clear()
 			wins = [0, 0]
 			round_num = 1
 			for f in fighters:
 				f.meter = 0.0
 			start_round()
 		"CHARACTER SELECT":
+			menu_stack.clear()
+			paused = false
 			GameState.goto("select")
-		"TITLE SCREEN":
+		"QUIT TO TITLE":
+			menu_stack.clear()
+			paused = false
 			GameState.goto("title")
 
 

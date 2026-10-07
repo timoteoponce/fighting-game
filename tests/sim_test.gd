@@ -47,6 +47,8 @@ func _ready() -> void:
 	_test_quick_rise()
 	_test_block()
 	_test_demo_match()
+	_test_settings()
+	_test_pause()
 	if OS.get_cmdline_user_args().has("--balance"):
 		_balance_report()
 	print("FAILURES: %d" % failures)
@@ -989,6 +991,53 @@ func _test_demo_match() -> void:
 			min_hp = mini(min_hp, fr.health)
 	check(min_hp < 1000, "CPUs deal damage")
 	check(f.phase == "over", "match finishes (%d frames, %.1f min, rounds %d, wins %s)" % [frames, frames / 3600.0, f.round_num, str(f.wins)])
+	f.free()
+
+
+## Match rules come from Settings, not constants: a one-round match must end
+## after a single round win, and the stage setting must reach the fight.
+func _test_settings() -> void:
+	print("[settings]")
+	# Tests mutate autoloads and ordering matters, so save and restore.
+	var old_rounds := Settings.rounds_to_win
+	var old_timer := Settings.timer_enabled
+	var old_stage := Settings.stage
+	Settings.rounds_to_win = 1
+	Settings.timer_enabled = false
+	Settings.stage = "dojo"
+	var f := _new_fight("ulises", "emilia")
+	check(f.rounds_to_win == 1, "fight reads rounds_to_win from Settings")
+	check(not f.timer_enabled, "fight reads timer_enabled from Settings")
+	check(f.stage.kind == "dojo", "fight reads stage from Settings")
+	_start(f)
+	# Zero health ends the round on the next phase update; with the timer off
+	# the only way out is a KO.
+	f.fighters[1].health = 0
+	_run(f, 400)
+	check(f.phase == "over", "a one-round match ends after a single round win")
+	Settings.rounds_to_win = old_rounds
+	Settings.timer_enabled = old_timer
+	Settings.stage = old_stage
+	f.free()
+
+
+## START pauses the fight: the sim stops advancing while the menu is open.
+func _test_pause() -> void:
+	print("[pause]")
+	var f := _new_fight("ulises", "emilia")
+	_start(f)
+	# Press START for one frame, then release.
+	_script(f.fighters[0], [[Controls.START, 1], [0, 1]])
+	f._physics_process(1.0 / 60.0)
+	check(f.paused, "START pauses the fight")
+	check(f.menu_stack.size() > 0, "the pause menu is open")
+	var phase_t := f.phase_t
+	_run(f, 30)
+	check(f.phase_t == phase_t, "the sim does not advance while paused")
+	# RESUME via the menu action (H key).
+	f._menu_action("RESUME")
+	check(not f.paused, "RESUME unpauses the fight")
+	check(f.menu_stack.is_empty(), "the menu stack is empty after resume")
 	f.free()
 
 

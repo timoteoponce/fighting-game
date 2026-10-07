@@ -1,7 +1,7 @@
 class_name TitleScreen
 extends Node2D
 
-const ITEMS := ["VS PLAYER", "VS CPU", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"]
+const ITEMS := ["VS PLAYER", "VS CPU", "OPTIONS", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"]
 
 var idx := 0
 var t := 0.0
@@ -44,6 +44,9 @@ func _process(delta: float) -> void:
 			"VS CPU":
 				GameState.mode = "cpu"
 				GameState.goto("select")
+			"OPTIONS":
+				GameState.options_return = "title"
+				GameState.goto("options")
 			"HOW TO PLAY":
 				GameState.goto("howto")
 			"CONTROLLER SETUP":
@@ -70,3 +73,4 @@ func _draw() -> void:
 	UI.text(self, Vector2(320, 96), "PJ's CLASH", 14, Color.WHITE)
 	UI.menu(self, ITEMS, idx, Vector2(320, 150), 17, 28)
 	UI.text(self, Vector2(320, 350), "P1: WASD + F / G     P2: Arrows + K / L     Gamepads: D-pad + buttons     F11: fullscreen", 10, Color(1, 1, 1, 0.8))
+	UI.text(self, Vector2(10, 350), "v" + ProjectSettings.get_setting("application/config/version"), 10, Color(1, 1, 1, 0.5), HORIZONTAL_ALIGNMENT_LEFT, 2)

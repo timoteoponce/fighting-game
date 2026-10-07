@@ -16,6 +16,9 @@ var chars := ["ulises", "emilia"]
 var cpu_level := 2
 var stage := ""  # "" = random
 var debug_full_meter := false  # --full-meter: start rounds with 3 hyper levels
+## Where the options screen returns to. Only "title" for now; the pause menu
+## uses an in-fight sub-menu instead of navigating here.
+var options_return := "title"
 
 var _registry := {}  # id -> GDScript
 
