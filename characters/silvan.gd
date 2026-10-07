@@ -320,7 +320,12 @@ func _init() -> void:
 		}),
 	}
 	size = 0.78  # he is two
-	build = 0.84  # slimmer than the old round diaper silhouette; still a toddler
+	# A two-year-old is a big head on a short, round body: the head is the
+	# loudest toddler cue, and the build is deliberately paunchy rather than
+	# the beanpole `build` would give him. Purely visual — hitboxes follow
+	# `size`, not these.
+	head_scale = 1.78
+	build = 1.15
 	scale_moves()
 
 
@@ -358,6 +363,18 @@ func draw_behind(r: FighterRenderer, _s: Dictionary) -> void:
 	var ear := r.chain_local("ear_b")
 	if ear.size() > 1:
 		r.ribbon(ear, 7.0, 4.0, FighterRenderer.dk(fur))
+
+
+## The tummy: a soft lighter patch on the shirt with a little navel, drawn on
+## top of the shared torso so the body reads round instead of as a straight
+## wedge. This plus the build and the big head is what sells "two years old".
+func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
+	var up: Vector2 = s["up"]
+	var perp: Vector2 = s["perp"]
+	var belly: Vector2 = s["hip"] + up * 9.0 + perp * 1.0
+	var shirt: Color = r.colors["shirt"]
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(belly, 7.6, 6.4), shirt.lightened(0.12))
+	r.draw_circle(belly - up * 2.0, 0.9, shirt.darkened(0.28))
 
 
 func draw_hair_back(r: FighterRenderer) -> void:

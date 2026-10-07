@@ -251,6 +251,13 @@ handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
 
+### Silvan actually looks two now
+
+He was a small, straight wedge on a mop of hair. Now he is a big head on a
+short, round body: a larger `head_scale`, a paunchier `build` and a soft belly
+on the shirt with a little navel. Purely a look — his frame data, hitboxes and
+movement are untouched.
+
 ### Emilia's heavy super is a cartwheel now
 
 Her BACK + L + H super was a beam of wand light, which made two of her supers
