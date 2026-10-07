@@ -95,26 +95,47 @@ jobs:
           log-public-key: false
 
       - name: Add host
-        run: mkdir -p ~/.ssh && ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Deploy
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
         run: |
           set -euo pipefail
+          # The secret text box keeps a trailing newline. Left in the script it
+          # splits the next token onto its own line, and the redirect never
+          # sees ssh-keyscan's output.
+          host=$(printf '%s' "$SSH_HOST" | tr -d '[:space:]')
+          test -n "$host"
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          user=$(printf '%s' "$SSH_USER" | tr -d '[:space:]')
+          host=$(printf '%s' "$SSH_HOST" | tr -d '[:space:]')
+          dest=$(printf '%s' "$DEPLOY_PATH" | tr -d '\r\n')
+          dest="${dest#"${dest%%[![:space:]]*}"}"
+          dest="${dest%"${dest##*[![:space:]]}"}"
+          test -n "$user"
+          test -n "$host"
+          case "$dest" in
+            /*) ;;
+            *) echo "DEPLOY_PATH must be an absolute path"; exit 1 ;;
+          esac
+          case "$dest" in
+            /|/home|/root|/var|/usr|/tmp|/opt) echo "DEPLOY_PATH is too broad"; exit 1 ;;
+          esac
           tar -C web -czf /tmp/pjclash-web.tar.gz .
-          scp /tmp/pjclash-web.tar.gz ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/pjclash-web.tar.gz
-          ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} /bin/bash << SCRIPT
+          scp /tmp/pjclash-web.tar.gz "${user}@${host}:/tmp/pjclash-web.tar.gz"
+          ssh "${user}@${host}" /bin/bash << SCRIPT
             set -euo pipefail
-            dest='${{ secrets.DEPLOY_PATH }}'
-            case "\$dest" in
-              /*) ;;
-              *) echo "DEPLOY_PATH must be an absolute path"; exit 1 ;;
-            esac
-            case "\$dest" in
-              /|/home|/root|/var|/usr|/tmp|/opt) echo "DEPLOY_PATH is too broad"; exit 1 ;;
-            esac
+            dest=$(printf '%q' "$dest")
             mkdir -p "\$dest"
             find "\$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
             tar -xzf /tmp/pjclash-web.tar.gz -C "\$dest"
             rm -f /tmp/pjclash-web.tar.gz
-            echo "Deployed to \$dest"
+            echo "Deployed"
           SCRIPT
