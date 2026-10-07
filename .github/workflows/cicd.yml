@@ -1,0 +1,177 @@
+name: CI/CD
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  GODOT_VERSION: 4.7.2
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system libraries
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            unzip wget ca-certificates \
+            libfontconfig1 libx11-6 libxcursor1 libxinerama1 \
+            libxrandr2 libxi6 libgl1 libxext6 libxrender1 libxfixes3 \
+            libxkbcommon0 libdbus-1-3 \
+            libwayland-client0 libwayland-cursor0 libwayland-egl1
+          sudo apt-get install -y --no-install-recommends libasound2t64 \
+            || sudo apt-get install -y --no-install-recommends libasound2
+
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot-4.7.2
+          key: godot-4.7.2-stable-linux-x86_64
+
+      - name: Download Godot 4.7.2
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          root="$HOME/.cache/godot-4.7.2"
+          mkdir -p "$root/bin" /tmp/godot-dl
+          wget -q -O /tmp/godot-dl/editor.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot-dl/editor.zip -d "$root/bin"
+          chmod +x "$root/bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          wget -q -O /tmp/godot-dl/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          rm -rf "$root/templates"
+          unzip -q /tmp/godot-dl/templates.tpz -d /tmp/godot-dl
+          mv /tmp/godot-dl/templates "$root/templates"
+
+      - name: Expose Godot
+        run: |
+          set -euo pipefail
+          root="$HOME/.cache/godot-4.7.2"
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          ln -sfn "$root/templates" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          sudo ln -sfn "$root/bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          godot --version
+
+      - name: Gameplay tests
+        run: |
+          set -euo pipefail
+          godot --headless --path . --import
+          godot --headless --path . -- --test
+
+      - name: Export web
+        run: ./build_web.sh
+
+      - name: Upload web build
+        uses: actions/upload-artifact@v4
+        with:
+          name: web
+          path: build/web/
+          retention-days: 7
+          if-no-files-found: error
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Download web build
+        uses: actions/download-artifact@v4
+        with:
+          name: web
+          path: web
+
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+          log-public-key: false
+
+      - name: Add host
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          # The secret text box keeps a trailing newline. Left in the script it
+          # splits the next token onto its own line, and the redirect never
+          # sees ssh-keyscan's output.
+          host=$(printf '%s' "$SSH_HOST" | tr -d '[:space:]')
+          test -n "$host"
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "$host" >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        env:
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          user=$(printf '%s' "$SSH_USER" | tr -d '[:space:]')
+          host=$(printf '%s' "$SSH_HOST" | tr -d '[:space:]')
+          dest=$(printf '%s' "$DEPLOY_PATH" | tr -d '\r\n')
+          dest="${dest#"${dest%%[![:space:]]*}"}"
+          dest="${dest%"${dest##*[![:space:]]}"}"
+          test -n "$user"
+          test -n "$host"
+          case "$dest" in
+            /*) ;;
+            *) echo "DEPLOY_PATH must be an absolute path"; exit 1 ;;
+          esac
+          case "$dest" in
+            /|/home|/root|/var|/usr|/tmp|/opt) echo "DEPLOY_PATH is too broad"; exit 1 ;;
+          esac
+          tar -C web -czf /tmp/pjclash-web.tar.gz .
+          scp /tmp/pjclash-web.tar.gz "${user}@${host}:/tmp/pjclash-web.tar.gz"
+          # Replace the directory in place. If it is root-owned (a /var/www
+          # tree), passwordless sudo is used for the swap. Otherwise the SSH
+          # user has to own the directory.
+          ssh "${user}@${host}" /bin/bash << SCRIPT
+            set -euo pipefail
+            dest=$(printf '%q' "$dest")
+            tmp=\$(mktemp -d)
+            tar -xzf /tmp/pjclash-web.tar.gz -C "\$tmp"
+            mkdir -p "\$dest" 2>/dev/null || sudo -n mkdir -p "\$dest"
+            use_sudo=0
+            if ! find "\$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +; then
+              if ! sudo -n find "\$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +; then
+                echo "Cannot delete existing files in DEPLOY_PATH as \$(id -un)."
+                echo "On the server run: sudo chown -R \$(id -un) <DEPLOY_PATH>"
+                exit 1
+              fi
+              use_sudo=1
+            fi
+            if [ "\$use_sudo" -eq 1 ] || [ ! -w "\$dest" ]; then
+              sudo -n cp -a "\$tmp"/. "\$dest"/
+              use_sudo=1
+            else
+              cp -a "\$tmp"/. "\$dest"/
+            fi
+            # cp -a copies the archive directory's mode onto dest. The
+            # Actions checkout of the web build is 700, so without this
+            # nginx (user www) cannot enter the directory.
+            as_owner() {
+              if [ "\$use_sudo" -eq 1 ]; then
+                sudo -n "\$@"
+              else
+                "\$@"
+              fi
+            }
+            as_owner chgrp www "\$dest" || true
+            group=\$(ls -ld "\$dest" | awk '{print \$4}')
+            if [ "\$group" = www ]; then
+              as_owner chmod 750 "\$dest"
+            else
+              as_owner chmod 755 "\$dest"
+            fi
+            as_owner find "\$dest" -type f -exec chmod 644 {} +
+            rm -rf "\$tmp" /tmp/pjclash-web.tar.gz
+            echo "Deployed"
+          SCRIPT

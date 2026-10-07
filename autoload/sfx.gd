@@ -236,6 +236,11 @@ func _start_music() -> void:
 			if ext in ["ogg", "wav", "mp3"]:
 				_music_files.append(dir.path_join(name))
 	_music_files.sort()
+	# The sting player exists either way. Playback itself waits for the first
+	# screen: the slam wants the sting, and a loop starting here would step on it.
+	_sting = AudioStreamPlayer.new()
+	_sting.volume_db = -6.0
+	add_child(_sting)
 	if _music_files.is_empty():
 		_start_synth_music()
 		return
@@ -243,7 +248,6 @@ func _start_music() -> void:
 	_music.volume_db = -16.0
 	_music.finished.connect(_advance_music)
 	add_child(_music)
-	_play_music(0)
 
 
 # --- Procedural chiptune music ---------------------------------------------------
@@ -301,6 +305,10 @@ var _music_mode := "fight"
 ## rebuilding on every screen switch would hitch.
 var _loops := {}
 var _jingle: AudioStreamPlayer
+var _sting: AudioStreamPlayer
+var _sting_stream: AudioStreamWAV
+## File playback was paused so the logo sting could be heard on its own.
+var _music_held := false
 
 
 func _start_synth_music() -> void:
@@ -310,17 +318,122 @@ func _start_synth_music() -> void:
 	_jingle = AudioStreamPlayer.new()
 	_jingle.volume_db = -10.0
 	add_child(_jingle)
-	set_music_mode("fight")
 
 
 func set_music_mode(mode: String) -> void:
 	_music_mode = mode
+	# Dropped-in tracks have no fight/menu split. Start them on the first real
+	# screen, and don't restart a track that is already going.
+	if _music != null:
+		if _music.stream_paused:
+			return
+		if not _music.playing:
+			_play_music(0)
+		return
 	if _synth_player == null:
 		return
 	if not _loops.has(mode):
 		_loops[mode] = _build_synth_loop(mode)
+	if _synth_player.playing and _synth_player.stream == _loops[mode]:
+		return
 	_synth_player.stream = _loops[mode]
 	_synth_player.play()
+
+
+# --- Logo sting ----------------------------------------------------------------
+# One cue list for the splash and the waveform. Nine hits, P J ' S then C L A S H.
+# Roots walk a short minor-ish run; the last one is the lock and rings longer.
+
+const LOGO_CUES := [
+	{"ch": "P", "t": 0.15, "root": 130.81},
+	{"ch": "J", "t": 0.32, "root": 146.83},
+	{"ch": "'", "t": 0.46, "root": 155.56},
+	{"ch": "S", "t": 0.62, "root": 196.0},
+	{"ch": "C", "t": 0.95, "root": 130.81},
+	{"ch": "L", "t": 1.08, "root": 146.83},
+	{"ch": "A", "t": 1.21, "root": 164.81},
+	{"ch": "S", "t": 1.34, "root": 174.61},
+	{"ch": "H", "t": 1.55, "root": 196.0},
+]
+
+
+func logo_cues() -> Array:
+	return LOGO_CUES.duplicate(true)
+
+
+## Power-chord stab on every letter. The last chord is the one that rings
+## under "PRESS ANY BUTTON".
+func build_logo_sting() -> AudioStreamWAV:
+	var cues := logo_cues()
+	var last_t := float((cues[cues.size() - 1] as Dictionary)["t"])
+	var dur := last_t + 1.25
+	var n := int(dur * RATE)
+	var data := PackedByteArray()
+	data.resize(n * 2)
+	for i in n:
+		var t := float(i) / RATE
+		var s := 0.0
+		for ci in cues.size():
+			var cue: Dictionary = cues[ci]
+			var dt := t - float(cue["t"])
+			var hit := 1.15 if ci == cues.size() - 1 else 0.2
+			if dt < 0.0 or dt >= hit:
+				continue
+			var root := float(cue["root"])
+			var env := pow(1.0 - dt / hit, 1.35)
+			if dt < 0.08:
+				var kp := dt / 0.08
+				s += sin(TAU * (160.0 - 120.0 * kp) * dt) * (1.0 - kp) * 0.55
+			s += _sq(t, root) * 0.16 * env
+			s += _sq(t, root * 1.014) * 0.1 * env
+			s += _sq(t, root * 1.5) * 0.13 * env
+			if dt < 0.04:
+				s += _noise(i) * (1.0 - dt / 0.04) * 0.3
+		data.encode_s16(i * 2, int(clampf(s, -1.0, 1.0) * 32767.0))
+	var w := AudioStreamWAV.new()
+	w.format = AudioStreamWAV.FORMAT_16_BITS
+	w.mix_rate = RATE
+	w.stereo = false
+	w.data = data
+	return w
+
+
+func play_logo_sting() -> void:
+	if _sting == null:
+		return
+	if _sting_stream == null:
+		_sting_stream = build_logo_sting()
+	if _music != null and _music.playing:
+		_music.stream_paused = true
+		_music_held = true
+	if _synth_player != null:
+		_synth_player.stop()
+		# The menu loop is a few hundred thousand samples. Build it while the
+		# slam is starting, so pressing through to the title does not hitch.
+		if not _loops.has("title"):
+			_loops["title"] = _build_synth_loop("title")
+	_sting.stream = _sting_stream
+	_sting.play()
+
+
+## The menu (or the fight, if something skipped straight there) takes the
+## speakers back. A dropped-in track that we paused is unpaused; the synth
+## loop is started by the set_music_mode call that follows this.
+func resume_after_sting() -> void:
+	if _sting != null and _sting.playing:
+		_sting.stop()
+	if _music_held and _music != null:
+		_music.stream_paused = false
+		_music_held = false
+
+
+func _sq(t: float, freq: float) -> float:
+	return 1.0 if fmod(t * freq, 1.0) < 0.35 else -1.0
+
+
+func _noise(i: int) -> float:
+	var n := (i * 1103515245 + 12345) & 0x7fffffff
+	return float(n % 2000) / 1000.0 - 1.0
 
 
 ## Short victory fanfare. Synth mode only: if the player dropped real files in

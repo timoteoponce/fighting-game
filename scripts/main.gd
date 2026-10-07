@@ -8,7 +8,9 @@ func _ready() -> void:
 	GameState.screen_requested.connect(func(s: String) -> void: call_deferred("_switch", s))
 	# Command line (after "--"): --demo = CPU vs CPU fight, --screen=NAME opens a
 	# screen, --test runs the gameplay tests.
-	var start := "title"
+	# The logo slam is the cold boot. --demo, --test and an explicit --screen=
+	# skip it, and coming back from a match lands on the menu, not the slam.
+	var start := "splash"
 	for arg in OS.get_cmdline_user_args():
 		if arg == "--demo":
 			GameState.mode = "demo"
@@ -32,9 +34,16 @@ func _ready() -> void:
 func _switch(screen: String) -> void:
 	if current:
 		current.queue_free()
-	# The fight gets the driving track; every other screen gets the mellow one.
-	Sfx.set_music_mode("fight" if screen == "fight" else "title")
+	# The slam has its own sting. The fight gets the driving track, and every
+	# other screen gets the mellow one (or the files in music/, if any).
+	if screen == "splash":
+		Sfx.play_logo_sting()
+	else:
+		Sfx.resume_after_sting()
+		Sfx.set_music_mode("fight" if screen == "fight" else "title")
 	match screen:
+		"splash":
+			current = SplashScreen.new()
 		"select":
 			current = CharSelect.new()
 		"fight":

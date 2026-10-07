@@ -5,10 +5,12 @@ fighters in a match are drawn in code into a 320x180 buffer and scaled up, so
 the game has a chunky KOF-era pixel look and the body can still move every
 frame. The menus draw the same fighters, live.
 
-Music is synthesized in code too: a mellow track for the menus and a driving
+The game opens on a short logo slam — the letters of **PJ'S CLASH** hit one
+at a time, with a synthesized sting — and any button skips it to the menu.
+Music after that is synthesized too: a mellow track for the menus and a driving
 one for the fight, with a short fanfare when a match is won. Drop `.ogg`,
 `.wav`, or `.mp3` files in `music/` and those play instead, in order, quietly,
-behind the menus and the match.
+behind the menus and the match. The logo sting still plays over them.
 
 Six stages, picked at random each match: a soccer stadium at dusk, a magic
 library hall, a rooftop at night, a dojo at sunset, a beach at sunset and a
@@ -26,6 +28,19 @@ snowy park.
 Everyone has **two supers** — see "Two supers, one meter bar" below.
 
 Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Normal / Hard).
+
+## Playing in a browser
+
+The web build is a folder of static files (`index.html` and the files next to
+it). Open it from a web server, not by double-clicking the html file.
+
+The page asks you to click once before the game starts. That click is what
+lets the browser play the logo sting. Keyboard and gamepad work the same as
+on the desktop build. There are no touch controls.
+
+A push to `main` builds this and copies it onto the server. See "For
+developers" for the secrets that deploy needs, and `deploy/nginx/pjclash.conf`
+for the one-time web server setup.
 
 ## Running on Linux (x86_64)
 
@@ -174,10 +189,22 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 - Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. There are no image files in the game at all. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
 - Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
-- Jump to one screen: `godot --path . -- --screen=select` (`title`, `select`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full.
+- Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
+- Build for web: `./build_web.sh` (same templates, plus the web ones) → `build/web/`. Serve that directory over http.
 - F1 during a fight shows the hitboxes, the hurtboxes and a readout of each fighter's state and frame count.
+
+GitHub Actions (`.github/workflows/cicd.yml`) runs the tests on every push and pull request, exports the web build, and on a push to `main` copies it over SSH. Add these repository secrets. The first three are the same ones rent_tracker uses. The game does not read them at runtime.
+
+| Secret | What it is |
+|---|---|
+| `SSH_PRIVATE_KEY` | Deploy key |
+| `SSH_HOST` | Server |
+| `SSH_USER` | SSH user |
+| `DEPLOY_PATH` | Absolute directory the web build replaces. Use a directory that holds only this game. |
+
+Nginx is installed once by hand from `deploy/nginx/pjclash.conf`. Point `root` at `DEPLOY_PATH`.
 
 Code map:
 
@@ -461,3 +488,7 @@ Nothing about frame data, damage or balance changed.
 - **Synthesized music.** A mellow track for the menus, a driving one for the
   fight and a short win fanfare, all generated in code — or drop your own files
   in `music/`.
+- **Logo slam.** The game opens on PJ'S CLASH, one letter at a time, with a
+  generated sting. Any button skips to the menu. In the browser, click the
+  loading picture or CLICK TO START so the sting can play. A push to `main` publishes the
+  web build; see "Playing in a browser" above.

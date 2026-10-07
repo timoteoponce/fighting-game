@@ -23,14 +23,20 @@ godot --headless --path . -- --test --balance                   # + ~60 CPU-vs-C
 godot --path . -- --demo                                        # CPU vs CPU
 godot --path . -- --screen=select                               # jump straight to one screen
 ./build_linux.sh                                                # export tarball -> build/ (needs export templates)
+./build_web.sh                                                  # export web -> build/web/ (needs the web templates too)
 ```
 
 - **Args after `--` are read by the game** (`OS.get_cmdline_user_args()`, `scripts/main.gd:12`).
   Engine flags like `--windowed` / `--fullscreen` must go **before** the `--` or they are ignored.
 - Full flag set: `--demo --test --balance --chars=a,b --stage=library --screen=NAME
-  --full-meter`. Screens: `title select fight setup howto options`. The
-  player-facing list is the README's "For developers" section.
-- **No linter, formatter, typecheck or CI exists.** The test run *is* the verification step.
+  --full-meter`. Screens: `splash title select fight setup howto options`. The
+  player-facing list is the README's "For developers" section. Cold boot is
+  `splash`. `--demo` and any `--screen=` skip the logo slam; coming back from a
+  match goes to `title`.
+- **No linter, formatter or typecheck exists.** The test run is the local
+  verification step. `.github/workflows/cicd.yml` runs that same test, exports
+  the web build, and on a push to `main` copies it over SSH. Secrets and the
+  one-time nginx site are in the README.
 - `F1` toggles the debug overlay during a fight: each fighter's hurtbox (green
   outline), hitbox (filled red) and a `STATE f<frame> <move id>` label. It does
   **not** show inputs or full frame data. Read-only; great for tuning frame data.
@@ -80,7 +86,9 @@ bite you.
   `design/.gdignore`; nothing in the game reads it. Optional voice clips load
   from `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd`).
   Optional music is the same idea for `music/` (`.ogg`, `.wav`, `.mp3`). Leave other
-  people's tracks out of the build.
+  people's tracks out of the build. The cold-boot sting is `Sfx.logo_cues()` /
+  `build_logo_sting()`: nine hits spelling PJ'S CLASH, drawn by `SplashScreen`.
+  It plays even when `music/` has files, and those files stay paused until the menu.
 - **The body is clothing on the pose skeleton.** `FighterRenderer.cloth()`, `_arm()` and
   `_leg()` draw one outlined ribbon when a limb is a single colour, and two overlapping
   pieces when it changes colour at the elbow or knee (a hem). Pose springs, squash and

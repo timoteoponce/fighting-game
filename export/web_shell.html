@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0">
+		<title>$GODOT_PROJECT_NAME</title>
+		<style>
+html, body, #canvas {
+	margin: 0;
+	padding: 0;
+	border: 0;
+}
+
+body {
+	color: white;
+	background-color: black;
+	overflow: hidden;
+	touch-action: none;
+}
+
+#canvas {
+	display: block;
+}
+
+#canvas:focus {
+	outline: none;
+}
+
+#status, #status-splash, #status-progress {
+	position: absolute;
+	left: 0;
+	right: 0;
+}
+
+#status, #status-splash {
+	top: 0;
+	bottom: 0;
+}
+
+#status {
+	background-color: $GODOT_SPLASH_COLOR;
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	visibility: hidden;
+}
+
+#status-splash {
+	max-height: 100%;
+	max-width: 100%;
+	margin: auto;
+	/* Full-screen layer. It used to sit on top of the button and take the
+	   click; Tab + Enter still reached the focused button. */
+	pointer-events: none;
+}
+
+#status-splash.show-image--false {
+	display: none;
+}
+
+#status-splash.fullsize--true {
+	height: 100%;
+	width: 100%;
+	object-fit: contain;
+}
+
+#status-splash.use-filter--false {
+	image-rendering: pixelated;
+}
+
+#status-progress, #status-notice {
+	display: none;
+}
+
+#status-progress {
+	bottom: 10%;
+	width: 50%;
+	margin: 0 auto;
+	z-index: 2;
+}
+
+#status-notice {
+	background-color: #5b3943;
+	border-radius: 0.5rem;
+	border: 1px solid #9b3943;
+	color: #e0e0e0;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	line-height: 1.3;
+	margin: 0 2rem;
+	overflow: hidden;
+	padding: 1rem;
+	text-align: center;
+	z-index: 1;
+}
+
+#start-btn {
+	display: none;
+	position: relative;
+	z-index: 2;
+	background: #ffd23f;
+	color: #1a0a14;
+	border: 4px solid #1a0a14;
+	box-shadow: 6px 6px 0 #7a1030;
+	font-family: 'Noto Sans', 'Droid Sans', Arial, sans-serif;
+	font-size: 28px;
+	font-weight: 800;
+	letter-spacing: 0.08em;
+	padding: 0.8rem 1.6rem;
+	cursor: pointer;
+}
+		</style>
+		$GODOT_HEAD_INCLUDE
+	</head>
+	<body>
+		<canvas id="canvas">
+			Your browser does not support the canvas tag.
+		</canvas>
+
+		<noscript>
+			Your browser does not support JavaScript.
+		</noscript>
+
+		<div id="status">
+			<img id="status-splash" class="$GODOT_SPLASH_CLASSES" src="$GODOT_SPLASH" alt="">
+			<progress id="status-progress"></progress>
+			<button id="start-btn" type="button">CLICK TO START</button>
+			<div id="status-notice"></div>
+		</div>
+
+		<script src="$GODOT_URL"></script>
+		<script>
+const GODOT_CONFIG = $GODOT_CONFIG;
+const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
+const exe = GODOT_CONFIG.executable;
+const pack = GODOT_CONFIG.mainPack || (exe + '.pck');
+GODOT_CONFIG.args = ['--main-pack', pack].concat(GODOT_CONFIG.args || []);
+const engine = new Engine(GODOT_CONFIG);
+
+(function () {
+	const statusOverlay = document.getElementById('status');
+	const statusProgress = document.getElementById('status-progress');
+	const statusNotice = document.getElementById('status-notice');
+	const startBtn = document.getElementById('start-btn');
+
+	let initializing = true;
+	let statusMode = '';
+
+	function setStatusMode(mode) {
+		if (statusMode === mode || !initializing) {
+			return;
+		}
+		if (mode === 'hidden') {
+			statusOverlay.remove();
+			initializing = false;
+			return;
+		}
+		statusOverlay.style.visibility = 'visible';
+		statusProgress.style.display = mode === 'progress' ? 'block' : 'none';
+		statusNotice.style.display = mode === 'notice' ? 'block' : 'none';
+		statusMode = mode;
+	}
+
+	function setStatusNotice(text) {
+		while (statusNotice.lastChild) {
+			statusNotice.removeChild(statusNotice.lastChild);
+		}
+		const lines = text.split('\n');
+		lines.forEach((line) => {
+			statusNotice.appendChild(document.createTextNode(line));
+			statusNotice.appendChild(document.createElement('br'));
+		});
+	}
+
+	function displayFailureNotice(err) {
+		console.error(err);
+		if (err instanceof Error) {
+			setStatusNotice(err.message);
+		} else if (typeof err === 'string') {
+			setStatusNotice(err);
+		} else {
+			setStatusNotice('An unknown error occurred.');
+		}
+		setStatusMode('notice');
+		initializing = false;
+	}
+
+	const missing = Engine.getMissingFeatures({
+		threads: GODOT_THREADS_ENABLED,
+	});
+
+	if (missing.length !== 0) {
+		const missingMsg = 'Error\nThe following features required to run Godot projects on the Web are missing:\n';
+		displayFailureNotice(missingMsg + missing.join('\n'));
+		return;
+	}
+
+	setStatusMode('progress');
+	// Download first, then wait for a click. Browsers will not play the logo
+	// sting unless the game itself starts inside a user gesture.
+	let ready = false;
+
+	function begin() {
+		if (!ready) {
+			return;
+		}
+		ready = false;
+		const AC = window.AudioContext || window.webkitAudioContext;
+		if (AC) {
+			const ac = new AC();
+			if (ac.resume) {
+				ac.resume();
+			}
+		}
+		startBtn.remove();
+		engine.start().then(() => {
+			setStatusMode('hidden');
+		}, displayFailureNotice);
+	}
+
+	Promise.all([
+		engine.init(exe),
+		engine.preloadFile(pack, pack),
+	]).then(() => {
+		statusProgress.style.display = 'none';
+		startBtn.style.display = 'inline-block';
+		statusOverlay.style.cursor = 'pointer';
+		ready = true;
+		startBtn.focus();
+	}, displayFailureNotice);
+
+	// The splash image covers the button, so the click has to be taken by the
+	// overlay. The button still starts it, and stops the event so begin runs once.
+	statusOverlay.addEventListener('click', begin);
+	startBtn.addEventListener('click', (event) => {
+		event.stopPropagation();
+		begin();
+	});
+}());
+		</script>
+	</body>
+</html>
