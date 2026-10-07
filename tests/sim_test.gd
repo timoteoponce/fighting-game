@@ -31,6 +31,7 @@ class Scripted:
 
 func _ready() -> void:
 	_test_roster()
+	_test_logo_sting()
 	for id in GameState.CHARACTERS:
 		_test_character_def(id)
 	for id in GameState.CHARACTERS:
@@ -75,6 +76,26 @@ func _test_roster() -> void:
 	check(all_unique, "every character id is unique")
 	for id in GameState.CHARACTERS:
 		check(GameState.make_character(id) is CharacterDef, "'%s' builds a CharacterDef" % id)
+
+
+## The cold-boot slam and its sting share one cue list. Pixel output is not
+## what a headless run can check; the beats and the waveform are.
+func _test_logo_sting() -> void:
+	print("[logo]")
+	var cues: Array = Sfx.logo_cues()
+	check(cues.size() == 9, "the logo sting has one hit per letter of PJ'S CLASH")
+	var prev := -1.0
+	var letters := ""
+	for c in cues:
+		var cue: Dictionary = c
+		var at := float(cue["t"])
+		check(at > prev, "logo hit '%s' lands after the previous one" % str(cue["ch"]))
+		prev = at
+		letters += str(cue["ch"])
+	check(letters == "PJ'SCLASH", "the logo hits spell PJ'S CLASH")
+	check(prev < 4.0, "the last logo hit is inside four seconds (%.2f)" % prev)
+	var stream := Sfx.build_logo_sting()
+	check(stream.data.size() > 1000, "the logo sting builds a waveform")
 
 
 ## Everything a new fighter can forget. This is the safety net behind

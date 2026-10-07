@@ -31,6 +31,12 @@ window/stretch/aspect="keep"
 common/physics_ticks_per_second=60
 common/max_physics_steps_per_frame=8
 
+[importer_defaults]
+
+texture={
+"compress/mode": 0
+}
+
 [rendering]
 
 anti_aliasing/quality/msaa_2d=2
