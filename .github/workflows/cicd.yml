@@ -130,12 +130,30 @@ jobs:
           esac
           tar -C web -czf /tmp/pjclash-web.tar.gz .
           scp /tmp/pjclash-web.tar.gz "${user}@${host}:/tmp/pjclash-web.tar.gz"
+          # Replace the directory in place. If it is root-owned (a /var/www
+          # tree), passwordless sudo is used for the swap. Otherwise the SSH
+          # user has to own the directory.
           ssh "${user}@${host}" /bin/bash << SCRIPT
             set -euo pipefail
             dest=$(printf '%q' "$dest")
-            mkdir -p "\$dest"
-            find "\$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-            tar -xzf /tmp/pjclash-web.tar.gz -C "\$dest"
-            rm -f /tmp/pjclash-web.tar.gz
+            tmp=\$(mktemp -d)
+            tar -xzf /tmp/pjclash-web.tar.gz -C "\$tmp"
+            mkdir -p "\$dest" 2>/dev/null || sudo -n mkdir -p "\$dest"
+            use_sudo=0
+            if ! find "\$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +; then
+              if ! sudo -n find "\$dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +; then
+                echo "Cannot delete existing files in DEPLOY_PATH as \$(id -un)."
+                echo "On the server run: sudo chown -R \$(id -un) <DEPLOY_PATH>"
+                exit 1
+              fi
+              use_sudo=1
+            fi
+            if [ "\$use_sudo" -eq 1 ] || [ ! -w "\$dest" ]; then
+              sudo -n cp -a "\$tmp"/. "\$dest"/
+              sudo -n chmod -R a+rX "\$dest"
+            else
+              cp -a "\$tmp"/. "\$dest"/
+            fi
+            rm -rf "\$tmp" /tmp/pjclash-web.tar.gz
             echo "Deployed"
           SCRIPT
