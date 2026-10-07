@@ -36,7 +36,8 @@ it). Open it from a web server, not by double-clicking the html file.
 
 The page asks you to click once before the game starts. That click is what
 lets the browser play the logo sting. Keyboard and gamepad work the same as
-on the desktop build. There are no touch controls.
+on the desktop build. A phone, held sideways, gets a pad on the left and L
+and H on the right. A computer does not show that pad.
 
 A push to `main` builds this and copies it onto the server. See "For
 developers" for the secrets that deploy needs, and `deploy/nginx/pjclash.conf`

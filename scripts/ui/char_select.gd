@@ -162,7 +162,10 @@ func _draw() -> void:
 		_draw_slot(i)
 	if start_timer >= 0.0:
 		UI.text(self, Vector2(320, 250), "GET READY!", 22, Color.WHITE)
-	UI.text(self, Vector2(320, 352), "LEFT / RIGHT: choose     L: confirm     H: back", 11, Color(1, 1, 1, 0.8))
+	var hint := "LEFT / RIGHT: choose     L: confirm     H: back"
+	if Controls.phone:
+		hint = "PAD: choose     L: confirm     H: back     P2: gamepad"
+	UI.text(self, Vector2(320, 352), hint, 11, Color(1, 1, 1, 0.8))
 
 
 func _draw_slot(i: int) -> void:
@@ -191,7 +194,10 @@ func _draw_slot(i: int) -> void:
 			status = "Difficulty:  <  %s  >" % GameState.CPU_LEVELS[GameState.cpu_level]
 			col = Color(1, 0.85, 0.3)
 	elif s["dev"] == Controls.NONE:
-		status = "PRESS  L  TO JOIN" if int(t * 2.0) % 2 == 0 else ""
+		if Controls.phone and i == 1:
+			status = "PLUG IN A GAMEPAD"
+		else:
+			status = "PRESS  L  TO JOIN" if int(t * 2.0) % 2 == 0 else ""
 		col = Color(1, 0.9, 0.3)
 	elif s["ready"]:
 		status = "READY!"

@@ -15,6 +15,9 @@ const START := 64
 
 const KB1 := -1
 const KB2 := -2
+## On-screen pad. Only present while `phone` is true, so a computer's device
+## list stays the two keyboards plus whatever gamepads are plugged in.
+const TOUCH := -3
 const NONE := -99
 
 const ACTIONS := ["up", "down", "left", "right", "light", "heavy", "start"]
@@ -49,13 +52,30 @@ var _rest := {}  # guid -> {axis index: resting value}
 var _prev := {}  # device -> mask (for menu edge detection)
 var _just := {}  # device -> mask pressed this frame
 
+## True on a phone or tablet browser: a coarse pointer and no hover. A desktop,
+## including a laptop that also has a touchscreen, stays false and shows no pad.
+var phone := false
+## Bits the on-screen pad is holding this frame. `read(TOUCH)` is what menus
+## and the fight actually see, after opposite directions cancel.
+var touch_mask := 0
+
 
 func _ready() -> void:
 	_load_sdl_db()
 	_load()
+	phone = _detect_phone()
 	Input.joy_connection_changed.connect(_on_joy_changed)
 	for dev in Input.get_connected_joypads():
 		_ensure_rest(dev)
+
+
+## The web export is the same build for a computer and a phone, so the engine's
+## "mobile" feature is never set. The browser's primary pointer is the signal.
+func _detect_phone() -> bool:
+	if not OS.has_feature("web"):
+		return false
+	var hit: Variant = JavaScriptBridge.eval("window.matchMedia('(hover: none) and (pointer: coarse)').matches")
+	return hit == true
 
 
 ## Cheap adapters often rest with a stick or an unused axis off centre, which
@@ -103,6 +123,8 @@ func _process(_delta: float) -> void:
 
 func devices() -> Array:
 	var list: Array = [KB1, KB2]
+	if phone:
+		list.append(TOUCH)
 	list.append_array(Input.get_connected_joypads())
 	return list
 
@@ -112,6 +134,8 @@ func device_name(dev: int) -> String:
 		return "Keyboard (WASD + F/G)"
 	if dev == KB2:
 		return "Keyboard (Arrows + K/L)"
+	if dev == TOUCH:
+		return "Touch"
 	if dev == NONE:
 		return "-"
 	return "Pad %d: %s" % [dev + 1, Input.get_joy_name(dev)]
@@ -120,7 +144,9 @@ func device_name(dev: int) -> String:
 ## Current held mask for a device.
 func read(dev: int) -> int:
 	var m := 0
-	if dev < 0:
+	if dev == TOUCH:
+		m = touch_mask
+	elif dev < 0:
 		if not KEYS.has(dev):
 			return 0
 		var keys: Dictionary = KEYS[dev]

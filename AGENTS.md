@@ -148,7 +148,9 @@ bite you.
   (`UP DOWN LEFT RIGHT LIGHT HEAVY START`). Fighters never see devices: `input_source.sample()`
   returns a mask. `CpuInput` returns the same mask shape and converts its relative
   `FWD`/`BACK` bits to absolute via `_to_abs(mask, facing)`, so fighter code is
-  player/CPU-agnostic — keep it that way.
+  player/CPU-agnostic — keep it that way. A phone adds `Controls.TOUCH`, fed by
+  `scripts/ui/touch_controls.gd`. `Controls.phone` is true only when the browser
+  reports a coarse pointer with no hover, so a computer never lists that device.
 
 ## Conventions that differ from defaults
 

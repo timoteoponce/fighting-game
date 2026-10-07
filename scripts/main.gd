@@ -28,6 +28,12 @@ func _ready() -> void:
 			GameState.stage = arg.trim_prefix("--stage=")
 		elif arg.begins_with("--screen="):
 			start = arg.trim_prefix("--screen=")
+	# Above every screen, and not freed when one is swapped out. Hidden unless
+	# this browser is a phone; see TouchControls.
+	var touch_layer := CanvasLayer.new()
+	touch_layer.layer = 40
+	touch_layer.add_child(TouchControls.new())
+	add_child(touch_layer)
 	_switch(start)
 
 

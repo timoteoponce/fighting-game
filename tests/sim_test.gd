@@ -32,6 +32,7 @@ class Scripted:
 func _ready() -> void:
 	_test_roster()
 	_test_logo_sting()
+	_test_touch()
 	for id in GameState.CHARACTERS:
 		_test_character_def(id)
 	for id in GameState.CHARACTERS:
@@ -61,6 +62,41 @@ func check(cond: bool, what: String) -> void:
 	print(("  ok   " if cond else "  FAIL ") + what)
 	if not cond:
 		failures += 1
+
+
+## The on-screen pad is a device. A computer must not grow one, and a held
+## finger has to look like a held key: an edge on the first frame, then held,
+## with left and right cancelling.
+func _test_touch() -> void:
+	print("[touch]")
+	var saved := Controls.phone
+	Controls.phone = false
+	Controls.touch_mask = 0
+	check(not Controls.devices().has(Controls.TOUCH), "a computer has no touch device")
+	Controls.phone = true
+	check(Controls.devices().has(Controls.TOUCH), "a phone lists the touch device")
+	Controls._process(0.0)
+	Controls.touch_mask = Controls.RIGHT | Controls.LIGHT
+	Controls._process(0.0)
+	check(Controls.read(Controls.TOUCH) == Controls.RIGHT | Controls.LIGHT, "touch holds right and light")
+	check(Controls.just_pressed(Controls.TOUCH, Controls.RIGHT), "right counts as just pressed")
+	check(Controls.just_pressed(Controls.TOUCH, Controls.LIGHT), "light counts as just pressed")
+	Controls._process(0.0)
+	check(not Controls.just_pressed(Controls.TOUCH, Controls.LIGHT), "a held button is not pressed again")
+	Controls.touch_mask = Controls.LEFT | Controls.RIGHT | Controls.LIGHT
+	var cleaned := Controls.read(Controls.TOUCH)
+	check(cleaned & (Controls.LEFT | Controls.RIGHT) == 0, "opposite directions cancel")
+	check(cleaned & Controls.LIGHT != 0, "light survives the cancel")
+	var pad := TouchControls.new()
+	check(pad.bits_at(TouchControls.PAD) == 0, "the middle of the pad is a dead zone")
+	check(pad.bits_at(TouchControls.PAD + Vector2(40, 0)) == Controls.RIGHT, "the right side of the pad is right")
+	check(pad.bits_at(TouchControls.PAD + Vector2(30, 30)) == Controls.DOWN | Controls.RIGHT, "a diagonal is down and forward")
+	check(pad.bits_at(TouchControls.LIGHT_AT) == Controls.LIGHT, "the L button is light")
+	check(pad.bits_at(TouchControls.HEAVY_AT) == Controls.HEAVY, "the H button is heavy")
+	pad.free()
+	Controls.touch_mask = 0
+	Controls.phone = saved
+	Controls._process(0.0)
 
 
 ## The roster comes from scanning `characters/`. If that ever breaks — most

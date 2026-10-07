@@ -46,5 +46,8 @@ func _draw() -> void:
 	y += 16.0
 	UI.text(self, Vector2(320, y), "You can cancel a hit into a special: L, then L + H right away", 12, Color(0.6, 1, 0.7))
 	y += 16.0
-	UI.text(self, Vector2(320, y), "Hitting and getting hit fills your HYPER meter.  F1 during a fight shows hitboxes and frame counts.", 11, Color(1, 1, 1, 0.8))
+	var tail := "Hitting and getting hit fills your HYPER meter.  F1 during a fight shows hitboxes and frame counts."
+	if Controls.phone:
+		tail = "On a phone: pad on the left, L and H on the right. Turn it sideways."
+	UI.text(self, Vector2(320, y), tail, 11, Color(1, 1, 1, 0.8))
 	UI.text(self, Vector2(320, 350), "Press any button to go back", 11, Color(1, 1, 1, 0.7))

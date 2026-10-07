@@ -19,6 +19,19 @@ func _ready() -> void:
 		r.position = Vector2(105 if i == 0 else 535, 318)
 		add_child(r)
 		chibis.append(r)
+	# VS CPU is the match one person can finish. VS PLAYER stays in the list
+	# for a second gamepad.
+	if Controls.phone:
+		idx = 1
+
+
+## QUIT closes a desktop window. A page has nothing to close.
+func _items() -> Array:
+	if not Controls.phone:
+		return ITEMS
+	var items: Array = ITEMS.duplicate()
+	items.erase("QUIT")
+	return items
 
 
 func _process(delta: float) -> void:
@@ -29,15 +42,16 @@ func _process(delta: float) -> void:
 		var intro := int(t * 0.4 + i * 0.5) % 2 == 0
 		r.prop = r.def.intro_prop if intro else ""
 		r.update_pose(r.def.pose("intro" if intro else "idle", {"lean": 6 + sin(t * 3.0 + i) * 3.0}), 0.1)
+	var items := _items()
 	if Controls.any_just_pressed(Controls.UP) != Controls.NONE:
-		idx = posmod(idx - 1, ITEMS.size())
+		idx = posmod(idx - 1, items.size())
 		Sfx.play("select")
 	if Controls.any_just_pressed(Controls.DOWN) != Controls.NONE:
-		idx = posmod(idx + 1, ITEMS.size())
+		idx = posmod(idx + 1, items.size())
 		Sfx.play("select")
 	if Controls.any_just_pressed(Controls.LIGHT | Controls.START) != Controls.NONE:
 		Sfx.play("confirm")
-		match ITEMS[idx]:
+		match items[idx]:
 			"VS PLAYER":
 				GameState.mode = "vs"
 				GameState.goto("select")
@@ -71,6 +85,9 @@ func _draw() -> void:
 	UI.text(self, Vector2(320, 70 - bob), "VS", 34, Color("ffd23f"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("7a1030"))
 	UI.text(self, Vector2(430, 64 + bob), "EMILIA", 44, Color("d19bff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("3a0d5a"))
 	UI.text(self, Vector2(320, 96), "PJ's CLASH", 14, Color.WHITE)
-	UI.menu(self, ITEMS, idx, Vector2(320, 150), 17, 28)
-	UI.text(self, Vector2(320, 350), "P1: WASD + F / G     P2: Arrows + K / L     Gamepads: D-pad + buttons     F11: fullscreen", 10, Color(1, 1, 1, 0.8))
+	UI.menu(self, _items(), idx, Vector2(320, 150), 17, 28)
+	var hint := "P1: WASD + F / G     P2: Arrows + K / L     Gamepads: D-pad + buttons     F11: fullscreen"
+	if Controls.phone:
+		hint = "PAD: move     L: confirm     H: back     A second player needs a gamepad"
+	UI.text(self, Vector2(320, 350), hint, 10, Color(1, 1, 1, 0.8))
 	UI.text(self, Vector2(10, 350), "v" + ProjectSettings.get_setting("application/config/version"), 10, Color(1, 1, 1, 0.5), HORIZONTAL_ALIGNMENT_LEFT, 2)
