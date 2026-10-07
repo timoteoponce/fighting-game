@@ -150,10 +150,28 @@ jobs:
             fi
             if [ "\$use_sudo" -eq 1 ] || [ ! -w "\$dest" ]; then
               sudo -n cp -a "\$tmp"/. "\$dest"/
-              sudo -n chmod -R a+rX "\$dest"
+              use_sudo=1
             else
               cp -a "\$tmp"/. "\$dest"/
             fi
+            # cp -a copies the archive directory's mode onto dest. The
+            # Actions checkout of the web build is 700, so without this
+            # nginx (user www) cannot enter the directory.
+            as_owner() {
+              if [ "\$use_sudo" -eq 1 ]; then
+                sudo -n "\$@"
+              else
+                "\$@"
+              fi
+            }
+            as_owner chgrp www "\$dest" || true
+            group=\$(ls -ld "\$dest" | awk '{print \$4}')
+            if [ "\$group" = www ]; then
+              as_owner chmod 750 "\$dest"
+            else
+              as_owner chmod 755 "\$dest"
+            fi
+            as_owner find "\$dest" -type f -exec chmod 644 {} +
             rm -rf "\$tmp" /tmp/pjclash-web.tar.gz
             echo "Deployed"
           SCRIPT
