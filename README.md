@@ -429,6 +429,6 @@ Nothing about frame data, damage or balance changed.
   fight and a short win fanfare, all generated in code — or drop your own files
   in `music/`.
 - **Logo slam.** The game opens on PJ'S CLASH, one letter at a time, with a
-  generated sting. Any button skips to the menu. In the browser, click
-  CLICK TO START first so the sting can play. A push to `main` publishes the
+  generated sting. Any button skips to the menu. In the browser, click the
+  loading picture or CLICK TO START so the sting can play. A push to `main` publishes the
   web build; see "Playing in a browser" above.
