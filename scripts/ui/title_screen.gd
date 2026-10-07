@@ -1,7 +1,7 @@
 class_name TitleScreen
 extends Node2D
 
-const ITEMS := ["VS PLAYER", "VS CPU", "OPTIONS", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"]
+const ITEMS := ["VS PLAYER", "ARCADE", "OPTIONS", "HOW TO PLAY", "CONTROLLER SETUP", "QUIT"]
 const MENU_AT := Vector2(320, 150)
 const MENU_SIZE := 17
 const MENU_SPACING := 28
@@ -95,8 +95,8 @@ func _confirm(items: Array) -> void:
 		"VS PLAYER":
 			GameState.mode = "vs"
 			GameState.goto("select")
-		"VS CPU":
-			GameState.mode = "cpu"
+		"ARCADE":
+			GameState.mode = "arcade"
 			GameState.goto("select")
 		"OPTIONS":
 			GameState.options_return = "title"

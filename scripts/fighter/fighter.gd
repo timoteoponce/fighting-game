@@ -66,6 +66,9 @@ var sf := 0  # frames spent in the current state
 ## this: nothing about the fight may progress while the world is stopped.
 var hyper_t := 0
 var health := MAX_HEALTH
+## This fighter's own maximum health, from `CharacterDef.health_scale` (the boss
+## has more). `health` and the HUD lifebar both work off this, not the constant.
+var max_health := MAX_HEALTH
 var meter := 0.0
 var stun := 0
 var crouching := false
@@ -96,6 +99,8 @@ func setup(d: CharacterDef, idx: int, src, alt: bool) -> void:
 	def = d
 	index = idx
 	input_source = src
+	max_health = maxi(1, roundi(MAX_HEALTH * d.health_scale))
+	health = max_health
 	renderer = FighterRenderer.new()
 	renderer.setup(def, alt)
 	renderer.base_scale = SCALE * def.size
@@ -106,7 +111,7 @@ func reset_for_round(x: float, face: int) -> void:
 	position = Vector2(x, GROUND_Y)
 	vel = Vector2.ZERO
 	facing = face
-	health = MAX_HEALTH
+	health = max_health
 	set_state(S.INTRO, true)
 	stun = 0
 	crouching = false
@@ -807,7 +812,7 @@ func _throw_step() -> void:
 	if sf < THROW_HOLD:
 		return
 	var m := def.throw_data()
-	var res := o.take_hit(m, position.x)
+	var res := o.take_hit(m, position.x, def.damage_scale)
 	on_hit_landed(m, false)
 	fight.on_throw(self, o, m, res)
 	_to_neutral()
@@ -888,8 +893,10 @@ func _can_block(dir: int) -> bool:
 	return buf.held(Controls.RIGHT if dir > 0 else Controls.LEFT)
 
 
-## Called on the defender. Returns "hit", "block" or "ko".
-func take_hit(m: MoveData, from_x: float) -> String:
+## Called on the defender. Returns "hit", "block" or "ko". `atk_scale` is the
+## attacker's `CharacterDef.damage_scale` (1.0 for everyone except the boss), so
+## a stronger fighter hits harder without every move being restated.
+func take_hit(m: MoveData, from_x: float, atk_scale := 1.0) -> String:
 	var dir := 1 if position.x > from_x else -1
 	if is_equal_approx(position.x, from_x):
 		dir = -facing
@@ -897,7 +904,7 @@ func take_hit(m: MoveData, from_x: float) -> String:
 		set_state(S.BLOCK)
 		stun = m.blockstun
 		vel.x = dir * (2.5 + m.kb.x * 0.4)
-		var chip := int(m.damage * m.chip)
+		var chip := int(m.damage * m.chip * atk_scale)
 		health = maxi(1, health - chip)  # chip damage never KOs
 		meter = minf(MAX_METER, meter + 2.0)
 		renderer.squish(0.07 + 0.03 * m.level)
@@ -907,7 +914,7 @@ func take_hit(m: MoveData, from_x: float) -> String:
 		return "block"
 	combo = combo + 1 if state in [S.HITSTUN, S.LAUNCHED] else 1
 	var scale := maxf(0.5 if m.level == 3 else 0.3, 1.0 - 0.1 * (combo - 1))
-	var dmg := maxi(1, roundi(m.damage * scale))
+	var dmg := maxi(1, roundi(m.damage * scale * atk_scale))
 	health = maxi(0, health - dmg)
 	meter = minf(MAX_METER, meter + dmg / 18.0)
 	flash = 4
@@ -1009,7 +1016,7 @@ func _expression() -> String:
 		S.DASH, S.BACKDASH, S.THROW:
 			return "attack"
 	# On the ropes: below a quarter health you sweat it out.
-	if health <= MAX_HEALTH / 4:
+	if health <= max_health / 4:
 		return "shock" if int(buf.frame / 22) % 4 == 0 else "normal"
 	return "normal"
 

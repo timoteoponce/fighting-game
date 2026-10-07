@@ -19,6 +19,15 @@ var size := 1.0  # body scale; hitboxes are scaled to match by scale_moves()
 ## Head size relative to the body. Purely visual (hitboxes ignore it), and the
 ## cheapest way to give a fighter a silhouette: big head = chibi cartoon.
 var head_scale := 1.45
+## Multiplier on every point of damage this fighter deals, normal or chip. The
+## whole roster leaves it at 1.0; the arcade boss sets it above 1 so she hits
+## harder without restating a number on every `MoveData`. Applied in
+## `Fighter.take_hit`, so a character opts in by setting this and nothing else.
+var damage_scale := 1.0
+## Multiplier on this fighter's health, i.e. how long they take to put down.
+## 1.0 for the roster; the arcade boss sets it above 1 so she is genuinely
+## harder to defeat. `Fighter.setup` turns it into `Fighter.max_health`.
+var health_scale := 1.0
 ## Limb and torso thickness, also purely visual: 0.7 is a beanpole, 1.3 is stocky.
 var build := 1.0
 var display := ""
@@ -35,6 +44,11 @@ var voice_pitch := 280.0
 ## Where this fighter sits on the select screen. Lower comes first; ties break
 ## alphabetically by id.
 var roster_order := 100
+## A secret fighter: still built and playable by id, but kept off the select
+## screen. `GameState._scan_characters` routes a hidden fighter into `LOCKED`
+## instead of `CHARACTERS`, which is how the arcade's final boss stays a
+## surprise. One file, one flag — no roster list to edit.
+var hidden := false
 var moves := {}
 var poses := {}
 var win_prop := ""

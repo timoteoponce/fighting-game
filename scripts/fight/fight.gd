@@ -91,12 +91,17 @@ func _ready() -> void:
 	stage.kind = stage_id
 	rounds_to_win = Settings.rounds_to_win
 	timer_enabled = Settings.timer_enabled
+	if GameState.mode == "arcade":
+		# Arcade bouts are their own rules: first to two rounds, and the
+		# opponent's level is the ladder's ramp rather than the Options setting.
+		rounds_to_win = 2
+		GameState.cpu_level = GameState.arcade_level()
 	world.add_child(stage)
 	var ids: Array = GameState.chars
 	for i in 2:
 		var f := Fighter.new()
 		var src
-		if GameState.mode == "vs" or (i == 0 and GameState.mode == "cpu"):
+		if GameState.mode == "vs" or (i == 0 and GameState.mode in ["cpu", "arcade"]):
 			src = PlayerInput.new(GameState.devices[i])
 		else:
 			src = CpuInput.new(GameState.cpu_level)
@@ -294,7 +299,9 @@ func _update_phase() -> void:
 					round_num += 1
 					start_round()
 		"over":
-			if phase_t == 200:
+			if phase_t == 200 and GameState.mode == "arcade":
+				_arcade_over()
+			elif phase_t == 200:
 				_open_menu("", ["REMATCH", "CHARACTER SELECT", "TITLE SCREEN"])
 
 
@@ -304,6 +311,20 @@ func _end_round(text: String) -> void:
 	_banner(text)
 	for f in fighters:
 		f.input_enabled = false
+
+
+## The end of an arcade bout. A win advances the ladder and returns to the
+## tower screen to show the progress; a loss offers the classic continue, or
+## the run is over.
+func _arcade_over() -> void:
+	if winner == 0:
+		GameState.arcade_advance()
+		GameState.goto("arcade")
+		return
+	if GameState.arcade_continues > 0:
+		_open_menu("CONTINUE?", ["CONTINUE", "QUIT TO TITLE"])
+	else:
+		_open_menu("GAME OVER", ["QUIT TO TITLE"])
 
 
 func on_hyper(f: Fighter, m: MoveData) -> void:
@@ -441,7 +462,7 @@ func _resolve_hits() -> void:
 func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projectile) -> void:
 	var from_x := a.position.x if p == null or p.anchored else p.position.x
 	var hp := d.health
-	var res := d.take_hit(m, from_x)
+	var res := d.take_hit(m, from_x, a.def.damage_scale)
 	var key := "%s %s" % [a.def.id, m.id if p == null else p.kind]
 	stats[key] = int(stats.get(key, 0)) + hp - d.health
 	var blocked := res == "block"
@@ -741,6 +762,16 @@ func _menu_action(item: String) -> void:
 				f.resync_input()
 		"OPTIONS":
 			_open_menu("OPTIONS", ["SFX VOLUME", "VOICE VOLUME", "MUSIC VOLUME", "ROUNDS TO WIN", "TIMER", "STAGE", "BACK"])
+		"CONTINUE":
+			menu_stack.clear()
+			paused = false
+			GameState.arcade_continues -= 1
+			wins = [0, 0]
+			round_num = 1
+			for f in fighters:
+				f.meter = 0.0
+				f.resync_input()
+			start_round()
 		"REMATCH":
 			menu_stack.clear()
 			wins = [0, 0]

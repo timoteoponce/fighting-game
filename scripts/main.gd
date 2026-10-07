@@ -52,6 +52,8 @@ func _switch(screen: String) -> void:
 			current = SplashScreen.new()
 		"select":
 			current = CharSelect.new()
+		"arcade":
+			current = ArcadeScreen.new()
 		"fight":
 			current = Fight.new()
 		"setup":

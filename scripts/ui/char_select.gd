@@ -1,7 +1,7 @@
 class_name CharSelect
 extends Node2D
 ## Players join with their own controller, pick a fighter, then fight.
-## VS CPU: player 1 also picks the CPU's fighter and difficulty.
+## Arcade: player 1 picks once and starts the run; the CPU fighter is the ladder.
 
 var slots := [
 	{"dev": Controls.NONE, "char": 0, "ready": false},
@@ -33,11 +33,18 @@ func _cpu() -> bool:
 	return GameState.mode == "cpu"
 
 
+func _arcade() -> bool:
+	return GameState.mode == "arcade"
+
+
 func _refresh_chibis() -> void:
 	for i in 2:
 		var id: String = GameState.CHARACTERS[slots[i]["char"]]
 		chibis[i].setup(GameState.make_character(id), i == 1 and slots[0]["char"] == slots[1]["char"])
 		chibis[i].base_scale = 1.35 * chibis[i].def.size
+	# Arcade is a solo run: hide the opponent chibi, so the right side is the
+	# ladder rather than a fighter the player never picked.
+	chibis[1].visible = not _arcade()
 
 
 func _process(delta: float) -> void:
@@ -67,7 +74,7 @@ func _handle_input() -> void:
 		if _slot_of(dev) >= 0:
 			continue
 		if Controls.just_pressed(dev, Controls.LIGHT | Controls.START):
-			for i in (1 if _cpu() else 2):
+			for i in (1 if (_cpu() or _arcade()) else 2):
 				if slots[i]["dev"] == Controls.NONE:
 					slots[i]["dev"] = dev
 					Sfx.play("confirm")
@@ -75,6 +82,9 @@ func _handle_input() -> void:
 		if Controls.just_pressed(dev, Controls.HEAVY) and slots[0]["dev"] == Controls.NONE and slots[1]["dev"] == Controls.NONE:
 			GameState.goto("title")
 			return
+	if _arcade():
+		_handle_arcade_mode()
+		return
 	if _cpu():
 		_handle_cpu_mode()
 		return
@@ -99,6 +109,22 @@ func _handle_input() -> void:
 			Sfx.play("select")
 	if slots[0]["ready"] and slots[1]["ready"]:
 		start_timer = 0.8
+
+
+## Arcade: one player, one pick. The rest of the roster becomes the ladder, so
+## there is no CPU fighter to choose and no difficulty step.
+func _handle_arcade_mode() -> void:
+	var dev: int = slots[0]["dev"]
+	if dev == Controls.NONE:
+		return
+	_change_char(0, dev)
+	if Controls.just_pressed(dev, Controls.LIGHT | Controls.START):
+		slots[0]["ready"] = true
+		Sfx.play("confirm")
+		start_timer = 0.8
+	elif Controls.just_pressed(dev, Controls.HEAVY):
+		slots[0]["dev"] = Controls.NONE
+		Sfx.play("select")
 
 
 func _handle_cpu_mode() -> void:
@@ -225,6 +251,10 @@ func _slot_of(dev: int) -> int:
 
 func _start_fight() -> void:
 	GameState.devices = [slots[0]["dev"], slots[1]["dev"]]
+	if _arcade():
+		GameState.start_arcade(GameState.CHARACTERS[slots[0]["char"]])
+		GameState.goto("arcade")
+		return
 	GameState.chars = [GameState.CHARACTERS[slots[0]["char"]], GameState.CHARACTERS[slots[1]["char"]]]
 	GameState.goto("fight")
 
@@ -234,7 +264,10 @@ func _draw() -> void:
 	UI.gradient_rect(self, Rect2(320, 0, 320, 360), Color("3a1261"), Color("a45be0"))
 	draw_colored_polygon(PackedVector2Array([Vector2(300, 0), Vector2(340, 0), Vector2(340, 360), Vector2(300, 360)]), Color(0, 0, 0, 0.25))
 	UI.text(self, Vector2(320, 30), "SELECT YOUR FIGHTER", 24, Color(1, 0.9, 0.3), HORIZONTAL_ALIGNMENT_CENTER, 8, Color(0.5, 0.05, 0.2))
-	UI.text(self, Vector2(320, 200), "VS", 40, Color(1, 0.85, 0.2), HORIZONTAL_ALIGNMENT_CENTER, 10, Color(0.6, 0.05, 0.2))
+	if _arcade():
+		UI.text(self, Vector2(320, 200), "ARCADE", 40, Color(1, 0.85, 0.2), HORIZONTAL_ALIGNMENT_CENTER, 10, Color(0.6, 0.05, 0.2))
+	else:
+		UI.text(self, Vector2(320, 200), "VS", 40, Color(1, 0.85, 0.2), HORIZONTAL_ALIGNMENT_CENTER, 10, Color(0.6, 0.05, 0.2))
 	for i in 2:
 		_draw_slot(i)
 	if start_timer >= 0.0:
@@ -246,6 +279,9 @@ func _draw() -> void:
 
 
 func _draw_slot(i: int) -> void:
+	if _arcade() and i == 1:
+		_draw_arcade_panel()
+		return
 	var s: Dictionary = slots[i]
 	var cx := 150.0 if i == 0 else 490.0
 	var def := chibis[i].def
@@ -290,3 +326,23 @@ func _draw_slot(i: int) -> void:
 		var y := 152.0 + j * 15.0
 		var x := 14.0 if i == 0 else 626.0
 		UI.text(self, Vector2(x, y), "%s: %s" % [row[0], row[1]], 10, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
+
+
+## The right side of the arcade select screen: the run's ladder, previewed from
+## the fighter currently highlighted. The boss is a "???" — that is the point.
+func _draw_arcade_panel() -> void:
+	var cx := 490.0
+	var pick: String = GameState.CHARACTERS[slots[0]["char"]]
+	UI.text(self, Vector2(cx, 60), "ARCADE", 16, Color(1, 1, 1, 0.9))
+	UI.text(self, Vector2(cx, 90), "THE LADDER", 26, Color(1, 0.95, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 8, Color(0.1, 0.05, 0.2))
+	UI.text(self, Vector2(cx, 112), "Beat the whole roster...", 10, Color(1, 1, 1, 0.9))
+	UI.text(self, Vector2(cx, 128), "...then someone is waiting.", 10, Color(1, 0.8, 0.95))
+	var names: Array[String] = []
+	for id in GameState.CHARACTERS:
+		if id != pick:
+			names.append(GameState.make_character(id).display)
+	UI.text(self, Vector2(cx, 158), "OPPONENTS", 10, Color(1, 0.8, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 3)
+	for j in names.size():
+		UI.text(self, Vector2(cx, 176 + j * 16), names[j], 12, Color(1, 1, 1, 0.85))
+	var last_y := 176 + names.size() * 16 + 6
+	UI.text(self, Vector2(cx, last_y), "???", 16, Color(1, 0.4, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 4, Color(0.3, 0.0, 0.1))

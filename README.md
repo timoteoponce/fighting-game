@@ -27,7 +27,25 @@ snowy park.
 
 Everyone has **two supers** — see "Two supers, one meter bar" below.
 
-Modes: **VS Player** (2 players, local) and **VS CPU** (Very Easy / Easy / Normal / Hard).
+Modes: **VS Player** (2 players, local) and **Arcade** (single player, a tower
+through the whole roster with a secret boss at the top — see below).
+
+## Arcade
+
+Pick one fighter, then beat every other fighter on the roster in turn, Mortal
+Kombat style. Each bout is **first to two rounds**, the CPU gets tougher as you
+climb (EASY → NORMAL → HARD), and the ladder screen shows who is left. Win and
+your fighter **climbs the tower** to the next rung; lose and you get **three
+continues** to retry the same opponent before the run is over. There is no
+giving up once a run is going — press **L / START** to fight the next contender.
+
+The last fight is a **secret boss**: **Luna**, a lazy, very strong, very bored
+cat who does not appear on the select screen and never will. Her two supers are
+**SLEEPY ATTACK!** (Back + L + H), a drifting wall of Z's, and **ANGER FOR
+FOOD!** (Up + L + H), an all-fours maul with a food can. She hits about **30%
+harder** than anyone else on the roster and has about **40% more health**, so
+she both hurts more and takes longer to put down. Beat her and the run is
+cleared.
 
 ## Playing in a browser
 
@@ -93,7 +111,7 @@ cd PJsClash
 - **RESUME** — back to the fight (H also resumes).
 - **OPTIONS** — volumes (SFX / voices / music), rounds to win (1-3), timer on/off, and stage select. Changes save immediately and apply to the next match.
 - **REMATCH** — restart the match from round 1.
-- **CHARACTER SELECT** — back to character select (VS Player / VS CPU).
+- **CHARACTER SELECT** — back to character select (VS Player / Arcade).
 - **QUIT TO TITLE** — back to the title screen.
 
 Settings are saved to `~/.local/share/godot/app_userdata/PJ's Clash/settings.cfg` on Linux.
@@ -196,7 +214,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 - Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. There are no image files in the game at all. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
 - Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
-- Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
+- Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `arcade`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
 - Build for web: `./build_web.sh` (same templates, plus the web ones) → `build/web/`. Serve that directory over http.

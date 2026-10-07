@@ -71,9 +71,19 @@ bite you.
 ## Architecture (the parts filenames don't tell you)
 
 - **One scene file only**: `scenes/main.tscn`. Every screen is built in code and swapped by
-  `scripts/main.gd:_switch` (`Fight.new()`, `TitleScreen.new()`, ...). Don't go looking for
-  `.tscn` files; to add a screen, add a `match` branch in `_switch` and call
-  `GameState.goto("name")` (which is `call_deferred`, so it lands after the current frame).
+  `scripts/main.gd:_switch` (`Fight.new()`, `TitleScreen.new()`, `ArcadeScreen.new()`, ...).
+  Don't go looking for `.tscn` files; to add a screen, add a `match` branch in `_switch` and
+  call `GameState.goto("name")` (which is `call_deferred`, so it lands after the current frame).
+- **The arcade run is `GameState` state, not a screen variable.** `mode == "arcade"` makes
+  `Fight` hand P1 a `PlayerInput` and the opponent a `CpuInput`, force first-to-two rounds and
+  take the opponent's level from `GameState.arcade_level()`. `start_arcade(id)` derives the
+  ladder from `CHARACTERS` minus the pick plus `BOSS_ID`; `arcade_opponent/advance/done/continues`
+  are the rest of the run. `scripts/ui/arcade_screen.gd` (`ArcadeScreen`) is the tower view
+  *and* the win screen; a loss opens `CONTINUE?` on the fight's `menu_stack`, and CONTINUE
+  replays the same bout. `arcade_advance` records `arcade_climb_from`, and the screen plays a
+  Mortal-Kombat-style climb (one hop per rung) on entry — START skips it. There is no
+  give-up on the tower any more; a run ends only by losing out of continues or quitting
+  through the pause menu. The boss is the whole reason the `hidden` flag exists.
 - **No script preloads anywhere.** Types resolve via `class_name` globals
   (`Fight`, `Fighter`, `MoveData`, `CharacterDef`, `FighterRenderer`, `UI`, ...) plus
   4 autoloads: `Controls` (input polling + joypad remap), `GameState` (match setup,
@@ -244,6 +254,19 @@ bite you.
   `roster_order` sets select-screen position, `voice_pitch` (Hz, on `CharacterDef`) is all
   the synthesized shouts need. `tests/sim_test.gd:_test_character_def` validates every
   registered fighter, so a half-finished one fails with a clear message.
+  **Setting `hidden = true` takes a finished fighter off the select screen** without taking
+  it out of the registry: `_scan_characters` files it under `GameState.LOCKED` instead of
+  `CHARACTERS`, so `make_character` still builds it and the arcade can face it. Only
+  `character/luna.gd` (the boss, `BOSS_ID`) uses this today; the roster-wide tests reach it
+  through `_all_ids()`.
+  **Setting `damage_scale` above 1** makes every point the fighter deals count for that much
+  more, chip included — `Fighter.take_hit` multiplies by the *attacker's* scale, and
+  `Fight._apply_hit` / the throw pass it in. The roster leaves it at 1.0; the boss sets 1.3,
+  so she is about 30% stronger without a single `MoveData` being restated. **Setting
+  `health_scale` above 1** is the other half of a boss: `Fighter.setup` turns it into the
+  instance's `max_health`, `reset_for_round` refills to that, and the HUD lifebar measures
+  against `fr.max_health` (not the `MAX_HEALTH` constant) so a bigger bar still reads full.
+  The boss sets 1.4.
 - **A character can own a rule, not just a number.** `CharacterDef` has six
   behaviour hooks besides the drawing ones, all no-ops so nobody else is affected:
   `tick(f)` (once per step, after the state machine), `on_round_start(f)` (from
@@ -461,7 +484,15 @@ input did nothing. Move the opponent out of range before scripting another super
 - `_test_specials`, `_test_combo` and `_test_character_def` run for **every** roster entry, so
   a new character is covered the moment the file exists. Combo-test gaps are derived from the
   character's own `startup + hitstop + 1` — never hard-code frame numbers there, or a slower
-  fighter fails a test about Ulises' timing.
+  fighter fails a test about Ulises' timing. **The roster-wide loops use `_all_ids()`
+  (`CHARACTERS + LOCKED`)**, so the hidden boss is held to the same bar even though she is not
+  selectable; `_balance_report` stays on `CHARACTERS`, so a boss does not skew the numbers.
+- `_test_arcade` covers the run: the ladder excludes the player, ends on `BOSS_ID`, forces
+  first-to-two and wires P1 human / P2 CPU. `_test_roster` asserts the boss is in `LOCKED`,
+  not `CHARACTERS`. `_test_damage_scale` proves the boss's `damage_scale`/`health_scale`
+  really land, and `_test_arcade_ui` fakes a `Controls` edge to prove START begins a bout on
+  the tower (and that HEAVY no longer gives up) — it mutes `screen_requested` first, because
+  `GameState.goto` would otherwise hand the test over to the real Main scene.
 - `cpu_level` is an index into `GameState.CPU_LEVELS` = `VERY EASY, EASY, NORMAL, HARD`
   (0-3). `CpuInput`'s `THINK` / `BLOCK_P` / `ANTI_AIR_P` / `COMBO_DROP_P` / `MOBILITY_P`
   tables must all stay the same length as that list.

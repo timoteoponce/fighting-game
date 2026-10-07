@@ -34,11 +34,14 @@ func _ready() -> void:
 	_test_logo_sting()
 	_test_touch()
 	_test_touch_select()
-	for id in GameState.CHARACTERS:
+	for id in _all_ids():
 		_test_character_def(id)
-	for id in GameState.CHARACTERS:
+	for id in _all_ids():
 		_test_specials(id)
 		_test_combo(id)
+	_test_arcade()
+	_test_damage_scale()
+	_test_arcade_ui()
 	_test_movement("ulises")
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
@@ -149,6 +152,15 @@ func _test_touch_select() -> void:
 	Controls._process(0.0)
 
 
+## Every fighter the game knows, selectable or hidden. The roster-wide checks
+## run over this so the secret boss is held to the same bar as everyone else,
+## even though she is kept off the select screen.
+func _all_ids() -> Array:
+	var ids: Array = GameState.CHARACTERS.duplicate()
+	ids.append_array(GameState.LOCKED)
+	return ids
+
+
 ## The roster comes from scanning `characters/`. If that ever breaks — most
 ## likely in an exported build where scripts ship as .gdc or .remap — the game
 ## has no fighters at all, so check it loudly and first.
@@ -165,6 +177,113 @@ func _test_roster() -> void:
 	check(all_unique, "every character id is unique")
 	for id in GameState.CHARACTERS:
 		check(GameState.make_character(id) is CharacterDef, "'%s' builds a CharacterDef" % id)
+	# The hidden boss is registered but must never appear on the select screen.
+	check(not GameState.CHARACTERS.has(GameState.BOSS_ID),
+		"the arcade boss '%s' is not on the select roster" % GameState.BOSS_ID)
+	check(GameState.LOCKED.has(GameState.BOSS_ID),
+		"the arcade boss '%s' is registered as hidden" % GameState.BOSS_ID)
+	check(GameState.has_character(GameState.BOSS_ID),
+		"the hidden boss still builds by id")
+
+
+## The single-player run: the ladder is derived from the roster, ends on the
+## hidden boss, and the mode wires up a human player against the CPU with
+## arcade's own round rules.
+func _test_arcade() -> void:
+	print("[arcade]")
+	GameState.start_arcade("ulises")
+	check(GameState.arcade_ladder.size() == GameState.CHARACTERS.size(),
+		"the ladder is every other fighter plus the boss (%d)" % GameState.arcade_ladder.size())
+	check(not GameState.arcade_ladder.has("ulises"), "the ladder never includes the player")
+	check(GameState.arcade_ladder[GameState.arcade_ladder.size() - 1] == GameState.BOSS_ID,
+		"the ladder ends on the hidden boss")
+	# Walk to the last rung: that fight is the boss, at the top difficulty.
+	while not GameState.arcade_is_boss():
+		GameState.arcade_advance()
+	check(GameState.arcade_opponent() == GameState.BOSS_ID, "the final opponent is the boss")
+	check(GameState.arcade_level() == GameState.CPU_LEVELS.size() - 1, "the boss thinks at HARD")
+	GameState.arcade_advance()
+	check(GameState.arcade_done(), "advancing past the boss finishes the run")
+	# The fight itself: player 1 is human, the opponent is the CPU, and the
+	# arcade forces first-to-two regardless of the Options setting.
+	GameState.mode = "arcade"
+	GameState.start_arcade("ulises")
+	GameState.chars = [GameState.arcade_player, GameState.arcade_opponent()]
+	var f := Fight.new()
+	add_child(f)
+	f.set_physics_process(false)
+	f.set_process(false)
+	check(f.rounds_to_win == 2, "arcade bouts are first to two rounds")
+	check(f.fighters[0].is_human(), "the arcade player is human")
+	check(not f.fighters[1].is_human(), "the arcade opponent is the CPU")
+	check(GameState.chars[1] == GameState.arcade_ladder[0], "the bout is against the current rung")
+	f.free()
+
+
+## The boss's `damage_scale` is a single number on her `CharacterDef`, applied
+## by `Fighter.take_hit` to every hit. This proves the same MoveData really does
+## land harder through an attacker with a scale above 1.
+func _test_damage_scale() -> void:
+	print("[damage scale]")
+	var boss: CharacterDef = GameState.make_character(GameState.BOSS_ID)
+	check(boss.damage_scale > 1.0, "the boss's damage scale is above the roster")
+	var f := _new_fight("emilia", "ulises")
+	_start(f)
+	var d := f.fighters[1]
+	var m := MoveData.make({"id": "probe", "damage": 100})
+	var before := d.health
+	d.take_hit(m, d.position.x - 40.0, 1.0)
+	var plain := before - d.health
+	# Reset the defender so the second hit is a fresh combo, not prorated.
+	d.health = before
+	d.combo = 0
+	d.set_state(Fighter.S.IDLE, true)
+	d.take_hit(m, d.position.x - 40.0, boss.damage_scale)
+	var boosted := before - d.health
+	check(boosted > plain, "the boss's scale lands harder (%d vs %d)" % [boosted, plain])
+	check(absf(float(boosted) / float(plain) - boss.damage_scale) < 0.06,
+		"the boss does about %.0f%% more damage" % ((boss.damage_scale - 1.0) * 100.0))
+	f.free()
+	# The other half of "harder to defeat": more health, i.e. a longer fight.
+	check(boss.health_scale > 1.0, "the boss has more health than the roster")
+	var fb := _new_fight(GameState.BOSS_ID, "emilia")
+	check(fb.fighters[0].max_health > Fighter.MAX_HEALTH, "the boss's max health is above the default")
+	check(fb.fighters[0].health == fb.fighters[0].max_health, "the boss starts at their own max health")
+	fb.free()
+
+
+## The tower screen's input: START (on its own) has to begin the bout, and the
+## old HEAVY "give up" is gone. The screen reads the real `Controls` mask, so
+## this fakes the one-frame just-pressed edge for a keyboard.
+func _test_arcade_ui() -> void:
+	print("[arcade ui]")
+	# Silence screen navigation for the duration: `GameState.goto` would hand the
+	# test over to the real Main scene via `screen_requested`.
+	var muted: Array = GameState.screen_requested.get_connections()
+	for c in muted:
+		GameState.screen_requested.disconnect(c["callable"])
+	GameState.mode = "arcade"
+	GameState.start_arcade("ulises")
+	GameState.arcade_advance()  # pretend a win, so the climb plays
+	var s := ArcadeScreen.new()
+	add_child(s)
+	check(s.climb_t < 1.0, "the tower climbs in after a win")
+	Controls._just[Controls.KB1] = Controls.HEAVY
+	s._process(1.0 / 60.0)
+	Controls._just.erase(Controls.KB1)
+	check(s.climb_t < 1.0, "HEAVY no longer gives up or skips the climb")
+	Controls._just[Controls.KB1] = Controls.START
+	s._process(1.0 / 60.0)  # skip the climb
+	Controls._just.erase(Controls.KB1)
+	check(s.climb_t >= 1.0, "START is read on the tower")
+	Controls._just[Controls.KB1] = Controls.START
+	s._process(1.0 / 60.0)  # begin the bout
+	Controls._just.erase(Controls.KB1)
+	check(GameState.chars == [GameState.arcade_player, GameState.arcade_opponent()],
+		"START begins the bout from the tower")
+	s.free()
+	for c in muted:
+		GameState.screen_requested.connect(c["callable"])
 
 
 ## The cold-boot slam and its sting share one cue list. Pixel output is not
@@ -339,7 +458,7 @@ func _check_hyper_spec(d: CharacterDef, h: MoveData, key: String) -> void:
 ## the one that flashes, slows the world and pushes the camera in.
 func _test_hyper_landing() -> void:
 	print("[hyper landing]")
-	for id: String in GameState.CHARACTERS:
+	for id: String in _all_ids():
 		var f := _new_fight(id, "emilia")
 		_start(f)
 		var p1 := f.fighters[0]
@@ -417,7 +536,7 @@ func _test_hyper_landing() -> void:
 ## the whole meter when it fires.
 func _test_hyper_max() -> void:
 	print("[hyper max]")
-	for id: String in GameState.CHARACTERS:
+	for id: String in _all_ids():
 		var d: CharacterDef = GameState.make_character(id)
 		for base: String in ["hyper", "hyper2"]:
 			if not d.moves.has(base + "_max"):
@@ -734,7 +853,7 @@ func _test_throw(id: String) -> void:
 ## geometry can be asserted directly.
 func _test_head_local() -> void:
 	print("[head local]")
-	for id: String in GameState.CHARACTERS:
+	for id: String in _all_ids():
 		var d := GameState.make_character(id)
 		var r := FighterRenderer.new()
 		r.setup(d)
@@ -904,7 +1023,7 @@ func _test_ulises_chain_pose() -> void:
 ## be frozen in the pose they were caught in, so they do not get it.
 func _test_hyper_cutin() -> void:
 	print("[hyper cut-in]")
-	for id: String in GameState.CHARACTERS:
+	for id: String in _all_ids():
 		var d: CharacterDef = GameState.make_character(id)
 		# P1 is placed on the left facing right, so "away" is LEFT and "up" is UP
 		# for both. BACK is the only relative direction in the special ladder.

@@ -28,6 +28,9 @@ var cutin_slammed := false  # the portrait's landing squish fires once per cut-i
 
 
 func _ready() -> void:
+	# Start the drain bars at each fighter's own max, so a boss does not visibly
+	# "heal" up to their larger bar over the first second.
+	shown_hp = [float(fight.fighters[0].max_health), float(fight.fighters[1].max_health)]
 	for i in 2:
 		var clip := _circle_clip(Vector2(36 if i == 0 else 604, 36), 27.0)
 		add_child(clip)
@@ -180,12 +183,15 @@ func _lifebar(o: Node2D, i: int) -> void:
 	UI.gradient_quad(o, frame_pts, METAL_TOP, METAL_BOTTOM)
 	o.draw_polyline(frame_pts + PackedVector2Array([frame_pts[0]]), Color("15102a"), 2.0, true)
 	o.draw_colored_polygon(_bar_poly(x0, y, BAR_W, BAR_H, 1.0, right), Color("1a0a18"))
-	o.draw_colored_polygon(_bar_poly(x0, y, BAR_W, BAR_H, shown_hp[i] / Fighter.MAX_HEALTH, right), Color("e8302a"))
+	# The bar is measured against this fighter's own max, so a boss with more
+	# health still reads full at the start of the round.
+	var mhp := float(fr.max_health)
+	o.draw_colored_polygon(_bar_poly(x0, y, BAR_W, BAR_H, shown_hp[i] / mhp, right), Color("e8302a"))
 	# Bright leading edge on the damage trail, right after a hit.
 	if chip_flash[i] > 0.0:
-		o.draw_polyline(_bar_edge(x0, y, BAR_W, BAR_H, shown_hp[i] / Fighter.MAX_HEALTH, right),
+		o.draw_polyline(_bar_edge(x0, y, BAR_W, BAR_H, shown_hp[i] / mhp, right),
 			Color(1, 1, 1, chip_flash[i] * 0.9), 3.0, true)
-	var frac := float(fr.health) / Fighter.MAX_HEALTH
+	var frac := float(fr.health) / mhp
 	var low := frac < 0.25
 	var top := Color("fff27a") if not low or frame % 20 < 10 else Color("ffb0a0")
 	var bottom := Color("ffa91e") if not low else Color("ff3d2a")
