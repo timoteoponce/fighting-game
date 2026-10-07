@@ -249,7 +249,7 @@ static func _bandpass(freq: float, q: float) -> Array:
 func _start_music() -> void:
 	if "--test" in OS.get_cmdline_user_args():
 		return
-	for dir in [OS.get_executable_path().get_base_dir() + "/music", ProjectSettings.globalize_path("res://music")]:
+	for dir in [OS.get_executable_path().get_base_dir() + "/music", "res://music"]:
 		var listing := DirAccess.open(dir)
 		if listing == null:
 			continue

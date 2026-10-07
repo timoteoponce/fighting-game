@@ -50,6 +50,7 @@ func _ready() -> void:
 	_test_demo_match()
 	_test_settings()
 	_test_pause()
+	_test_voices()
 	if OS.get_cmdline_user_args().has("--balance"):
 		_balance_report()
 	print("FAILURES: %d" % failures)
@@ -1060,6 +1061,22 @@ func _test_pause() -> void:
 	check(not f.paused, "RESUME unpauses the fight")
 	check(f.menu_stack.is_empty(), "the menu stack is empty after resume")
 	f.free()
+
+
+## The built-in recordings ship inside the PCK at `res://voices`. The loader
+## used `globalize_path("res://voices")`, which in an exported build resolves to
+## the executable's directory rather than the pack, so every built-in voice
+## silently fell back to the synthesized one. Ulises was the only fighter with
+## custom records, so he was the only one who lost anything (the web build).
+## The path must stay `res://` and be read straight out of the pack.
+func _test_voices() -> void:
+	print("[voices]")
+	# The route the loader must take in an exported build: read straight from the
+	# PCK through the `res://` path. `globalize_path` would turn that into the
+	# executable's directory instead, which is how the web build lost these.
+	var s := Sfx._load_recording_dir("res://voices", "ulises", "light", true)
+	check(s != null, "Ulises' built-in voice line loads from res://voices")
+	check(s is AudioStreamWAV, "it loads as an AudioStreamWAV")
 
 
 ## Not a pass/fail check: CPU vs CPU win counts per character.
