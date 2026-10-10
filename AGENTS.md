@@ -37,6 +37,15 @@ godot --path . -- --screen=select                               # jump straight 
   verification step. `.github/workflows/cicd.yml` runs that same test, exports
   the web build, and on a push to `main` copies it over SSH. Secrets and the
   one-time nginx site are in the README.
+- **The web build is tuned for a phone.** `run/max_fps=60` (the sim is 60 Hz; a
+  120 Hz panel would otherwise render twice the frames), the project-wide
+  `anti_aliasing/quality/msaa_2d=0`, and Canvas Resize Policy **None** with
+  `export/web_shell.html` sizing the canvas to the window at **pixel ratio 1**
+  (Godot's Adaptive policy multiplies the backing store by the phone's ~2.5-3x
+  ratio for a 320x180 game). The export is **threaded**
+  (`variant/thread_support=true`), so the page must be cross-origin isolated:
+  nginx sends COOP/COEP and the site must be HTTPS, or the game refuses to boot.
+  Don't turn any of these back without a reason.
 - `F1` toggles the debug overlay during a fight: each fighter's hurtbox (green
   outline), hitbox (filled red) and a `STATE f<frame> <move id>` label. It does
   **not** show inputs or full frame data. Read-only; great for tuning frame data.
@@ -142,7 +151,10 @@ bite you.
   scale on a `640x360` logical screen (window override `1920x1080`). This chunky
   look is the point, so three things protect it and must not be "improved" away:
   `Fight.PIXEL` must stay `0.5`, `Fight.world.msaa_2d` must stay `MSAA_DISABLED`
-  (anti-aliasing softens exactly the pixels the look is built on), and
+  (anti-aliasing softens exactly the pixels the look is built on) — and so must
+  the project-wide `anti_aliasing/quality/msaa_2d`, which is what the *root*
+  viewport (the scaled frame, HUD and menus) would otherwise multisample at the
+  full canvas size, a 4x cost on a phone for no gain — and
   `FighterRenderer.INK` must stay `2.4` (thin lines vanish at 320x180). **There is no
   post-FX shader pass** — it was removed because a fullscreen bloom resamples the
   buffer with linear filtering and undoes the pixels. Nearest filtering is set on

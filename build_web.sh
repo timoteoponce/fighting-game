@@ -3,7 +3,9 @@
 #
 # Needs Godot 4.7.x on the PATH as `godot`, plus the matching export templates
 # (Editor > Manage Export Templates, or the .tpz from the Godot releases page).
-# The page has to be served over http. Opening index.html from disk will not run.
+# The export is threaded, so the page must be served over https with the
+# cross-origin isolation headers in deploy/nginx/pjclash.conf; opening
+# index.html from disk will not run.
 set -euo pipefail
 cd "$(dirname "$0")"
 
@@ -18,4 +20,4 @@ mkdir -p "$OUT"
 rm -f art/portraits/*.import
 "$GODOT" --headless --path . --import
 "$GODOT" --headless --path . --export-release "Web" "$OUT/index.html"
-echo "Built $OUT/ — serve that directory over http."
+echo "Built $OUT/ — serve that directory over https with the COOP/COEP headers in deploy/nginx/pjclash.conf."

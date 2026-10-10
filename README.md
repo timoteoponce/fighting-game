@@ -50,7 +50,12 @@ cleared.
 ## Playing in a browser
 
 The web build is a folder of static files (`index.html` and the files next to
-it). Open it from a web server, not by double-clicking the html file.
+it). Open it from a web server, not by double-clicking the html file. The
+export is threaded (for a steadier framerate and lower-latency audio), so the
+server must send cross-origin isolation headers and the page must be served
+over **https** — `deploy/nginx/pjclash.conf` is set up for this. The canvas is
+rendered at screen resolution rather than the phone's device pixel ratio, and
+the frame rate is capped at 60, so a mid-range phone is enough to play it.
 
 The page asks you to click once before the game starts. That click is what
 lets the browser play the logo sting. Keyboard and gamepad work the same as
@@ -218,7 +223,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 - Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `arcade`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
-- Build for web: `./build_web.sh` (same templates, plus the web ones) → `build/web/`. Serve that directory over http.
+- Build for web: `./build_web.sh` (same templates, plus the web ones) → `build/web/`. Serve that directory over **https** — the export is threaded, so the page must be cross-origin isolated, which browsers only allow in a secure context.
 - F1 during a fight shows the hitboxes, the hurtboxes and a readout of each fighter's state and frame count.
 
 GitHub Actions (`.github/workflows/cicd.yml`) runs the tests on every push and pull request, exports the web build, and on a push to `main` copies it over SSH. Add these repository secrets. The first three are the same ones rent_tracker uses. The game does not read them at runtime.
@@ -230,7 +235,7 @@ GitHub Actions (`.github/workflows/cicd.yml`) runs the tests on every push and p
 | `SSH_USER` | SSH user |
 | `DEPLOY_PATH` | Absolute directory the web build replaces. Use a directory that holds only this game. |
 
-Nginx is installed once by hand from `deploy/nginx/pjclash.conf`. Point `root` at `DEPLOY_PATH`.
+Nginx is installed once by hand from `deploy/nginx/pjclash.conf`. Point `root` at `DEPLOY_PATH`. That site sends the `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers the threaded export needs, and it must be reached over **https** (either add a TLS server block or terminate TLS in a proxy in front, keeping those headers on the response). Without both, the browser blocks `SharedArrayBuffer` and the game shows a "missing features" error instead of booting.
 
 Code map:
 
@@ -341,7 +346,8 @@ on the last frame of its active window, after it has connected.
 
 - **The arena is pixelated again.** The world renders into a **320x180** buffer
   and is scaled up by an exact integer factor, instead of drawing at 640x360.
-  Anti-aliasing is off (`Fight.world.msaa_2d = MSAA_DISABLED`) because it
+  Anti-aliasing is off (`Fight.world.msaa_2d = MSAA_DISABLED`, and the
+  project-wide `msaa_2d` is `0`) because it
   softens exactly the pixels this look is built on, and the ink line weight is
   back up to `INK = 2.4` — thin lines vanish at that resolution. This is the
   chunky KOF-era look the game had before the high-res pass.

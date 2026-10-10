@@ -20,6 +20,10 @@ body {
 
 #canvas {
 	display: block;
+	/* The canvas is sized at pixel ratio 1 (see the script below), so the
+	   browser scales it up to the physical screen. Keep that nearest so the
+	   chunky pixels survive. */
+	image-rendering: pixelated;
 }
 
 #canvas:focus {
@@ -135,6 +139,21 @@ const GODOT_THREADS_ENABLED = $GODOT_THREADS_ENABLED;
 const exe = GODOT_CONFIG.executable;
 const pack = GODOT_CONFIG.mainPack || (exe + '.pck');
 GODOT_CONFIG.args = ['--main-pack', pack].concat(GODOT_CONFIG.args || []);
+
+// Canvas Resize Policy is None, so the shell owns the canvas size. Size the
+// backing store to the window in CSS pixels (pixel ratio 1) instead of letting
+// Godot's Adaptive policy multiply it by the device pixel ratio: the game is a
+// 320x180 buffer scaled up, so a phone's 2.5-3x ratio buys no detail and
+// multiplies the per-frame pixels. The browser scales it back to the glass.
+const canvas = document.getElementById('canvas');
+function fitCanvas() {
+	canvas.width = window.innerWidth;
+	canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', fitCanvas);
+window.addEventListener('orientationchange', fitCanvas);
+fitCanvas();
+
 const engine = new Engine(GODOT_CONFIG);
 
 (function () {
