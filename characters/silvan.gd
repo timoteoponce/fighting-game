@@ -320,12 +320,16 @@ func _init() -> void:
 		}),
 	}
 	size = 0.78  # he is two
-	# A two-year-old is a big head on a short, round body: the head is the
-	# loudest toddler cue, and the build is deliberately paunchy rather than
-	# the beanpole `build` would give him. Purely visual — hitboxes follow
-	# `size`, not these.
-	head_scale = 1.78
-	build = 1.15
+	# A two-year-old is a big head on a short, round body — and toddlers are
+	# mostly torso. He ties Charlie for the biggest head on the roster, a
+	# `build` thick enough to read as paunchy from across the screen, and
+	# `limb_scale` below 1
+	# so the arms and legs are stubby instead of adult-sized on a small frame:
+	# a little barrel that waddles. Purely visual — hitboxes and hurtboxes
+	# follow `size` and the authored MoveData, not these.
+	head_scale = 1.9
+	build = 1.42
+	limb_scale = 0.85
 	scale_moves()
 
 
@@ -358,8 +362,8 @@ func draw_behind(r: FighterRenderer, _s: Dictionary) -> void:
 	var fur: Color = r.colors["fur"]
 	var tail := r.chain_local("tail")
 	if tail.size() > 1:
-		r.ribbon(tail, 7.0, 3.0, fur)
-		r.ball(tail[tail.size() - 1], 3.2, FighterRenderer.hl(fur))
+		r.ribbon(tail, 8.5, 3.6, fur)
+		r.ball(tail[tail.size() - 1], 3.6, FighterRenderer.hl(fur))
 	var ear := r.chain_local("ear_b")
 	if ear.size() > 1:
 		r.ribbon(ear, 7.0, 4.0, FighterRenderer.dk(fur))
@@ -367,13 +371,21 @@ func draw_behind(r: FighterRenderer, _s: Dictionary) -> void:
 
 ## The tummy: a soft lighter patch on the shirt with a little navel, drawn on
 ## top of the shared torso so the body reads round instead of as a straight
-## wedge. This plus the build and the big head is what sells "two years old".
+## wedge, with two stitch lines where the shirt strains over the belly. Scaled
+## with `build` and rotated with the torso, so the pot-belly stays round through
+## a lean. This plus the build, the stubby limbs and the big head is what sells
+## "two years old".
 func draw_torso(r: FighterRenderer, s: Dictionary) -> void:
 	var up: Vector2 = s["up"]
 	var perp: Vector2 = s["perp"]
-	var belly: Vector2 = s["hip"] + up * 9.0 + perp * 1.0
+	var b := r.def.build
+	var belly: Vector2 = s["hip"] + up * 9.5 + perp * 1.0
 	var shirt: Color = r.colors["shirt"]
-	r.draw_colored_polygon(FighterRenderer.ellipse_pts(belly, 7.6, 6.4), shirt.lightened(0.12))
+	var rot := atan2(perp.y, perp.x)
+	r.draw_colored_polygon(FighterRenderer.ellipse_pts(belly, 7.4 * b, 6.2 * b, rot), shirt.lightened(0.12))
+	# The shirt stretched tight over the round of the belly.
+	r.draw_line(belly + up * 3.0 + perp * 3.4 * b, belly + up * 5.0 + perp * 4.6 * b, shirt.darkened(0.16), 1.0, true)
+	r.draw_line(belly + up * 3.0 - perp * 3.4 * b, belly + up * 5.0 - perp * 4.6 * b, shirt.darkened(0.16), 1.0, true)
 	r.draw_circle(belly - up * 2.0, 0.9, shirt.darkened(0.28))
 
 
@@ -400,10 +412,11 @@ func draw_hair_front(r: FighterRenderer) -> void:
 
 func draw_face(r: FighterRenderer) -> void:
 	r.face(r.colors["eyes"])
-	# Puppy nose and two dots of blush: this is the whole character in 3 shapes.
+	# Puppy nose and two fat dots of blush — the chubby-cheek cue — sell him on
+	# the shared face.
 	r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(9.0, 3.0), 2.2, 1.7), r.colors["nose"])
 	for cx in [-2.0, 11.0]:
-		r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(cx, 5.5), 2.6, 1.6), Color(1, 0.55, 0.6, 0.45))
+		r.draw_colored_polygon(FighterRenderer.ellipse_pts(Vector2(cx, 5.5), 3.0, 1.9), Color(1, 0.55, 0.6, 0.45))
 	var ear := r.chain_local("ear_f")
 	if ear.size() > 1:
 		# `draw_face` runs inside the head transform, and `chain_local` is node

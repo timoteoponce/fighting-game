@@ -30,6 +30,12 @@ var damage_scale := 1.0
 var health_scale := 1.0
 ## Limb and torso thickness, also purely visual: 0.7 is a beanpole, 1.3 is stocky.
 var build := 1.0
+## Multiplier on the arm and leg bone lengths. 1.0 is the shared adult figure;
+## below 1 gives stubby limbs and a barrel silhouette (a toddler reads this way),
+## above 1 makes everything lanky. Purely visual — hitboxes and hurtboxes follow
+## `size` and the authored `MoveData`, not these, so a stubby fighter keeps his
+## reach exactly as tuned.
+var limb_scale := 1.0
 var display := ""
 var likes := ""
 var colors := {}

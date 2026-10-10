@@ -283,6 +283,12 @@ bite you.
   instance's `max_health`, `reset_for_round` refills to that, and the HUD lifebar measures
   against `fr.max_health` (not the `MAX_HEALTH` constant) so a bigger bar still reads full.
   The boss sets 1.4.
+  **The silhouette is three numbers, all purely visual.** `head_scale` (bigger = chibi),
+  `build` (limb and torso thickness; 0.7 is a beanpole, 1.42 is a barrel) and `limb_scale`
+  (arm/leg bone length; below 1 is stubby, which is what makes a toddler read as a toddler)
+  never touch a hitbox or hurtbox — those follow `size` and the authored `MoveData`.
+  Silvan is the extreme end of the roster at 1.9 / 1.42 / 0.85; a fighter that wants a
+  different build only changes these three lines.
 - **A character can own a rule, not just a number.** `CharacterDef` has six
   behaviour hooks besides the drawing ones, all no-ops so nobody else is affected:
   `tick(f)` (once per step, after the state machine), `on_round_start(f)` (from

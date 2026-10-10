@@ -54,6 +54,11 @@ func _init() -> void:
 	# size = 1.0 is the default build. If you change it, call scale_moves() at
 	# the end of _init() so the hitboxes grow or shrink with the body.
 	size = 1.0
+	# The shared body is an adult figure. `head_scale` (bigger = chibi), `build`
+	# (thicker = stocky) and `limb_scale` (shorter limbs = stubbier/toddler) are
+	# all purely visual — hitboxes follow `size` and the authored MoveData, so a
+	# look change never moves a hitbox. Set them after `size` (Silvan is
+	# head_scale 1.9, build 1.42, limb_scale 0.85).
 	walk_speed = 3.3  # pixels per frame walking forward
 	back_speed = 2.7  # walking backward; always make this slower than forward
 	jump_vel = -11.0  # more negative = higher jump

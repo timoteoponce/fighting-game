@@ -228,6 +228,10 @@ static func dir(a: float) -> Vector2:
 
 func skeleton() -> Dictionary:
 	var p := pose
+	# Per-character bone length. `limb_scale` shortens or stretches the arms and
+	# legs so a fighter can own its silhouette (a toddler's stubby limbs) while
+	# the pose angles do all the animation work unchanged.
+	var ls := def.limb_scale if def != null else 1.0
 	var lean := deg_to_rad(float(p["lean"]))
 	var up := Vector2(sin(lean), -cos(lean))
 	var perp := Vector2(-up.y, up.x)
@@ -235,22 +239,22 @@ func skeleton() -> Dictionary:
 	s["hip"] = Vector2.ZERO
 	s["hip_f"] = perp * 2.0
 	s["hip_b"] = -perp * 2.0
-	s["knee_f"] = s["hip_f"] + dir(p["leg_f"]) * THIGH
-	s["ankle_f"] = s["knee_f"] + dir(p["leg_f"] - p["knee_f"]) * SHIN
+	s["knee_f"] = s["hip_f"] + dir(p["leg_f"]) * THIGH * ls
+	s["ankle_f"] = s["knee_f"] + dir(p["leg_f"] - p["knee_f"]) * SHIN * ls
 	s["foot_f"] = s["ankle_f"] + dir(p["leg_f"] - p["knee_f"] + 90.0) * ANKLE
-	s["knee_b"] = s["hip_b"] + dir(p["leg_b"]) * THIGH
-	s["ankle_b"] = s["knee_b"] + dir(p["leg_b"] - p["knee_b"]) * SHIN
+	s["knee_b"] = s["hip_b"] + dir(p["leg_b"]) * THIGH * ls
+	s["ankle_b"] = s["knee_b"] + dir(p["leg_b"] - p["knee_b"]) * SHIN * ls
 	s["foot_b"] = s["ankle_b"] + dir(p["leg_b"] - p["knee_b"] + 90.0) * ANKLE
 	s["neck"] = up * TORSO
 	# Torso twist: a reaching front arm drags its shoulder forward, the back one pulls away.
 	var twist := clampf((float(p["arm_f"]) - 45.0) / 50.0, -0.6, 1.0)
 	s["sh_f"] = up * (TORSO - 3.0 - absf(twist) * 1.5) + perp * (1.5 + twist * 4.0)
 	s["sh_b"] = up * (TORSO - 2.5) - perp * (3.0 + twist * 2.0)
-	s["elb_f"] = s["sh_f"] + dir(p["arm_f"]) * UPPER
-	s["wrist_f"] = s["elb_f"] + dir(p["arm_f"] + p["elb_f"]) * FORE
+	s["elb_f"] = s["sh_f"] + dir(p["arm_f"]) * UPPER * ls
+	s["wrist_f"] = s["elb_f"] + dir(p["arm_f"] + p["elb_f"]) * FORE * ls
 	s["hand_f"] = s["wrist_f"] + dir(p["arm_f"] + p["elb_f"] + 15.0) * WRIST
-	s["elb_b"] = s["sh_b"] + dir(p["arm_b"]) * UPPER
-	s["wrist_b"] = s["elb_b"] + dir(p["arm_b"] + p["elb_b"]) * FORE
+	s["elb_b"] = s["sh_b"] + dir(p["arm_b"]) * UPPER * ls
+	s["wrist_b"] = s["elb_b"] + dir(p["arm_b"] + p["elb_b"]) * FORE * ls
 	s["hand_b"] = s["wrist_b"] + dir(p["arm_b"] + p["elb_b"] + 15.0) * WRIST
 	var head_ang := lean * 0.5 + deg_to_rad(float(p["head"]))
 	s["head"] = s["neck"] + up.rotated(head_ang - lean) * (NECK + HEAD * 0.8 * hs)

@@ -281,6 +281,17 @@ handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
 
+### Silvan is actually a toddler now
+
+The first pass gave him a big head on a round body, but the arms and legs were
+still adult-sized, so he read as a small grown-up in a bunny t-shirt. The body
+builder grew a third, purely visual dial: `limb_scale`, which shortens the arms
+and legs — the rest of the roster leaves it at 1.0, so nobody else changes one
+pixel. Silvan now sets the whole toddler set: a head as big as Charlie's on a
+barrel `build`, *stubby* limbs and a rounder pot-belly that follows his lean.
+His roly-poly is a proper ball and his belly flop lands fatter. Purely a look —
+frame data, hitboxes and movement are untouched.
+
 ### Silvan actually looks two now
 
 He was a small, straight wedge on a mop of hair. Now he is a big head on a
