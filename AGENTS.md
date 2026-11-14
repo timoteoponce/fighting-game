@@ -14,6 +14,11 @@ Everything cross-file is referenced by Godot global `class_name`, not by `preloa
 Without an import pass the class cache is empty and *both* the game and the tests die
 with `Parse Error: Identifier "Fight" not declared in the current scope`.
 
+`./build.sh`'s `run` / `demo` / `screen` tasks run that import on demand, so a
+fresh clone plays with `./build.sh run` and no other step; `test` and `balance`
+import unconditionally, which doubles as the refresh to run after pulling new
+scripts.
+
 ## Commands
 
 ```sh
@@ -26,6 +31,9 @@ godot --path . -- --screen=select                               # jump straight 
 ./build_web.sh                                                  # export web -> build/web/ (needs the web templates too)
 ```
 
+- **`./build.sh <task>` wraps all of these by name** (`run`, `test`, `balance`,
+  `demo`, `screen NAME`, `linux`, `web`, `clean`). Its play tasks import the class
+  cache on demand, so a fresh clone runs with `./build.sh run` and no other step.
 - **Args after `--` are read by the game** (`OS.get_cmdline_user_args()`, `scripts/main.gd:12`).
   Engine flags like `--windowed` / `--fullscreen` must go **before** the `--` or they are ignored.
 - Full flag set: `--demo --test --balance --chars=a,b --stage=library --screen=NAME

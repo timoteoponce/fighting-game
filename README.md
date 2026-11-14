@@ -218,7 +218,7 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 ## For developers
 
 - Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. There are no image files in the game at all. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
-- Run from source: `godot --path .` (opens fullscreen; F11 or Alt+Enter toggles). Engine flags such as `--windowed` go *before* the `--`.
+- Run from source: `./build.sh run`, which imports the class cache on demand so a fresh checkout needs no other step (opens fullscreen; F11 or Alt+Enter toggles). The same task runner wraps the commands below by name (`test`, `balance`, `demo`, `screen NAME`, `linux`, `web`); the raw `godot` invocations work too, once the checkout is imported. Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
 - Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `arcade`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
@@ -262,7 +262,7 @@ match statement to edit.
 3. Drop the leading underscore from the filename. Files starting with `_` are
    skipped by the roster scanner, which is the only reason the template itself
    never shows up on the select screen.
-4. Run `godot --headless --path . -- --test`. The character validation checks
+4. Run `./build.sh test`. The character validation checks
    name every missing move, colour or out-of-range frame number, so a
    half-finished fighter fails with a clear message instead of crashing
    mid-match.

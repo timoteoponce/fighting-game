@@ -16,10 +16,25 @@
 #
 # Extra args are forwarded after `--` for run/test/balance/demo.
 # Override the engine with GODOT=/path/to/godot ./build.sh <task>.
+#
+# run/demo/screen import on demand when the class cache is missing, so a fresh
+# checkout plays with no separate step. test/balance import unconditionally,
+# which also refreshes a cache left stale by a pull that added scripts.
 set -euo pipefail
 cd "$(dirname "$0")"
 
 GODOT="${GODOT:-godot}"
+
+# The class cache (.godot/global_script_class_cache.cfg) is gitignored and every
+# cross-file type resolves through it, so a checkout that has never been
+# imported dies on the first script with "Identifier not declared" parse errors.
+# Play tasks build it on demand.
+import_if_needed() {
+    if [ ! -f .godot/global_script_class_cache.cfg ]; then
+        echo "no .godot class cache — importing first (one-time per checkout)"
+        "$GODOT" --headless --path . --import
+    fi
+}
 
 usage() {
     echo "usage: ./build.sh <import|run|test|balance|demo|screen NAME|linux|web|clean> [args...]"
@@ -31,6 +46,7 @@ case "${1:-help}" in
         ;;
     run)
         shift
+        import_if_needed
         "$GODOT" --path . -- "$@"
         ;;
     test)
@@ -45,9 +61,11 @@ case "${1:-help}" in
         ;;
     demo)
         shift
+        import_if_needed
         "$GODOT" --path . -- --demo "$@"
         ;;
     screen)
+        import_if_needed
         "$GODOT" --path . -- --screen="${2:?usage: ./build.sh screen NAME}"
         ;;
     linux)
@@ -58,7 +76,7 @@ case "${1:-help}" in
         ;;
     clean)
         rm -rf build .godot
-        echo "removed build/ and .godot/"
+        echo "removed build/ and .godot/ — the next run or test re-imports"
         ;;
     *)
         usage
