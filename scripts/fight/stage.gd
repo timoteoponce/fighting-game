@@ -97,7 +97,7 @@ func _draw_field() -> void:
 	draw_rect(sc, Color("141222"))
 	draw_rect(sc.grow(-4), Color("1b2a6a"))
 	UI.text(self, sc.get_center() + Vector2(0, -2), "FRIENDS CUP", 11, Color(1, 0.9, 0.3), HORIZONTAL_ALIGNMENT_CENTER, 3, Color.BLACK, UI.arcade_font())
-	UI.text(self, sc.get_center() + Vector2(0, 14), "ULISES VS EMILIA", 8, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 2, Color.BLACK)
+	UI.text(self, sc.get_center() + Vector2(0, 14), "PJ'S CLASH", 8, Color.WHITE, HORIZONTAL_ALIGNMENT_CENTER, 2, Color.BLACK)
 	draw_rect(sc, Color("5a5a7a"), false, 2.0)
 	# Floodlights with light cones.
 	for lx in [60.0, 940.0]:

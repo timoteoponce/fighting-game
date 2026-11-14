@@ -119,11 +119,11 @@ func _draw() -> void:
 		var p3 := c + Vector2(cos(a - 0.12), sin(a - 0.12)) * 500.0
 		if i % 2 == 0:
 			draw_colored_polygon(PackedVector2Array([p1, p2, p3]), Color(1, 1, 1, 0.06))
+	# The same mark the splash slams together: PJ'S over CLASH, gold over pink,
+	# see-sawing on the bob the old two-name logo used to ride.
 	var bob := sin(t * 2.5) * 3.0
-	UI.text(self, Vector2(210, 64 + bob), "ULISES", 44, Color("5ab0ff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("0b1a4a"))
-	UI.text(self, Vector2(320, 70 - bob), "VS", 34, Color("ffd23f"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("7a1030"))
-	UI.text(self, Vector2(430, 64 + bob), "EMILIA", 44, Color("d19bff"), HORIZONTAL_ALIGNMENT_CENTER, 10, Color("3a0d5a"))
-	UI.text(self, Vector2(320, 96), "PJ's CLASH", 14, Color.WHITE)
+	UI.title(self, Vector2(320, 58 + bob), "PJ'S", 44, Color("ffd23f"))
+	UI.title(self, Vector2(320, 112 - bob), "CLASH", 44, Color("ff8ab8"))
 	UI.menu(self, _items(), idx, MENU_AT, MENU_SIZE, MENU_SPACING)
 	var hint := "P1: WASD + F / G     P2: Arrows + K / L     Gamepads: D-pad + buttons     F11: fullscreen"
 	if Controls.phone:

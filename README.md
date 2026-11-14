@@ -281,6 +281,14 @@ handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
 
+### PJ's Clash leads the title screen now
+
+The main menu still opened with a giant "ULISES VS EMILIA" and a small
+"PJ's CLASH" tucked underneath — both left over from before the rename.
+The title now carries the same mark the splash slams together, **PJ'S**
+over **CLASH**, and the stadium jumbotron on the field stage, which still
+advertised the old name under "FRIENDS CUP", reads "PJ'S CLASH" too.
+
 ### Silvan is actually a toddler now
 
 The first pass gave him a big head on a round body, but the arms and legs were
