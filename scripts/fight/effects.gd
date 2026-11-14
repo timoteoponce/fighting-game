@@ -59,8 +59,9 @@ func spawn(kind: String, pos: Vector2, data := {}) -> void:
 	parts.append({"k": kind, "p": pos, "t": 0, "life": LIFE.get(kind, 12), "d": data})
 
 
-## A comic impact word, picked to match how hard the hit was.
-func word(pos: Vector2, level := 1) -> void:
+## A comic impact word, picked to match how hard the hit was. `col` tints the
+## starburst card — a super passes its own palette so the word matches the show.
+func word(pos: Vector2, level := 1, col := Color.TRANSPARENT) -> void:
 	var pool: Array = WORDS_LIGHT
 	if level >= 3:
 		pool = WORDS_SUPER
@@ -75,7 +76,7 @@ func word(pos: Vector2, level := 1) -> void:
 	for e in parts:
 		if e["k"] == "bubble" and absf(e["p"].x - at.x) < 70.0 and absf(e["p"].y - at.y) < 34.0:
 			at.y = e["p"].y + 36.0
-	spawn("text", at, {"text": pool.pick_random(), "level": level})
+	spawn("text", at, {"text": pool.pick_random(), "level": level, "col": col})
 
 
 ## A speech bubble with a fighter's own line in it. `who` is the speaker's
@@ -170,9 +171,10 @@ func _draw_glow() -> void:
 		match kind:
 			"hit", "heavy", "super":
 				# A small halo only. The spikes themselves are ink, in `_draw_impact`,
-				# so the core stays a hard white dot instead of washing out.
+				# so the core stays a hard white dot instead of washing out. The
+				# halo takes the super's own colour (`col2` from `Fight._apply_hit`).
 				var big: float = {"hit": 0.65, "heavy": 1.0, "super": 1.35}[kind] * ck
-				var col: Color = {"hit": Color(1, 0.85, 0.45), "heavy": Color(1, 0.7, 0.3), "super": Color(1, 0.55, 0.85)}[kind]
+				var col: Color = e["d"].get("col2", {"hit": Color(1, 0.85, 0.45), "heavy": Color(1, 0.7, 0.3), "super": Color(1, 0.55, 0.85)}[kind])
 				glow.draw_circle(p, 8.0 * big * fade, Color(col, 0.45 * fade), true, -1.0, true)
 			"block":
 				glow.draw_circle(p, 9.0 * fade, Color(0.55, 0.8, 1.0, 0.35 * fade), true, -1.0, true)
@@ -217,6 +219,9 @@ func _draw_impact(e: Dictionary) -> void:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = int(e["d"]["seed"])
 	var back := Vector2.from_angle(kb + PI)
+	# A super's spikes wear the super's colour (passed by `Fight._apply_hit` as
+	# `col`); ordinary hits keep the near-white cream.
+	var col: Color = e["d"].get("col", Color(1, 0.97, 0.9))
 	# A few speed lines, stuck to the burst. Long ones used to stripe the stage.
 	if k < 0.6:
 		var lines := 3 if kind == "hit" else (4 if kind == "heavy" else 5)
@@ -236,7 +241,7 @@ func _draw_impact(e: Dictionary) -> void:
 		var root := p + d * 2.5
 		var tip := p + d * len
 		var poly := PackedVector2Array([root + n * w, tip, root - n * w])
-		draw_colored_polygon(poly, Color(1, 0.97, 0.9, fade))
+		draw_colored_polygon(poly, Color(col, fade))
 		draw_polyline(Stage._closed(poly), Color(0.07, 0.04, 0.08), 1.6, true)
 	var cr := minf(7.5, (4.0 if kind == "hit" else 5.5) * minf(big, 1.5))
 	draw_circle(p, cr + 1.6, Color(0.07, 0.04, 0.08, fade), true, -1.0, true)
@@ -335,7 +340,11 @@ func _draw_word(e: Dictionary) -> void:
 		var ang := TAU * i / float(spikes * 2) + tilt
 		var r := (1.0 if i % 2 == 0 else 0.74) * (0.94 + rng.randf() * 0.12)
 		pts.append(c + Vector2(cos(ang) * rx, sin(ang) * ry) * r)
-	var burst: Color = [Color(1, 0.95, 0.5), Color(1, 0.7, 0.25), Color(1, 0.45, 0.6), Color(0.6, 0.85, 1)][mini(level, 3)]
+	# A super's word wears the super's colour; anything else keeps the stock
+	# card graded by level.
+	var burst: Color = e["d"].get("col", Color.TRANSPARENT)
+	if burst.a == 0.0:
+		burst = [Color(1, 0.95, 0.5), Color(1, 0.7, 0.25), Color(1, 0.45, 0.6), Color(0.6, 0.85, 1)][mini(level, 3)]
 	ink.draw_colored_polygon(pts, Color(burst, 0.92 * a))
 	ink.draw_polyline(Stage._closed(pts), Color(0.12, 0.08, 0.16, a), 2.5, true)
 	UI.text(ink, at, txt, size, Color(1, 0.98, 0.9, a),

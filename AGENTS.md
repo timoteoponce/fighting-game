@@ -251,7 +251,14 @@ bite you.
   8px cells walked through an HSV hue ramp, which at 320x180 was a rainbow checkerboard:
   no single colour survived, the hitbox edge was unreadable and the text was illegible.
   **Do not reintroduce per-cell hue.** The spine runs along the beam's long axis, so a
-  `size` taller than it is wide is a pillar and needs the column branch.
+  `size` taller than it is wide is a pillar and needs the column branch. The shape also
+  *boils* and *flickers*, the two things a CPS2 beam does that a rectangle does not:
+  every pass is `_beam_outline` — the rectangle with its long edges displaced on a
+  travelling sine that flows *away* from the fighter — at a different inset, and `hot`
+  (two frames on, two off, keyed off `t` like everything else so hitstop holds the
+  shimmer) surges the body, the spine, the bars and the halo together. The halo adds a
+  birth flare at the muzzle, a tip star while the beam is still punching out, and riding
+  sparkles along the sides.
 - **Pixel text on a beam sits on an ink plate.** `draw_string` puts `pos.y` on the
   *baseline* and the glyphs sit above it, so the plate is sized to the cap height and
   centred *above* the baseline. Centring it on the origin leaves it hanging under the
@@ -265,6 +272,13 @@ bite you.
   and again by up to 2.35, which on a 200px dragon painted an opaque disc over half the
   screen. Beam halos also have to use the same orientation test as `_draw_beam`, or a tall
   pillar gets a wide slab beside it instead of a glow around it.
+- **A super's hit sparks wear its own colours.** `Fight._apply_hit` passes `col` (spike
+  fill, a core/mid blend) and `col2` (additive halo and impact-word card) into the impact
+  effect: the projectile's palette for a projectile hyper, the attacker's `accent` for a
+  melee one, so GAME THUNDER bursts storm blue and Silvan's pillar bursts gold. The
+  finishing hit of a super also stamps an expanding `ring` and gets a `k` bump on its
+  burst. Level-2 specials keep the stock cream spark on purpose — that is how you tell a
+  super hit landed at a glance.
 - `MoveData.hitbox` is relative to the fighter's **feet, facing right**. `CharacterDef.size`
   (body scale) does *not* rescale hitboxes automatically: the character must call
   `scale_moves()` at the end of `_init()` whenever `size != 1.0`.

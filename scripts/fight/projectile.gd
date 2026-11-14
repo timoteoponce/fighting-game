@@ -247,14 +247,51 @@ func _draw_halo(h: Node2D) -> void:
 		var bw := size.x * minf(1.0, t / 6.0)
 		var bh := size.y * (1.0 if life > 10 else life / 10.0)
 		var pillar := size.y > size.x * 1.2
+		# The same flicker cadence as the body, so the whole beam surges as one
+		# thing instead of the glow breathing out of step with the light.
+		var hot := t % 4 < 2
+		var beam_pulse := 1.0 + (0.22 if hot else 0.0) + 0.08 * sin(t * 0.5)
 		for i in 3:
 			var pad := 2.0 + float(i) * 4.0
-			var alpha := 0.15 - float(i) * 0.042
+			var alpha := 0.15 + 0.07 * (1.0 if hot else 0.0) - float(i) * 0.042
 			# The bar starts at x = 0, so the glow is nudged in by the same 2px
 			# the body's muzzle cap is, and a pillar is centred on x = 0 instead.
 			var r := Rect2(-2.0 - pad, -bh * 0.5 - pad, bw + pad * 2.0, bh + pad * 2.0) if not pillar \
 				else Rect2(-bw * 0.5 - pad, -bh * 0.5 - pad, bw + pad * 2.0, bh + pad * 2.0)
+			r = r.grow((beam_pulse - 1.0) * 6.0)
 			h.draw_rect(r, Color(col, alpha))
+		# The muzzle detonation: a starburst where the beam leaves the fighter,
+		# huge on frame one and gone by frame fourteen, so the beam is born
+		# rather than switched on — the release flash every Street Fighter
+		# projectile has.
+		var birth := maxf(0.0, 1.0 - t / 14.0)
+		if birth > 0.0:
+			var muzzle := Vector2.ZERO if not pillar else Vector2(0.0, bh * 0.5)
+			for i in 2:
+				var br := (30.0 - float(i) * 11.0) * (0.4 + 0.6 * birth)
+				h.draw_colored_polygon(FighterRenderer.star_pts(muzzle, br, br * 0.38, 4, float(i) * 0.8 + t * 0.12),
+					Color(pal("core"), 0.4 * birth))
+		# The tip star: a flare riding the beam's leading edge for as long as it
+		# is still punching outward.
+		if t < 9:
+			var tp := 1.0 - t / 9.0
+			var tip := Vector2(bw, 0.0) if not pillar else Vector2(0.0, -bh * 0.5)
+			h.draw_colored_polygon(FighterRenderer.star_pts(tip, 11.0 + 9.0 * tp, 4.0, 4, t * 0.2),
+				Color(pal("core"), 0.7 * tp))
+		# Riding sparkles: little stars streaming along just outside the body,
+		# alternating sides, so the beam sheds energy as it travels.
+		var span := bw if not pillar else bh
+		for i in 3:
+			var k := fmod(t * 0.045 + float(i) * 0.37, 1.0)
+			var tw := sin(k * PI)
+			if tw <= 0.05 or span < 30.0:
+				continue
+			var along := 5.0 + k * (span - 10.0)
+			var side := -1.0 if i % 2 == 0 else 1.0
+			var off := 5.0 + sin(t * 0.4 + float(i)) * 2.5
+			var q := Vector2(along, side * (bh * 0.5 + off)) if not pillar \
+				else Vector2(side * (bw * 0.5 + off), bh * 0.5 - along)
+			h.draw_colored_polygon(FighterRenderer.star_pts(q, 3.6 * tw, 1.4, 4, k * 5.0), Color(1, 1, 1, 0.8 * tw))
 		return
 	# A glow around the body itself, not around the whole hitbox: the old code
 	# scaled the largest dimension by 0.9 and then again by up to 2.35, which on
@@ -333,7 +370,10 @@ func _draw_spark() -> void:
 ## 320x180 turned into a rainbow checkerboard: no single colour survived, the
 ## hitbox edge was unreadable, and the pixel text on top was illegible. A beam is
 ## one shape, so it is drawn as one shape — a dark ink rim, a body, a hot core
-## and a few chunky energy bars — and `tint` decides the colour.
+## and a few chunky energy bars — and the shape *boils*: every pass is the same
+## travelling-sine outline at a different inset, and everything surges on a
+## two-frames-hot / two-frames-cool flicker, the CPS2 shimmer Street Fighter
+## supers run on. `tint` decides the colour.
 func _draw_beam() -> void:
 	var w := size.x * minf(1.0, t / 6.0)
 	var h := size.y * (1.0 if life > 10 else life / 10.0)
@@ -346,40 +386,56 @@ func _draw_beam() -> void:
 	# only thing that differs is which axis is the length, and that decides
 	# where the muzzle cap and the travelling bars go.
 	var tall := size.y > size.x * 1.2
-	var rect := Rect2(0.0, -h * 0.5, w, h) if not tall else Rect2(-w * 0.5, -h * 0.5, w, h)
-	draw_rect(rect.grow(2.0), out)
-	draw_rect(rect, edge)
-	var inner := rect.grow(-4.0)
-	draw_rect(inner, mid)
+	# The flicker: two frames hot, two cool, forever. Hot frames surge — the
+	# body lerps toward the core, the spine fattens, the boil hardens — so the
+	# beam stroboscopes like an arcade sprite instead of glowing steadily. `t`
+	# only moves when the sim moves, so hitstop holds the shimmer too, which
+	# reads as the world holding its breath.
+	var hot := t % 4 < 2
+	var surge := 1.0 if hot else 0.0
+	mid = mid.lerp(core, 0.35 * surge)
+	var amp := (1.7 + 1.2 * surge) * minf(1.0, w / 40.0)
+	# The wave travels away from the fighter — out along a bar, up a pillar —
+	# so the light reads as flowing at the opponent rather than sitting there.
+	var flow := -t * 0.55 if not tall else t * 0.55
+	# Ink envelope, coloured rim, boiling body: the one outline at three
+	# insets, so the layers stay parallel while they wobble.
+	draw_colored_polygon(FighterRenderer.safe(_beam_outline(w, h, tall, 0.0, 0.0, amp, flow)), out)
+	draw_colored_polygon(FighterRenderer.safe(_beam_outline(w, h, tall, 3.0, 3.0, amp, flow)), edge)
+	draw_colored_polygon(FighterRenderer.safe(_beam_outline(w, h, tall, 6.0, 6.0, amp + 1.3, flow + 1.3)), mid)
 	# The hot core: a spine along the beam's length. On a narrow pillar it is a
 	# vertical column, on a wide bar a horizontal one, so either orientation has
-	# a bright line up the middle instead of a flat wash.
-	var core_rect := Rect2(inner.position.x, -h * 0.5 + h * 0.30, inner.size.x, h * 0.40) if not tall \
-		else Rect2(-w * 0.20, inner.position.y, w * 0.40, inner.size.y)
-	draw_rect(core_rect, core)
-	var glint := Rect2(core_rect.position.x, core_rect.position.y + core_rect.size.y * 0.24,
-		core_rect.size.x, core_rect.size.y * 0.28) if not tall \
-		else Rect2(core_rect.position.x + core_rect.size.x * 0.30, core_rect.position.y,
-		core_rect.size.x * 0.22, core_rect.size.y)
-	draw_rect(glint, Color(1, 1, 1, 0.75))
-	# Chunky energy bars running outward from the muzzle. These are the only
-	# motion in the shape, and at 8px they stay square. A beam thinner than a
-	# couple of cells has no room for them.
+	# a bright line up the middle instead of a flat wash. It boils against the
+	# body's phase so the two layers slide past each other.
+	var core_ix := 6.0 if not tall else w * (0.30 - 0.06 * surge)
+	var core_iy := h * (0.30 - 0.07 * surge) if not tall else 6.0
+	draw_colored_polygon(FighterRenderer.safe(_beam_outline(w, h, tall, core_ix, core_iy, amp * 0.7, flow + 2.6)), core)
+	# A white glint threading the spine, thin and nearly steady, like the
+	# catchlight on a wet edge.
+	var glint_ix := 10.0 if not tall else w * (0.44 - 0.05 * surge)
+	var glint_iy := h * (0.44 - 0.05 * surge) if not tall else 10.0
+	draw_colored_polygon(FighterRenderer.safe(_beam_outline(w, h, tall, glint_ix, glint_iy, 1.2, flow + 3.5)),
+		Color(1, 1, 1, 0.7 + 0.2 * surge))
+	# Chunky energy bars running outward from the muzzle. At 8px they stay
+	# square, and they are the fastest motion in the shape. A beam thinner than
+	# a couple of cells has no room for them.
 	var cell := 8.0
-	if inner.size.x >= cell * 2.0 and inner.size.y >= cell * 2.0:
+	var body := Rect2(6.0, -h * 0.5 + 6.0, w - 12.0, h - 12.0) if not tall \
+		else Rect2(-w * 0.5 + 6.0, -h * 0.5 + 6.0, w - 12.0, h - 12.0)
+	if body.size.x >= cell * 2.0 and body.size.y >= cell * 2.0:
 		var along: int = maxi(1, int(w / cell)) if not tall else maxi(1, int(h / cell))
 		var across: int = maxi(1, int(h / cell)) if not tall else maxi(1, int(w / cell))
 		for i in along:
-			var phase := fmod(t * 0.35 - float(i) * 0.22, 1.0)
+			var phase := fmod(t * 0.6 - float(i) * 0.18, 1.0)
 			var band := int(phase * float(across))
-			var fade := 0.30 * sin(phase * PI)
-			if fade <= 0.01:
+			var fade := (0.45 + 0.25 * surge) * sin(phase * PI)
+			if fade <= 0.02:
 				continue
 			var r := Rect2(i * cell, -h * 0.5 + float(band) * cell, cell - 2.0, cell - 2.0) if not tall \
 				else Rect2(-w * 0.5 + float(band) * cell, -h * 0.5 + i * cell, cell - 2.0, cell - 2.0)
-			if not inner.intersects(r):
+			if not body.intersects(r):
 				continue
-			draw_rect(r, Color(core, fade))
+			draw_rect(r, Color(core.lerp(Color.WHITE, 0.35 * surge), fade))
 	# A muzzle cap at the origin end, so the beam reads as leaving the fighter
 	# rather than as a rectangle floating in the arena. On a tall pillar that is
 	# the bottom of the shape, since the pillar rises off him.
@@ -406,6 +462,40 @@ func _draw_beam() -> void:
 		draw_rect(plate, Color(ti, 0.55), false, 1.5)
 		UI.text(self, Vector2.ZERO, label, 20, ti, HORIZONTAL_ALIGNMENT_CENTER, 4, Color(0, 0, 0, 0.85))
 		draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## The beam's boiling silhouette: its rectangle with the long edges displaced on
+## a travelling sine, sampled in steps kept chunky at this resolution. Every pass
+## of `_draw_beam` is this one outline at a different inset, which is what keeps
+## the ink, the rim and the body parallel while they boil. Top and bottom run on
+## offset phases (2.1 rad) so the shape lumbers instead of pulsing symmetrically.
+func _beam_outline(w: float, h: float, tall: bool, ix: float, iy: float, amp: float, ph: float) -> PackedVector2Array:
+	var pts := PackedVector2Array()
+	# Cap the sample count, so a 940px MAX beam is a hundred-point polygon and
+	# not a thousand-point one. The wobble is low frequency, so coarse steps
+	# still carry it — and chunkier steps suit the pixels.
+	var step := maxf(7.0, (w if not tall else h) / 60.0)
+	if not tall:
+		var x0 := ix
+		var x1 := maxf(x0 + 1.0, w - ix)
+		var steps := maxi(2, int((x1 - x0) / step))
+		for i in steps + 1:
+			var x := lerpf(x0, x1, float(i) / float(steps))
+			pts.append(Vector2(x, -h * 0.5 + iy + sin(x * 0.07 + ph) * amp))
+		for i in range(steps, -1, -1):
+			var x := lerpf(x0, x1, float(i) / float(steps))
+			pts.append(Vector2(x, h * 0.5 - iy + sin(x * 0.07 + ph + 2.1) * amp))
+	else:
+		var y0 := h * 0.5 - iy
+		var y1 := minf(y0 - 1.0, -h * 0.5 + iy)
+		var steps := maxi(2, int((y0 - y1) / step))
+		for i in steps + 1:
+			var y := lerpf(y0, y1, float(i) / float(steps))
+			pts.append(Vector2(-w * 0.5 + ix + sin(y * 0.07 + ph) * amp, y))
+		for i in range(steps, -1, -1):
+			var y := lerpf(y0, y1, float(i) / float(steps))
+			pts.append(Vector2(w * 0.5 - ix + sin(y * 0.07 + ph + 2.1) * amp, y))
+	return pts
 
 
 ## A soccer ball as chunky pixels: a 7x7 cell disc with a black pentagon patch.

@@ -281,6 +281,17 @@ handles blinking, X eyes on a knockout and the squint on an attack.
 
 ## Changelog
 
+### Supers surge, boil and burst in their own colours
+
+The light beams — GAME THUNDER, Silvan's golden pillar, Luna's sleepy
+waves — used to be steady glowing rectangles. Street Fighter's supers never
+sit still, so the beams now flicker on a two-frames-hot, two-cool arcade
+shimmer, their edges boil on a wave that travels at the opponent, they
+detonate out of the fighter with a birth flash, punch outward behind a tip
+star, and shed little sparkles along their sides as they go. Every burst a
+super lands is tinted to match it — storm blue for GAME THUNDER, gold for
+the pillar — and the finishing hit stamps a shockwave ring.
+
 ### PJ's Clash leads the title screen now
 
 The main menu still opened with a giant "ULISES VS EMILIA" and a small

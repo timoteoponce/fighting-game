@@ -485,7 +485,25 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 	var away := signf(d.position.x - a.position.x)
 	var kb := Vector2(m.kb.x * (away if away != 0.0 else 1.0), m.kb.y)
 	var combo_k := 1.0 + 0.12 * float(d.combo)
-	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point, {"kb": kb.angle(), "k": combo_k})
+	# A super's sparks wear its own colours, so the whole thing reads as one
+	# move: the projectile's palette for a beam or a ball, the attacker's accent
+	# colour for a melee super. `col` tints the inked spikes, `col2` the additive
+	# halo and the impact word's card. Anything below level 3 keeps the stock
+	# cream-and-ink spark — which is itself the cue that a super hit landed.
+	var col := Color(1, 0.97, 0.9)
+	var col2 := Color(1, 0.55, 0.85)
+	if m.level == 3:
+		var body_c: Color = p.pal("mid") if p != null else a.renderer.colors["accent"]
+		col = (p.pal("core") if p != null else Color(1, 1, 0.96)).lerp(body_c, 0.45)
+		col2 = body_c
+	# The finishing hit of a super is the event, not just the twelfth burst: a
+	# shockwave ring and a half-point bigger explosion, on top of the
+	# slow-motion catch and the flash below.
+	if m.level == 3 and last_hit:
+		combo_k += 0.5
+		effects.spawn("ring", point)
+	effects.spawn("super" if m.level == 3 else ("heavy" if heavy else "hit"), point,
+		{"kb": kb.angle(), "k": combo_k, "col": col, "col2": col2})
 	Sfx.play(m.hit_sfx, 1.0 + 0.06 * float(d.combo))
 	hitstop = maxi(hitstop, m.hitstop)
 	if heavy:
@@ -503,14 +521,16 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		if not items.is_empty():
 			effects.gag(point, items.pick_random(), away)
 	# A multi-hit hyper is its own show: words only on the finishing hit, so
-	# they never paper over the character's hyper art.
+	# they never paper over the character's hyper art. A super's word wears the
+	# super's colour; everything else keeps the stock card.
+	var word_col := col2 if m.level == 3 else Color.TRANSPARENT
 	var mid_hyper := p != null and m.level == 3 and p.hits_left > 0
 	if mid_hyper:
 		pass
 	elif (m.launch or m.knockdown) and randf() < 0.6:
-		effects.word(point, m.level)
+		effects.word(point, m.level, word_col)
 	elif m.level >= 2:
-		effects.word(point, m.level)
+		effects.word(point, m.level, word_col)
 	elif randf() < 0.18:
 		effects.word(point, 0)
 	# The victim yelps. Rare enough that it stays funny instead of nagging.
@@ -524,7 +544,7 @@ func _apply_hit(a: Fighter, d: Fighter, m: MoveData, point: Vector2, p: Projecti
 		hitstop = 24
 		shake = 9.0
 		flash = 8
-		effects.word(point, 3)
+		effects.word(point, 3, word_col)
 		# The full yard sale: everything they own goes flying.
 		for item in d.def.gag_items:
 			effects.gag(point + Vector2(randf_range(-8, 8), randf_range(-14, 4)), item, away)
