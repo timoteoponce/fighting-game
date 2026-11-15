@@ -34,10 +34,13 @@ through the whole roster with a secret boss at the top — see below).
 
 Pick one fighter, then beat every other fighter on the roster in turn, Mortal
 Kombat style. Each bout is **first to two rounds**, the CPU gets tougher as you
-climb (EASY → NORMAL → HARD), and the ladder screen shows who is left. Win and
-your fighter **climbs the tower** to the next rung; lose and you get **three
-continues** to retry the same opponent before the run is over. There is no
-giving up once a run is going — press **L / START** to fight the next contender.
+climb (EASY → NORMAL → HARD), and the tower screen shows who is left: one block
+per opponent going up, each with that kid's face on it. Beaten kids stay up
+there, KO'd under a gold strike, and a faceless `???` block waits at the top.
+Win and your fighter **hops up the tower** to the next block; lose and you get
+**three continues** to retry the same opponent before the run is over. There is
+no giving up once a run is going — press **L / START** to fight the next
+contender.
 
 The last fight is a **secret boss**: **Luna**, a lazy, very strong, very bored
 cat who does not appear on the select screen and never will. Her two supers are
