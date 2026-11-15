@@ -147,6 +147,9 @@ func _ready() -> void:
 	hud.fight = self
 	layer.add_child(hud)
 	Controls.device_changed.connect(_on_device_changed)
+	# Android's back button is routed through the window (the engine would
+	# otherwise quit the app; `quit_on_go_back` is off in project.godot).
+	get_window().go_back_requested.connect(_on_go_back)
 	start_round()
 
 
@@ -159,6 +162,43 @@ func _on_device_changed(dev: int, connected: bool) -> void:
 			_open_menu("CONTROLLER UNPLUGGED", ["RESUME", "CHARACTER SELECT", "TITLE SCREEN"])
 			paused = true
 			return
+
+
+## The one pause menu. START opens it, and so do Android's back button and the
+## app losing focus.
+func _open_pause() -> void:
+	_open_menu("PAUSE", ["RESUME", "OPTIONS", "REMATCH", "CHARACTER SELECT", "QUIT TO TITLE"])
+	paused = true
+
+
+## Android's back button behaves like START in a fight — pause — and backs out
+## of the menus it opens. The CONTINUE?/GAME OVER/UNPLUGGED menus stay
+## START-selects only; they have no safe "back".
+func _on_go_back() -> void:
+	if menu_stack.is_empty():
+		if phase != "over":
+			_open_pause()
+		return
+	match _current_menu()["title"]:
+		"PAUSE":
+			_menu_action("RESUME")
+		"OPTIONS":
+			Sfx.play("select")
+			_close_menu()
+		_:
+			pass
+
+
+## Home button, phone call, a system dialog: Android freezes the process, so
+## the fight resumes mid-exchange without the player seeing the frames in
+## between. Losing focus parks the fight on the pause menu instead, with the
+## same guards as an unplugged controller — never stack on a menu already up.
+func _notification(what: int) -> void:
+	if what != MainLoop.NOTIFICATION_APPLICATION_FOCUS_OUT and what != MainLoop.NOTIFICATION_APPLICATION_PAUSED:
+		return
+	if paused or not menu_stack.is_empty() or phase == "over":
+		return
+	_open_pause()
 
 
 func start_round() -> void:
@@ -202,8 +242,7 @@ func _physics_process(_delta: float) -> void:
 	if menu_stack.is_empty():
 		for f in fighters:
 			if f.is_human() and f.buf.pressed_now(Controls.START):
-				_open_menu("PAUSE", ["RESUME", "OPTIONS", "REMATCH", "CHARACTER SELECT", "QUIT TO TITLE"])
-				paused = true
+				_open_pause()
 				return
 	effects.step()
 	banner_t += 1

@@ -62,6 +62,10 @@ func _switch(screen: String) -> void:
 			current = HowToPlay.new()
 		"options":
 			current = OptionsScreen.new()
+		"icon":
+			# Dev-only: renders art/icon.png with the real renderer and quits
+			# (tools/make_icon.gd). Not a player-facing screen.
+			current = load("res://tools/make_icon.gd").new()
 		_:
 			current = TitleScreen.new()
 	add_child(current)

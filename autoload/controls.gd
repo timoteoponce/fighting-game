@@ -77,8 +77,12 @@ func _ready() -> void:
 
 ## The web export is the same build for a computer and a phone, so the engine's
 ## "mobile" feature is never set. The browser reports the glass, and
-## `is_phone_screen` decides.
+## `is_phone_screen` decides. A native Android build has no browser to ask and
+## no keyboard to fall back on, so every Android device gets the pad — a tablet
+## included.
 func _detect_phone() -> bool:
+	if OS.has_feature("android"):
+		return true
 	if not OS.has_feature("web"):
 		return false
 	var probe := _phone_probe()
