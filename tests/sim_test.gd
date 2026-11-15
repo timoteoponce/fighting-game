@@ -34,6 +34,7 @@ func _ready() -> void:
 	_test_logo_sting()
 	_test_touch()
 	_test_touch_select()
+	_test_arcade_select()
 	for id in _all_ids():
 		_test_character_def(id)
 	for id in _all_ids():
@@ -152,6 +153,45 @@ func _test_touch_select() -> void:
 	check(screen.column_bit(Vector2(410, 128)) == Controls.LEFT, "left of the difficulty makes it easier")
 	check(screen.column_bit(Vector2(490, 128)) == Controls.LIGHT, "a tap on the difficulty confirms")
 	check(screen.column_bit(Vector2(570, 128)) == Controls.RIGHT, "right of the difficulty makes it harder")
+	screen.free()
+	GameState.mode = saved_mode
+	Controls.phone = saved_phone
+	Controls._process(0.0)
+
+
+## The arcade select screen previews the run as a mini tower: one portrait per
+## non-boss rung, the boss as a "???" cell, and the tower re-points itself when
+## the pick changes.
+func _test_arcade_select() -> void:
+	print("[arcade select]")
+	var saved_mode := GameState.mode
+	var saved_phone := Controls.phone
+	Controls.phone = false
+	GameState.mode = "arcade"
+	var screen := CharSelect.new()
+	add_child(screen)
+	check(screen._arcade(), "the select screen is in arcade mode")
+	check(screen.tower.size() == GameState.CHARACTERS.size() - 1,
+		"one portrait per non-boss rung (%d)" % screen.tower.size())
+	check(screen._tower_y(0) > screen._tower_y(screen.tower.size() - 1), "the mini tower climbs up too")
+	# Occupants match the ladder: roster minus the pick, in roster order.
+	var pick: String = GameState.CHARACTERS[0]
+	var j := 0
+	for id in GameState.CHARACTERS:
+		if id == pick:
+			continue
+		check(screen.tower[j].def.id == id, "rung %d is %s before the pick changes" % [j, id])
+		j += 1
+	# Cycling the pick re-points every portrait.
+	screen.slots[0]["char"] = 1
+	screen._refresh_chibis()
+	var new_pick: String = GameState.CHARACTERS[1]
+	j = 0
+	for id in GameState.CHARACTERS:
+		if id == new_pick:
+			continue
+		check(screen.tower[j].def.id == id, "rung %d is %s after the pick changes" % [j, id])
+		j += 1
 	screen.free()
 	GameState.mode = saved_mode
 	Controls.phone = saved_phone

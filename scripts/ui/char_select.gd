@@ -13,6 +13,13 @@ var t := 0.0
 ## A column tap held for one poll, then released so it stays a press.
 var _pulse := 0
 var chibis: Array[FighterRenderer] = []
+## The arcade ladder preview: one portrait per non-boss rung, bottom to top.
+var tower: Array[FighterRenderer] = []
+## Mini-tower geometry, in 640x360 menu space. The same recipe as the big
+## tower screen, scaled down to fit the right side of this screen.
+const TOWER_X := 490.0
+const TOWER_W := 120.0
+const TOWER_BASE := 345.0
 
 
 func _ready() -> void:
@@ -23,6 +30,8 @@ func _ready() -> void:
 		r.position = Vector2(245 if i == 0 else 395, 305)
 		add_child(r)
 		chibis.append(r)
+	if _arcade():
+		_build_tower()
 	_refresh_chibis()
 	# The phone is already holding a controller. Waiting for "press L to join"
 	# made the arrows do nothing, which is the whole screen.
@@ -45,7 +54,8 @@ func _refresh_chibis() -> void:
 	# Arcade is a solo run: hide the opponent chibi, so the right side is the
 	# ladder rather than a fighter the player never picked.
 	chibis[1].visible = not _arcade()
-
+	if not tower.is_empty():
+		_refresh_tower()
 
 func _process(delta: float) -> void:
 	t += delta
@@ -65,6 +75,10 @@ func _process(delta: float) -> void:
 		r.prop = r.def.win_prop if ready else ""
 		r.expr = "happy" if ready else "normal"
 		r.update_pose(r.def.pose("intro" if ready else "idle", {"lean": 6 + sin(t * 3.0 + i) * 2.0}), 0.15)
+	# The arcade ladder preview: same idle pose, kept fresh per frame.
+	for r in tower:
+		r.t = t * 60.0
+		r.update_pose(r.def.pose("idle"), 1.0)
 	queue_redraw()
 
 
@@ -329,21 +343,105 @@ func _draw_slot(i: int) -> void:
 		UI.text(self, Vector2(x, y), "%s: %s" % [row[0], row[1]], 10, Color(1, 1, 1, 0.85), HORIZONTAL_ALIGNMENT_LEFT if i == 0 else HORIZONTAL_ALIGNMENT_RIGHT, 3)
 
 
-## The right side of the arcade select screen: the run's ladder, previewed from
+## The right side of the arcade select screen: the run's tower, previewed from
 ## the fighter currently highlighted. The boss is a "???" — that is the point.
 func _draw_arcade_panel() -> void:
-	var cx := 490.0
+	var cx := TOWER_X
 	var pick: String = GameState.CHARACTERS[slots[0]["char"]]
 	UI.text(self, Vector2(cx, 60), "ARCADE", 16, Color(1, 1, 1, 0.9))
-	UI.text(self, Vector2(cx, 90), "THE LADDER", 26, Color(1, 0.95, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 8, Color(0.1, 0.05, 0.2))
+	UI.text(self, Vector2(cx, 90), "THE TOWER", 26, Color(1, 0.95, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 8, Color(0.1, 0.05, 0.2))
 	UI.text(self, Vector2(cx, 112), "Beat the whole roster...", 10, Color(1, 1, 1, 0.9))
 	UI.text(self, Vector2(cx, 128), "...then someone is waiting.", 10, Color(1, 0.8, 0.95))
+	UI.text(self, Vector2(cx, 158), "OPPONENTS", 10, Color(1, 0.8, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 3)
+	var n := GameState.CHARACTERS.size()
+	var h := _tower_block_h()
+	var left := TOWER_X - TOWER_W * 0.5
+	var rad := h * 0.5 - 3.0
 	var names: Array[String] = []
 	for id in GameState.CHARACTERS:
 		if id != pick:
 			names.append(GameState.make_character(id).display)
-	UI.text(self, Vector2(cx, 158), "OPPONENTS", 10, Color(1, 0.8, 0.95), HORIZONTAL_ALIGNMENT_CENTER, 3)
-	for j in names.size():
-		UI.text(self, Vector2(cx, 176 + j * 16), names[j], 12, Color(1, 1, 1, 0.85))
-	var last_y := 176 + names.size() * 16 + 6
-	UI.text(self, Vector2(cx, last_y), "???", 16, Color(1, 0.4, 0.5), HORIZONTAL_ALIGNMENT_CENTER, 4, Color(0.3, 0.0, 0.1))
+	# The pennant crowns the tower, the same grammar as the big screen. (The
+	# base slab is dropped here: the select screen's hint text sits just below
+	# and a full-width base would paint over it.)
+	var top := _tower_y(n - 1) - h * 0.5
+	draw_line(Vector2(TOWER_X, top), Vector2(TOWER_X, top - 11.0), Color(0.62, 0.55, 0.9, 0.5), 2.0)
+	var fl := Vector2(TOWER_X, top - 11.0)
+	draw_colored_polygon(PackedVector2Array([fl, fl + Vector2(9.0, 3.0), fl + Vector2(0.0, 6.0)]), Color(1, 0.85, 0.35))
+	for i in n:
+		var boss := i == n - 1
+		var cy := _tower_y(i)
+		var rect := Rect2(left, cy - h * 0.5, TOWER_W, h)
+		var fill := Color("201636") if boss else Color("443469")
+		draw_rect(rect, fill)
+		draw_rect(Rect2(left + 2.0, rect.position.y + 1.0, TOWER_W - 4.0, 2.0), fill.lightened(0.16))
+		draw_rect(Rect2(left + 2.0, rect.end.y - 3.0, TOWER_W - 4.0, 2.0), fill.darkened(0.3))
+		draw_rect(rect, Color(0.62, 0.55, 0.9, 0.5), false, 2.0)
+		if boss:
+			# A faceless "???" cell, painted in the same pass so the disc and
+			# the mark stay in the same order as the big tower's marks node.
+			var dc := Vector2(left + rad + 6.0, cy)
+			draw_circle(dc, rad, Color("1e1435"))
+			draw_circle(Vector2(dc.x, dc.y - rad * 0.35), rad * 0.92, Color("33255c"))
+			UI.text(self, dc + Vector2(0.0, 6.0), "???", 16, Color(1, 0.4, 0.5),
+				HORIZONTAL_ALIGNMENT_CENTER, 3, Color(0.3, 0.0, 0.1))
+		var name := "???" if boss else names[i]
+		var col := Color(1, 0.4, 0.5) if boss else Color(1, 1, 1, 0.85)
+		var nx := left + rad * 2.0 + 12.0 + (TOWER_W - (rad * 2.0 + 12.0)) * 0.5
+		UI.text(self, Vector2(nx, cy + 4.0), name, 11, col, HORIZONTAL_ALIGNMENT_CENTER, 3,
+			Color(0.07, 0.05, 0.12))
+
+
+## Build one portrait slot per non-boss rung. The boss crowns the tower as a
+## drawn "???" cell, so it never needs a renderer of its own.
+func _build_tower() -> void:
+	var n := GameState.CHARACTERS.size() - 1
+	for i in n:
+		tower.append(_tower_disc(i))
+
+
+## Height of one mini block. The column stands on TOWER_BASE and compresses
+## if a bigger roster ever needs the space.
+func _tower_block_h() -> float:
+	var n := GameState.CHARACTERS.size()
+	return clampf(200.0 / float(n), 22.0, 36.0)
+
+
+## Centre of rung i, bottom to top.
+func _tower_y(i: int) -> float:
+	return TOWER_BASE - _tower_block_h() * (float(i) + 0.5)
+
+
+## The HUD portrait recipe, scaled down: a clipping disc with a dark backing
+## and a `head_only` renderer inside, sized so the face fills the disc.
+func _tower_disc(i: int) -> FighterRenderer:
+	var h := _tower_block_h()
+	var rad := h * 0.5 - 3.0
+	var s := rad / 20.0
+	var clip := Node2D.new()
+	clip.position = Vector2(TOWER_X - TOWER_W * 0.5 + rad + 6.0, _tower_y(i))
+	clip.clip_children = CanvasItem.CLIP_CHILDREN_AND_DRAW
+	clip.draw.connect(func() -> void:
+		clip.draw_circle(Vector2.ZERO, rad, Color("1e1435"), true, -1.0, true)
+		clip.draw_circle(Vector2(0.0, -rad * 0.35), rad * 0.92, Color("33255c"), true, -1.0, true))
+	add_child(clip)
+	var p := FighterRenderer.new()
+	p.head_only = true
+	p.base_scale = s
+	p.facing = -1
+	p.position = Vector2(0.0, 43.0 * s)
+	clip.add_child(p)
+	return p
+
+
+## Re-point every portrait at the current ladder's occupants. The ladder is
+## the roster minus whoever is picked, so the pick drops out and the rest
+## shift up as the player cycles.
+func _refresh_tower() -> void:
+	var pick: String = GameState.CHARACTERS[slots[0]["char"]]
+	var j := 0
+	for id in GameState.CHARACTERS:
+		if id == pick:
+			continue
+		tower[j].setup(GameState.make_character(id))
+		j += 1
