@@ -37,7 +37,7 @@ godot --path . -- --screen=select                               # jump straight 
 - **Args after `--` are read by the game** (`OS.get_cmdline_user_args()`, `scripts/main.gd:12`).
   Engine flags like `--windowed` / `--fullscreen` must go **before** the `--` or they are ignored.
 - Full flag set: `--demo --test --balance --chars=a,b --stage=library --screen=NAME
-  --full-meter`. Screens: `splash title select fight setup howto options`. The
+  --full-meter`. Screens: `splash title select arcade fight setup howto options`. The
   player-facing list is the README's "For developers" section. Cold boot is
   `splash`. `--demo` and any `--screen=` skip the logo slam; coming back from a
   match goes to `title`.
@@ -97,8 +97,13 @@ bite you.
   ladder from `CHARACTERS` minus the pick plus `BOSS_ID`; `arcade_opponent/advance/done/continues`
   are the rest of the run. `scripts/ui/arcade_screen.gd` (`ArcadeScreen`) is the tower view
   *and* the win screen; a loss opens `CONTINUE?` on the fight's `menu_stack`, and CONTINUE
-  replays the same bout. `arcade_advance` records `arcade_climb_from`, and the screen plays a
-  Mortal-Kombat-style climb (one hop per rung) on entry — START skips it. There is no
+  replays the same bout. The tower is a stacked column of blocks, rung 0 at the bottom and
+  the boss crowning the top: each block inlays a live head-and-shoulders portrait (the HUD
+  lifebar recipe — a clipping disc plus a `head_only` `FighterRenderer`), the current block
+  is gold and carries the ledge the player's chibi stands on, beaten blocks dim under a
+  gold strike, and the boss's block stays a faceless `???` until she is the next fight.
+  `arcade_advance` records `arcade_climb_from`, and the screen plays the climb (one hop per
+  rung, upward) on entry — START skips it. There is no
   give-up on the tower any more; a run ends only by losing out of continues or quitting
   through the pause menu. The boss is the whole reason the `hidden` flag exists.
 - **No script preloads anywhere.** Types resolve via `class_name` globals
@@ -124,7 +129,8 @@ bite you.
   and a hyper is a short burst. **The title and character-select screens draw live
   `FighterRenderer`s, not images** (`title_screen.gd:_ready` and `char_select.gd:_ready`
   both build a `chibis` array and pose it every frame), so the menus and the match are
-  the same art. There are no image files in the game at all.
+  the same art — the arcade tower's block portraits and the HUD lifebar faces are the
+  same trick with `head_only` renderers. There are no image files in the game at all.
 - **The head, torso, hands and shoes are shared shapes, not hooks.** A circle head with
   a chin blob, a straight wedge torso, mitten hands and a five-point slipper, all in
   `FighterRenderer` (`head_shape`, `torso`, `fist` / `open_hand`, `shoe`). There is no
@@ -537,6 +543,9 @@ input did nothing. Move the opponent out of range before scripting another super
   really land, and `_test_arcade_ui` fakes a `Controls` edge to prove START begins a bout on
   the tower (and that HEAVY no longer gives up) — it mutes `screen_requested` first, because
   `GameState.goto` would otherwise hand the test over to the real Main scene.
+  `_test_arcade_tower` checks the tower's shape: rungs climb *up* to the boss, every rung
+  owns that rung's portrait, the boss's face stays hidden until she is the next fight, and
+  beaten rungs keep a dimmed KO face.
 - `cpu_level` is an index into `GameState.CPU_LEVELS` = `VERY EASY, EASY, NORMAL, HARD`
   (0-3). `CpuInput`'s `THINK` / `BLOCK_P` / `ANTI_AIR_P` / `COMBO_DROP_P` / `MOBILITY_P`
   tables must all stay the same length as that list.

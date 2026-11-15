@@ -42,6 +42,7 @@ func _ready() -> void:
 	_test_arcade()
 	_test_damage_scale()
 	_test_arcade_ui()
+	_test_arcade_tower()
 	_test_movement("ulises")
 	_test_throw("ulises")
 	_test_ulises_chain_pose()
@@ -286,6 +287,41 @@ func _test_arcade_ui() -> void:
 	Controls._just.erase(Controls.KB1)
 	check(GameState.chars == [GameState.arcade_player, GameState.arcade_opponent()],
 		"START begins the bout from the tower")
+	s.free()
+	for c in muted:
+		GameState.screen_requested.connect(c["callable"])
+
+
+## The tower's shape: the rungs climb UP the screen to the boss, every rung
+## owns a portrait of that rung's fighter, and the boss's face stays hidden
+## until she is the next fight. A beaten rung keeps a KO face under its dim.
+func _test_arcade_tower() -> void:
+	print("[arcade tower]")
+	# Silence screen navigation for the duration, same as `_test_arcade_ui`.
+	var muted: Array = GameState.screen_requested.get_connections()
+	for c in muted:
+		GameState.screen_requested.disconnect(c["callable"])
+	GameState.mode = "arcade"
+	GameState.start_arcade("ulises")
+	var s := ArcadeScreen.new()
+	add_child(s)
+	var n := GameState.arcade_ladder.size()
+	check(n >= 2, "the ladder has at least one rung plus the boss (%d)" % n)
+	check(s._rung_y(0) > s._rung_y(n - 1), "rung 0 sits below the top rung — the tower climbs up")
+	check(s.portraits.size() == n, "one portrait per rung (%d vs %d)" % [s.portraits.size(), n])
+	for i in n:
+		check(s.portraits[i].def.id == GameState.arcade_ladder[i], "rung %d's portrait is that rung's fighter" % i)
+	# The boss crowns the tower and stays a faceless "???" until she is next.
+	var boss_i := n - 1
+	check(GameState.arcade_ladder[boss_i] == GameState.BOSS_ID, "the boss is the top rung")
+	check(s.portraits[boss_i].visible == false, "the boss's face is hidden before she is the next fight")
+	for _i in boss_i:
+		GameState.arcade_advance()
+	s._process(1.0 / 60.0)
+	check(GameState.arcade_index == boss_i, "advancing reaches the boss rung")
+	check(s.portraits[boss_i].visible == true, "the boss's face shows once she is the next fight")
+	check(s.portraits[0].expr == "ko", "a beaten rung keeps a KO face")
+	check(s.portraits[0].modulate != Color.WHITE, "a beaten rung's portrait is dimmed")
 	s.free()
 	for c in muted:
 		GameState.screen_requested.connect(c["callable"])
