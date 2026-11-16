@@ -5,6 +5,11 @@ var current: Node
 
 
 func _ready() -> void:
+	# Cap the render rate in code as well as in project.godot: on some Android
+	# devices the project setting is ignored and the engine renders at the
+	# panel's refresh rate (120 Hz on the S20 FE), which doubles the work for
+	# a 60 Hz sim.
+	Engine.max_fps = 60
 	GameState.screen_requested.connect(func(s: String) -> void: call_deferred("_switch", s))
 	# Command line (after "--"): --demo = CPU vs CPU fight, --screen=NAME opens a
 	# screen, --test runs the gameplay tests.

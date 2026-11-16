@@ -856,6 +856,7 @@ func _unhandled_input(event: InputEvent) -> void:
 func _draw_debug() -> void:
 	if not debug:
 		return
+	UI.text(debug_draw, Vector2(8, 8), "FPS %d  (frame %d)" % [Engine.get_frames_per_second(), Engine.get_process_frames()], 10, Color(1, 1, 0.3))
 	for f in fighters:
 		var hu := f.hurtbox_world()
 		if hu.has_area():
