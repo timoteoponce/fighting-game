@@ -16,6 +16,9 @@ config/icon="res://art/icon.png"
 config/features=PackedStringArray("4.7")
 ; Android's back button is the pause toggle (Fight._on_go_back), never a quit.
 config/quit_on_go_back=false
+; Skip the Godot engine logo on boot; the game's own SplashScreen with the
+; logo sting is the only intro the player sees.
+application/boot_splash/show_image=false
 ; The sim is a fixed 60 Hz. A 120 Hz phone would otherwise render twice the
 ; frames for no gain, and every one of them costs battery.
 run/max_fps=60
@@ -62,4 +65,7 @@ textures/vram_compression/import_etc2_astc=true
 ; off again in code; this is the root viewport (HUD, menus, the scaled frame).
 anti_aliasing/quality/msaa_2d=0
 renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+; Vulkan on Android: the compatibility renderer (OpenGL ES 3.0) is markedly
+; slower on mobile GPUs, especially Exynos/Mali. The pixel pipeline is unchanged
+; — SubViewport size, nearest filtering and MSAA-off are all per-viewport.
+renderer/rendering_method.mobile="mobile"
