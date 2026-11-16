@@ -12,6 +12,7 @@
 #   screen NAME       jump straight to one screen: splash title select fight setup howto options
 #   linux             export the Linux build (wraps build_linux.sh)
 #   web               export the web build (wraps build_web.sh)
+#   android           export the Android APK (wraps build_android.sh; needs a JDK + Android SDK)
 #   clean             remove build/ and the .godot/ import cache
 #
 # Extra args are forwarded after `--` for run/test/balance/demo.
@@ -37,7 +38,7 @@ import_if_needed() {
 }
 
 usage() {
-    echo "usage: ./build.sh <import|run|test|balance|demo|screen NAME|linux|web|clean> [args...]"
+    echo "usage: ./build.sh <import|run|test|balance|demo|screen NAME|linux|web|android|clean> [args...]"
 }
 
 case "${1:-help}" in
@@ -73,6 +74,9 @@ case "${1:-help}" in
         ;;
     web)
         ./build_web.sh
+        ;;
+    android)
+        ./build_android.sh
         ;;
     clean)
         rm -rf build .godot
