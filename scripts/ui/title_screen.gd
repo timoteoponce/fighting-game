@@ -29,9 +29,10 @@ func _ready() -> void:
 		idx = 1
 
 
-## QUIT closes a desktop window. A page has nothing to close.
+## QUIT closes a desktop window and the Android app. A page has nothing to
+## close, so the web phone build drops it.
 func _items() -> Array:
-	if not Controls.phone:
+	if not Controls.phone or not OS.has_feature("web"):
 		return ITEMS
 	var items: Array = ITEMS.duplicate()
 	items.erase("QUIT")

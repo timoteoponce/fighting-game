@@ -9,7 +9,16 @@ config/name="PJ's Clash"
 config/description="A 2D fighting game in the style of Marvel vs Capcom, starring Ulises and Emilia."
 config/version="1.0.0"
 run/main_scene="res://scenes/main.tscn"
+; Drawn once by tools/make_icon.gd (--screen=icon). The Android export uses it
+; for the launcher, the adaptive foreground and the splash; desktop shows it
+; in the window title bar.
+config/icon="res://art/icon.png"
 config/features=PackedStringArray("4.7")
+; Android's back button is the pause toggle (Fight._on_go_back), never a quit.
+config/quit_on_go_back=false
+; Skip the Godot engine logo on boot; the game's own SplashScreen with the
+; logo sting is the only intro the player sees.
+application/boot_splash/show_image=false
 ; The sim is a fixed 60 Hz. A 120 Hz phone would otherwise render twice the
 ; frames for no gain, and every one of them costs battery.
 run/max_fps=60
@@ -30,6 +39,9 @@ window/size/window_width_override=1920
 window/size/window_height_override=1080
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep"
+; Handhelds only: both landscape rotations are fine, portrait never is. The
+; Android manifest takes its orientation from here.
+window/handheld/orientation=4
 
 [physics]
 
@@ -44,10 +56,16 @@ texture={
 
 [rendering]
 
+; Android requires an ETC2/ASTC import path to exist. The game draws
+; everything in code, so nothing uses it — art/icon.png is the one image.
+textures/vram_compression/import_etc2_astc=true
 ; MUST stay Disabled. The whole look is a 320x180 buffer scaled by an integer;
 ; anti-aliasing softens exactly those pixels, and on a phone it costs a 4x
 ; multisample of the full canvas every frame. The arena SubViewport turns it
 ; off again in code; this is the root viewport (HUD, menus, the scaled frame).
 anti_aliasing/quality/msaa_2d=0
 renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
+; Vulkan on Android: the compatibility renderer (OpenGL ES 3.0) is markedly
+; slower on mobile GPUs, especially Exynos/Mali. The pixel pipeline is unchanged
+; — SubViewport size, nearest filtering and MSAA-off are all per-viewport.
+renderer/rendering_method.mobile="mobile"

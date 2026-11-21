@@ -75,6 +75,33 @@ A push to `main` builds this and copies it onto the server. See "For
 developers" for the secrets that deploy needs, and `deploy/nginx/pjclash.conf`
 for the one-time web server setup.
 
+## Playing on Android
+
+A native Android build exists as an APK (arm64, about 27 MB): fullscreen and
+immersive, no browser chrome, and lower audio latency than the web build. It is
+built by CI and attached to each run of the workflow as an artifact (also on
+this repository's Actions page), or locally with `./build.sh android`.
+
+```sh
+# with a phone connected over USB, once "USB debugging" is on:
+adb install -r PJsClash.apk
+# or copy the APK to the phone and tap it; Android asks for permission to
+# install from that source the first time.
+```
+
+- The fight is **landscape only**. Rotate the phone; the game never shows
+  portrait.
+- The same see-through pad as the web phone build: arrows left, L and H right,
+  START (II) top-right. **The Android back button pauses** (and backs out of
+  the pause menus), and losing focus — a phone call, the home button — parks
+  the fight on the pause menu when you come back.
+- Gamepads work the same as on desktop, including the cheap PS2/PS3 USB
+  adapters the controller setup is built for.
+- Settings live in the app's private storage (uninstalling clears them). The
+  optional `voices/`, `music/` and `gamecontrollerdb.txt` folders are a desktop
+  feature; an APK is read-only, so those are not read there.
+- The game needs no permissions and makes no network connections.
+
 ## Running on Linux (x86_64)
 
 ```sh
@@ -220,16 +247,18 @@ Tip: if the D-pad does nothing, press the adapter's **Analog** button and set it
 
 ## For developers
 
-- Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. There are no image files in the game at all. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
-- Run from source: `./build.sh run`, which imports the class cache on demand so a fresh checkout needs no other step (opens fullscreen; F11 or Alt+Enter toggles). The same task runner wraps the commands below by name (`test`, `balance`, `demo`, `screen NAME`, `linux`, `web`); the raw `godot` invocations work too, once the checkout is imported. Engine flags such as `--windowed` go *before* the `--`.
+- Engine: **Godot 4.7** (GDScript). Fighters, stages, the HUD and hit effects are drawn in code into a 320x180 buffer, so a body can move every frame and the pixels stay chunky. No image file is loaded by the game at all; the one committed PNG, `art/icon.png`, is the Android launcher/desktop-window icon, rendered once by `tools/make_icon.gd` and never read at runtime. Shouts and the soundtrack are synthesized until you drop files in `voices/` or `music/`.
+- Run from source: `./build.sh run`, which imports the class cache on demand so a fresh checkout needs no other step (opens fullscreen; F11 or Alt+Enter toggles). The same task runner wraps the commands below by name (`test`, `balance`, `demo`, `screen NAME`, `linux`, `web`, `android`); the raw `godot` invocations work too, once the checkout is imported. Engine flags such as `--windowed` go *before* the `--`.
 - CPU vs CPU demo: `godot --path . -- --demo` (optional: `--chars=ulises,emilia --stage=library`; stages: field, library, rooftop, dojo, beach, snow)
-- Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `arcade`, `fight`, `setup`, `howto`, `options`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
+- Jump to one screen: `godot --path . -- --screen=select` (`splash`, `title`, `select`, `arcade`, `fight`, `setup`, `howto`, `options`; `icon` is the dev-only icon render, see `tools/make_icon.gd`). `--full-meter` starts the hyper bar full. `--demo` and any `--screen=` skip the logo slam.
 - Gameplay tests: `godot --headless --path . -- --test` (add `--balance` for a CPU win/damage report across every pairing — 60 matches with a four-fighter roster, more as the roster grows)
 - Build for Linux: `./build_linux.sh` (needs the Godot 4.7 export templates) → `build/PJsClash-linux-x86_64.tar.gz`
 - Build for web: `./build_web.sh` (same templates, plus the web ones) → `build/web/`. Serve that directory over **https** — the export is threaded, so the page must be cross-origin isolated, which browsers only allow in a secure context.
+- Build for Android: `./build_android.sh` (same templates, plus a JDK on the `PATH` and the Android SDK, both pointed at in Editor Settings > Export > Android) → `build/android/PJsClash.apk`. Signs with the `GODOT_ANDROID_KEYSTORE_RELEASE_*` environment variables when set, else a self-signed `build/android/release.keystore` (fresh per machine, so such builds do not upgrade over each other). CI injects the stable key from secrets.
+- The launcher icon: `godot --path . -- --screen=icon` re-renders `art/icon.png` (needs a real rendering context — not headless — so a window appears briefly). The export takes it from `application/config/icon` for the launcher, the adaptive foreground and the Android 12+ splash.
 - F1 during a fight shows the hitboxes, the hurtboxes and a readout of each fighter's state and frame count.
 
-GitHub Actions (`.github/workflows/cicd.yml`) runs the tests on every push and pull request, exports the web build, and on a push to `main` copies it over SSH. Add these repository secrets. The first three are the same ones rent_tracker uses. The game does not read them at runtime.
+GitHub Actions (`.github/workflows/cicd.yml`) runs the tests on every push and pull request, exports the web build and the Android APK, and on a push to `main` copies the web build over SSH. Add these repository secrets. The first three are the same ones rent_tracker uses. The game does not read them at runtime.
 
 | Secret | What it is |
 |---|---|
@@ -237,6 +266,8 @@ GitHub Actions (`.github/workflows/cicd.yml`) runs the tests on every push and p
 | `SSH_HOST` | Server |
 | `SSH_USER` | SSH user |
 | `DEPLOY_PATH` | Absolute directory the web build replaces. Use a directory that holds only this game. |
+| `PJCLASH_KEYSTORE` | Base64 of the release keystore (`keytool -genkeypair -keystore release.keystore -storepass pjsclash -keypass pjsclash -alias pjsclash -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=PJsClash"`), so CI-signed APKs keep the same key and can upgrade an install |
+| `PJCLASH_KEYSTORE_PASSWORD` | That keystore's password (alias `pjsclash`) |
 
 Nginx is installed once by hand from `deploy/nginx/pjclash.conf`. Point `root` at `DEPLOY_PATH`. That site sends the `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers the threaded export needs, and it must be reached over **https** (either add a TLS server block or terminate TLS in a proxy in front, keeping those headers on the response). Without both, the browser blocks `SharedArrayBuffer` and the game shows a "missing features" error instead of booting.
 

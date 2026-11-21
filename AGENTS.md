@@ -29,22 +29,25 @@ godot --path . -- --demo                                        # CPU vs CPU
 godot --path . -- --screen=select                               # jump straight to one screen
 ./build_linux.sh                                                # export tarball -> build/ (needs export templates)
 ./build_web.sh                                                  # export web -> build/web/ (needs the web templates too)
+./build_android.sh                                              # export Android APK -> build/android/ (needs JDK + Android SDK)
 ```
 
 - **`./build.sh <task>` wraps all of these by name** (`run`, `test`, `balance`,
-  `demo`, `screen NAME`, `linux`, `web`, `clean`). Its play tasks import the class
-  cache on demand, so a fresh clone runs with `./build.sh run` and no other step.
+  `demo`, `screen NAME`, `linux`, `web`, `android`, `clean`). Its play tasks
+  import the class cache on demand, so a fresh clone runs with `./build.sh run`
+  and no other step.
 - **Args after `--` are read by the game** (`OS.get_cmdline_user_args()`, `scripts/main.gd:12`).
   Engine flags like `--windowed` / `--fullscreen` must go **before** the `--` or they are ignored.
 - Full flag set: `--demo --test --balance --chars=a,b --stage=library --screen=NAME
-  --full-meter`. Screens: `splash title select arcade fight setup howto options`. The
-  player-facing list is the README's "For developers" section. Cold boot is
+  --full-meter`. Screens: `splash title select arcade fight setup howto options`
+  (plus the dev-only `icon`, which re-renders the launcher PNG — see `tools/make_icon.gd`).
+  The player-facing list is the README's "For developers" section. Cold boot is
   `splash`. `--demo` and any `--screen=` skip the logo slam; coming back from a
   match goes to `title`.
 - **No linter, formatter or typecheck exists.** The test run is the local
   verification step. `.github/workflows/cicd.yml` runs that same test, exports
-  the web build, and on a push to `main` copies it over SSH. Secrets and the
-  one-time nginx site are in the README.
+  the web build and the Android APK, and on a push to `main` copies the web
+  build over SSH. Secrets and the one-time nginx site are in the README.
 - **The web build is tuned for a phone.** `run/max_fps=60` (the sim is 60 Hz; a
   120 Hz panel would otherwise render twice the frames), the project-wide
   `anti_aliasing/quality/msaa_2d=0`, and Canvas Resize Policy **None** with
@@ -113,9 +116,11 @@ bite you.
   in `voices/` and `music/`) and `Settings` (volumes, match rules and stage choice,
   saved to `user://settings.cfg`). Adding a `preload` would be off-style.
 - **The match is drawn in code; a few recordings are files.** Fighters, stages, the
-  HUD, the menus and synthesized SFX are all generated in code — there are no image
-  files in the game at all. `design/` is a scratch directory kept out of the import via
-  `design/.gdignore`; nothing in the game reads it. Optional voice clips load
+  HUD, the menus and synthesized SFX are all generated in code — the one
+  committed image, `art/icon.png`, is the launcher icon and is never loaded by
+  game code (see `tools/make_icon.gd`). `design/` is a scratch directory kept
+  out of the import via `design/.gdignore`; nothing in the game reads it.
+  Optional voice clips load
   from `<exe dir>/voices/<char>/<line>.wav|ogg` or `res://voices/...` (`autoload/sfx.gd`).
   Optional music is the same idea for `music/` (`.ogg`, `.wav`, `.mp3`). Leave other
   people's tracks out of the build. The cold-boot sting is `Sfx.logo_cues()` /
@@ -130,7 +135,9 @@ bite you.
   `FighterRenderer`s, not images** (`title_screen.gd:_ready` and `char_select.gd:_ready`
   both build a `chibis` array and pose it every frame), so the menus and the match are
   the same art — the arcade tower's block portraits and the HUD lifebar faces are the
-  same trick with `head_only` renderers. There are no image files in the game at all.
+  same trick with `head_only` renderers. The one committed image, `art/icon.png`, is never
+  loaded by game code — it is the Android/desktop launcher icon, rendered once by
+  `tools/make_icon.gd`.
 - **The head, torso, hands and shoes are shared shapes, not hooks.** A circle head with
   a chin blob, a straight wedge torso, mitten hands and a five-point slipper, all in
   `FighterRenderer` (`head_shape`, `torso`, `fist` / `open_hand`, `shoe`). There is no
@@ -189,7 +196,10 @@ bite you.
   `is_phone_screen()`: the browser has touch points and the glass's short
   side is at most `PHONE_SHORT_MAX` (520 CSS px). That is the gap between a
   large phone and a small tablet, so a computer, a tablet and a touchscreen
-  laptop stay on the keyboard and gamepad. A finger
+  laptop stay on the keyboard and gamepad. **On a native Android build there is
+  no browser and no keyboard, so `_detect_phone()` short-circuits to `true` for
+  `OS.has_feature("android")` and every Android device gets the pad** (a tablet
+  included — it is the only way to play). A finger
   (`InputEventScreenTouch` → `Controls.adopt_touch()`) asks the browser
   again, for a page that was not ready at boot, and still refuses anything
   that is not a cellphone. A mouse click must not call it.
@@ -490,6 +500,36 @@ input did nothing. Move the opponent out of range before scripting another super
   guarded by `menu_stack.is_empty()` so it cannot stack on the over/win menu.
   The one exception is the round intro: `input_enabled` is false there, so
   `poll_input` pushes a zero mask and the START press never reaches the buffer.
+
+## Android (the native build)
+
+- **`./build_android.sh` → `build/android/PJsClash.apk`** (arm64, ~27 MB, no
+  permissions, no Gradle). Needs the export templates plus a JDK on the `PATH`
+  and the Android SDK, both pointed at in Editor Settings > Export > Android;
+  the exporter's settings file is `editor_settings-<major.minor>.tres` (so
+  `4.7`, not `4.7.2`). CI writes that file and installs
+  `build-tools;36.0.0` + `platform-tools`.
+- **Signing:** the export reads `GODOT_ANDROID_KEYSTORE_RELEASE_{PATH,USER,PASSWORD}`
+  (they override the preset's empty `keystore/*` fields). CI injects the stable
+  key from the `PJCLASH_KEYSTORE` secrets; `build_android.sh` otherwise
+  self-signs into `build/android/release.keystore` — per machine, so such
+  builds do not upgrade over each other. The preset's keystore fields stay
+  empty so no credential is ever committed.
+- **Orientation lives in the project setting, not the preset**:
+  `display/window/handheld/orientation=4` (sensor landscape — both landscape
+  rotations, never portrait) lands in the manifest's `screenOrientation`.
+- **The back button is the pause toggle.** The engine's default is to quit
+  (`application/config/quit_on_go_back=false` turns that off); `Fight._ready`
+  connects `get_window().go_back_requested` to `_on_go_back`, which opens
+  `_open_pause()` (or backs out of the pause/options menus). Android's focus
+  loss is a notification, `NOTIFICATION_APPLICATION_FOCUS_OUT` /
+  `NOTIFICATION_APPLICATION_PAUSED`, handled in `Fight._notification` — the
+  same guards as an unplugged controller, so a phone call parks the fight on
+  the pause menu.
+- **`Controls.phone` is always true on Android** (no browser probe, no
+  keyboard), so the touch pad, `CharSelect`'s tap mapping and the phone title
+  default (`VS CPU`) all come along; `TitleScreen._items()` keeps QUIT on
+  Android (an app can be closed) and only drops it on the web build.
 
 ## Testing quirks
 

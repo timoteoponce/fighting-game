@@ -78,6 +78,117 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  build-android:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system libraries
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            unzip wget ca-certificates \
+            libfontconfig1 libx11-6 libxcursor1 libxinerama1 \
+            libxrandr2 libxi6 libgl1 libxext6 libxrender1 libxfixes3 \
+            libxkbcommon0 libdbus-1-3 \
+            libwayland-client0 libwayland-cursor0 libwayland-egl1
+          sudo apt-get install -y --no-install-recommends libasound2t64 \
+            || sudo apt-get install -y --no-install-recommends libasound2
+
+      # The build job has already populated this cache, so the download step
+      # is normally skipped; the symlinks below are idempotent either way.
+      - name: Cache Godot
+        id: cache-godot
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/godot-4.7.2
+          key: godot-4.7.2-stable-linux-x86_64
+
+      - name: Download Godot 4.7.2
+        if: steps.cache-godot.outputs.cache-hit != 'true'
+        run: |
+          set -euo pipefail
+          root="$HOME/.cache/godot-4.7.2"
+          mkdir -p "$root/bin" /tmp/godot-dl
+          wget -q -O /tmp/godot-dl/editor.zip \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          unzip -q /tmp/godot-dl/editor.zip -d "$root/bin"
+          chmod +x "$root/bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64"
+          wget -q -O /tmp/godot-dl/templates.tpz \
+            "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable/Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          rm -rf "$root/templates"
+          unzip -q /tmp/godot-dl/templates.tpz -d /tmp/godot-dl
+          mv /tmp/godot-dl/templates "$root/templates"
+
+      - name: Expose Godot
+        run: |
+          set -euo pipefail
+          root="$HOME/.cache/godot-4.7.2"
+          mkdir -p "$HOME/.local/share/godot/export_templates"
+          ln -sfn "$root/templates" "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          sudo ln -sfn "$root/bin/Godot_v${GODOT_VERSION}-stable_linux.x86_64" /usr/local/bin/godot
+          godot --version
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        run: |
+          set -euo pipefail
+          SDK_ROOT="$HOME/android-sdk"
+          mkdir -p "$SDK_ROOT/cmdline-tools"
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O /tmp/cmdline-tools.zip
+          unzip -q /tmp/cmdline-tools.zip -d "$SDK_ROOT/cmdline-tools"
+          mv "$SDK_ROOT/cmdline-tools/cmdline-tools" "$SDK_ROOT/cmdline-tools/latest"
+          echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
+          printf "y\ny\ny\ny\ny\ny\ny\ny\ny\ny\n" | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+          "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --sdk_root="$SDK_ROOT" "build-tools;36.0.0" "platform-tools"
+
+      # The Android exporter reads these paths from the editor settings file,
+      # which on a runner is written from scratch. (The file is
+      # editor_settings-<major.minor>.tres, not the full version.)
+      - name: Editor settings
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.config/godot"
+          printf '[gd_resource type="EditorSettings" format=3]\n\n[resource]\n\nexport/android/java_sdk_path = "%s"\nexport/android/android_sdk_path = "%s"\n' \
+            "$JAVA_HOME" "$ANDROID_HOME" > "$HOME/.config/godot/editor_settings-4.7.tres"
+
+      # The stable signing key, base64 in the PJCLASH_KEYSTORE secret. Without
+      # it (a fork, a fresh checkout) build_android.sh self-signs instead and
+      # the APK installs fine, just under a different key.
+      - name: Release keystore
+        env:
+          PJCLASH_KEYSTORE: ${{ secrets.PJCLASH_KEYSTORE }}
+        run: |
+          set -euo pipefail
+          if [ -n "${PJCLASH_KEYSTORE:-}" ]; then
+            mkdir -p build/android
+            printf '%s' "$PJCLASH_KEYSTORE" | base64 -d > build/android/release.keystore
+            {
+              echo "GODOT_ANDROID_KEYSTORE_RELEASE_PATH=$PWD/build/android/release.keystore"
+              echo "GODOT_ANDROID_KEYSTORE_RELEASE_USER=pjsclash"
+              echo "GODOT_ANDROID_KEYSTORE_RELEASE_PASSWORD=${{ secrets.PJCLASH_KEYSTORE_PASSWORD }}"
+            } >> "$GITHUB_ENV"
+          fi
+
+      - name: Export Android
+        run: ./build_android.sh
+
+      - name: Upload Android build
+        uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: build/android/PJsClash.apk
+          retention-days: 7
+          if-no-files-found: error
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
